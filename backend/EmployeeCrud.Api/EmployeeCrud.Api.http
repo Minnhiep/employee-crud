@@ -1,0 +1,7 @@
+@EmployeeCrud.Api_HostAddress = http://localhost:5081
+
+# Đường dẫn không tồn tại: mong đợi 404 dạng ProblemDetails, title "Không tìm thấy"
+GET {{EmployeeCrud.Api_HostAddress}}/api/khong-ton-tai
+Accept: application/json
+
+###
