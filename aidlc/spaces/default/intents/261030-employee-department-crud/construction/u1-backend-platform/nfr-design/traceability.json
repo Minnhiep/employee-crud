@@ -1,0 +1,25 @@
+{
+  "stage": "nfr-design",
+  "unit": "u1-backend-platform",
+  "upstream_ids": ["NFR5.1","NFR5.2","NFR5.3","NFR2.1","NFR2.2","NFR2.3","NFR7.1","NFR7.2","NFR3.1","NFR3.2","NFR2.4","NFR5.4","NFR5.5","NFR1.1","NFR1.2","NFR1.3","NFR1.4","NFR3.3"],
+  "coverage": [
+    { "id": "NFR5.1", "status": "OK", "target": "performance-design: chuỗi xử lý 5 bước, không middleware thừa" },
+    { "id": "NFR5.2", "status": "OK", "target": "performance-design: AddDbContext theo request + pool Npgsql mặc định" },
+    { "id": "NFR5.3", "status": "OK", "target": "performance-design: không chạy migration/nạp dữ liệu lúc khởi động" },
+    { "id": "NFR2.1", "status": "OK", "target": "security-design §1: user-secrets init, appsettings không có ConnectionStrings" },
+    { "id": "NFR2.2", "status": "OK", "target": "security-design §1: .gitignore + git grep giới hạn backend/frontend" },
+    { "id": "NFR2.3", "status": "OK", "target": "security-design §5 + observability-design: 500 chung chung, stack trace chỉ trong log" },
+    { "id": "NFR7.1", "status": "OK", "target": "security-design §2: chính sách CORS một origin, không credential" },
+    { "id": "NFR7.2", "status": "OK", "target": "security-design §2: UseCors ngoài cùng + 3 test WebApplicationFactory với endpoint ném lỗi" },
+    { "id": "NFR3.1", "status": "OK", "target": "security-design §4: đọc SqlState + ConstraintName từ PostgresException" },
+    { "id": "NFR3.2", "status": "OK", "target": "security-design §4: service U3/U4 tự bắt DbUpdateException; U1 dự phòng 409 chung" },
+    { "id": "NFR2.4", "status": "OK", "target": "security-design §3: kiểm lại DTO ở API; bỏ phần 413/32 KB vì không có nguồn" },
+    { "id": "NFR5.4", "status": "OK", "target": "scalability-design: một tiến trình" },
+    { "id": "NFR5.5", "status": "OK", "target": "scalability-design: không static, vòng đời theo request" },
+    { "id": "NFR1.1", "status": "OK", "target": "reliability-design §1: kiểm chuỗi kết nối lúc khởi động, thoát mã khác 0" },
+    { "id": "NFR1.2", "status": "OK", "target": "reliability-design §2: dotnet ef database update khi chưa có migration (dự phòng migrations list) + gói EFCore.Design" },
+    { "id": "NFR1.3", "status": "OK", "target": "reliability-design §2: launchSettings Development, -- --environment Development" },
+    { "id": "NFR1.4", "status": "OK", "target": "reliability-design §3: không retry, request lỗi 500, pool tự nối lại" },
+    { "id": "NFR3.3", "status": "OK", "target": "reliability-design §4: unit test từng nhánh bộ đổi lỗi" }
+  ]
+}

@@ -1,0 +1,1 @@
+"Ứng dụng quản lý nhân viên và phòng ban theo docs/ke-hoach.md: React → Web API JSON → ASP.NET Core → PostgreSQL; nhân viên: danh sách, thêm, sửa, xóa, tìm kiếm theo họ tên và email, chọn phòng ban; phòng ban: danh sách, thêm, sửa, xóa; kiểm tra dữ liệu và báo lỗi; bàn giao source + migration, sơ đồ DB, danh sách API kèm JSON, README"

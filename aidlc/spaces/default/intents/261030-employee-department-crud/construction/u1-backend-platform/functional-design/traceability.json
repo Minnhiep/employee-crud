@@ -1,0 +1,26 @@
+{
+  "stage": "functional-design",
+  "unit": "u1-backend-platform",
+  "upstream_ids": ["AC4.1.1","AC4.1.2","AC4.1.3","AC5.1.1","AC5.1.2","AC5.1.3","AC5.2.1","AC5.2.2","AC5.2.3","AC5.2.4"],
+  "coverage": [
+    { "id": "AC4.1.1", "status": "N/A", "target": "kiểm dữ liệu trên form React - delivered by u2-web-shell, u3-departments, u4-employees" },
+    { "id": "AC4.1.2", "status": "OK", "target": "BR1.2, BR1.8" },
+    { "id": "AC4.1.3", "status": "OK", "target": "BR1.2, BR1.3" },
+    { "id": "AC5.1.1", "status": "N/A", "target": "các bước README và migration - delivered by u5-handover, u3-departments, u4-employees" },
+    { "id": "AC5.1.2", "status": "OK", "target": "BR2.1, BR2.2" },
+    { "id": "AC5.1.3", "status": "N/A", "target": "luồng thêm/sửa/xóa/tìm trọn vẹn - delivered by u3-departments, u4-employees" },
+    { "id": "AC5.2.1", "status": "N/A", "target": "danh sách API kèm JSON - delivered by u5-handover" },
+    { "id": "AC5.2.2", "status": "N/A", "target": "mã thành công 200/201/204 của từng endpoint - delivered by u3-departments, u4-employees" },
+    { "id": "AC5.2.3", "status": "OK", "target": "BR1.1, BR1.3, BR1.7, BR1.8" },
+    { "id": "AC5.2.4", "status": "OK", "target": "BR2.4" }
+  ],
+  "reverse": [
+    { "id": "BR1.4", "status": "N/A", "target": "chốt chặn database cho trùng dữ liệu (NFR3, contract C3) - không gắn AC riêng" },
+    { "id": "BR1.5", "status": "N/A", "target": "chốt chặn database cho khóa ngoại (NFR3, contract C3) - không gắn AC riêng" },
+    { "id": "BR1.6", "status": "N/A", "target": "phong bì lỗi 500 (contract C3) - lỗi ngoài dự kiến" },
+    { "id": "BR2.3", "status": "N/A", "target": "CORS (NFR7) - điều kiện kỹ thuật để giao diện gọi API" },
+    { "id": "BR2.5", "status": "N/A", "target": "JSON camelCase (FR6.2, contract C3)" },
+    { "id": "BR3.1", "status": "N/A", "target": "truy cập database bất đồng bộ (NFR5, ADR-004)" },
+    { "id": "BR3.2", "status": "N/A", "target": "log không chứa bí mật (NFR2)" }
+  ]
+}

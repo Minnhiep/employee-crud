@@ -1,0 +1,29 @@
+## Review
+
+**Verdict:** READY
+**Reviewer:** aidlc-architecture-reviewer-agent
+**Date:** 2026-11-01T09:19:14Z
+**Iteration:** 1
+**Verdict Dictated:** no
+
+### Findings
+
+| ID | Severity | Location | Finding | Required action | Status |
+|---|---|---|---|---|---|
+| R-01 | Major | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u1-backend-platform/infrastructure-design/cicd-pipeline.md > mục 1, bước 5 "Quét bí mật" | Lệnh `git grep -i -n "password=" -- backend frontend` chỉ quét file Git đã theo dõi. Ở lần commit đầu tiên (repo chưa có commit nào), mọi file mới đều chưa được theo dõi, nên lệnh luôn ra 0 dòng dù có lộ mật khẩu. Bước này lại đứng trước bước commit, nên "đạt" là đạt giả đúng ở lúc cần nhất. Mẫu `password=` cũng bỏ sót dạng `Password = ...` có khoảng trắng và dạng `Pwd=`. | Đổi lệnh thành `git grep --untracked -i -n -E "(password\|pwd)s*=" -- backend frontend` (hoặc ghi rõ phải `git add` trước khi quét). Cập nhật cùng chỗ trong `security-design.md` §1 khi tới Code Generation. | New |
+| R-02 | Major | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u1-backend-platform/infrastructure-design/infrastructure-specification.md > bảng Infrastructure Services, dòng User-secrets; và cicd-pipeline.md > bước 4 | Thiết kế yêu cầu backend thoát với mã khác 0 khi `ConnectionStrings:Default` rỗng (NFR1.1), còn ba test CORS dựng ứng dụng thật bằng `WebApplicationFactory`. User-secrets chỉ nạp ở môi trường Development, nên khi `dotnet test` chạy (môi trường Testing) ứng dụng sẽ tự thoát và ba test sẽ hỏng. Tài liệu hạ tầng không nói cấu hình của lúc chạy test lấy từ đâu. Nếu test tự nhét một chuỗi kết nối giả có `Password=`, bước quét bí mật ở trên lại báo nhầm trong thư mục `backend`. | Ghi rõ vào đặc tả hạ tầng: project test cấp chuỗi kết nối giả qua `ConfigureAppConfiguration` (hoặc biến môi trường) và không kết nối thật; chuỗi giả không chứa `Password=` thật (ví dụ dùng `Host=localhost;Database=test`). Ghi rõ cách bước quét bí mật loại trừ hoặc tránh chuỗi này. | New |
+| R-03 | Minor | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u1-backend-platform/infrastructure-design/cicd-pipeline.md > mục 1 bước 4 và monitoring-design.md > Metrics, dòng "Độ phủ dòng" | Mức sàn 80% của các lớp service được ghi là điều kiện qua, nhưng `--collect:"XPlat Code Coverage"` chỉ sinh file `coverage.cobertura.xml`, không tự so với ngưỡng. Tool manifest chỉ có `dotnet-ef`, chưa có công cụ đọc báo cáo. Hiệp sẽ khó biết con số theo từng lớp service. Việc này chỉ cần từ U3, nên chưa chặn U1. | Trước U3, chọn một cách đọc hoặc ép ngưỡng: thêm `dotnet-reportgenerator-globaltool` vào tool manifest cục bộ, hoặc đặt `Threshold` của coverlet. Ghi lệnh cụ thể vào cicd-pipeline. | New |
+| R-04 | Minor | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u1-backend-platform/infrastructure-design/infrastructure-specification.md > Deployment, dòng Networking | CORS chỉ cho phép đúng `http://localhost:5173`. Nếu cổng 5173 đang bận, Vite tự nhảy sang 5174 và mọi lời gọi API bị chặn CORS với triệu chứng chỉ là "lỗi mạng" khó hiểu. Thiết kế không nhắc điều này. Giá trị `Cors:AllowedOrigins` cũng chưa nói nằm ở file cấu hình nào. | Ghi vào cấu hình U2 `server.strictPort: true` (Vite báo lỗi thay vì đổi cổng) và nêu trong README. Ghi rõ `Cors:AllowedOrigins` nằm trong `appsettings.json` (không phải bí mật, được commit). | New |
+| R-05 | Minor | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u1-backend-platform/infrastructure-design/cicd-pipeline.md > mục 3 bước 3 và mục 4 | Lệnh `dotnet ef database update` ở mục 3 không nhắc điều kiện môi trường Development để đọc user-secrets (chỉ có ở `reliability-design.md` §2). Mục 4 "migration trước đó" không nói cách lùi về trước migration đầu tiên (`dotnet ef database update 0`), và không nói thứ tự: lùi database trước, rồi mới `git revert` code, nếu không code còn thiếu migration đã áp dụng. | Thêm vào mục 3 lời nhắc `-- --environment Development` khi không đọc được user-secrets. Thêm vào mục 4 trường hợp `update 0` và nêu thứ tự lùi database trước, `git revert` sau. | New |
+| R-06 | Minor | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u1-backend-platform/infrastructure-design/monitoring-design.md > Metrics, dòng "Thời gian khởi động backend" | Ngưỡng "≤ 10 giây từ lúc gõ `dotnet run` tới dòng `Now listening on:`" gộp cả thời gian build lại của `dotnet run`, nên con số phụ thuộc việc có thay đổi code hay không. Cách đo chưa rõ. | Ghi rõ đo bằng `dotnet run --no-build` sau khi đã build. | New |
+| R-07 | Minor | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u1-backend-platform/infrastructure-design/cicd-pipeline.md > mục 1, các lệnh dùng `backend/EmployeeCrud.sln` | Đường dẫn `backend/EmployeeCrud.sln` và `backend/EmployeeCrud.Api` được viết như đã chốt, nhưng bố cục thư mục do Code Generation quyết. Nếu bố cục khác, các lệnh trong checklist sẽ sai. | Đánh dấu các đường dẫn là "dự kiến", yêu cầu Code Generation cập nhật checklist và README cho khớp bố cục thật. | New |
+
+### Validation Tool Results
+
+| Tool | Result | Interpretation |
+|---|---|---|
+| traceability | Đã đạt theo thông báo của điều phối viên; không chạy lại. `traceability.json` liệt kê 18 NFR, 14 OK và 4 N/A (NFR2.4, NFR3.1, NFR3.2, NFR5.5) | Truy vết đủ, lý do N/A hợp lý vì là logic code. Hai dòng OK (NFR7.2, NFR1.1) dựa vào kiểm chứng mà cicd-pipeline chưa mô tả chi tiết (xem finding về cấu hình khi chạy test) |
+
+### Summary
+
+Thiết kế hạ tầng phù hợp với phạm vi máy cá nhân và không vi phạm điều cấm nào (không cloud, Docker, CI, push, secret trong repo). Hai điểm nên xử lý trước khi duyệt: bước quét bí mật bỏ sót file chưa theo dõi (đạt giả ở commit đầu), và chưa nói cấu hình khi chạy test trong khi ứng dụng cố ý thoát nếu thiếu chuỗi kết nối. Các điểm Minor còn lại không chặn.

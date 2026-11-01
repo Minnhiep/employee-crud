@@ -1,0 +1,25 @@
+{
+  "stage": "infrastructure-design",
+  "unit": "u1-backend-platform",
+  "upstream_ids": ["NFR5.1","NFR5.3","NFR5.2","NFR2.1","NFR2.4","NFR7.1","NFR7.2","NFR3.1","NFR3.2","NFR2.2","NFR2.3","NFR5.4","NFR5.5","NFR1.1","NFR1.4","NFR3.3","NFR1.2","NFR1.3"],
+  "coverage": [
+    { "id": "NFR5.1", "status": "OK", "target": "monitoring-design: đo thời gian phản hồi bằng Postman/Network; chuỗi xử lý 5 bước, log 4xx không thêm middleware" },
+    { "id": "NFR5.3", "status": "OK", "target": "infrastructure-specification: migration do Hiệp chạy bằng dotnet ef, không chạy lúc khởi động; monitoring-design: đo thời gian khởi động" },
+    { "id": "NFR5.2", "status": "OK", "target": "infrastructure-specification: PostgreSQL localhost:5432, pool kết nối mặc định của Npgsql" },
+    { "id": "NFR2.1", "status": "OK", "target": "infrastructure-specification: user-secrets ConnectionStrings:Default, dự phòng biến môi trường" },
+    { "id": "NFR2.4", "status": "N/A", "target": "Kiểm dữ liệu ở DTO là việc của code, không cần tài nguyên hạ tầng; giữ giới hạn body mặc định của Kestrel" },
+    { "id": "NFR7.1", "status": "OK", "target": "infrastructure-specification: Shared Infrastructure, chính sách CORS chỉ http://localhost:5173" },
+    { "id": "NFR7.2", "status": "OK", "target": "infrastructure-specification: ghi chú cho Code Generation (IExceptionHandler áp lại CORS); cicd-pipeline bước 4 chạy ba test CORS" },
+    { "id": "NFR3.1", "status": "N/A", "target": "Đổi lỗi PostgresException theo tên ràng buộc là logic code; hạ tầng chỉ cần database employee_db đã có" },
+    { "id": "NFR3.2", "status": "N/A", "target": "Service U3/U4 tự bắt DbUpdateException là logic code; không cần tài nguyên hạ tầng" },
+    { "id": "NFR2.2", "status": "OK", "target": "cicd-pipeline bước 5: git grep quét bí mật; .gitignore ở mục 5" },
+    { "id": "NFR2.3", "status": "OK", "target": "monitoring-design: Logs & Tracing, không ghi chuỗi kết nối, mật khẩu, body; stack trace chỉ ở console" },
+    { "id": "NFR5.4", "status": "OK", "target": "infrastructure-specification: Deployment, một tiến trình dotnet run trên máy" },
+    { "id": "NFR5.5", "status": "N/A", "target": "Vòng đời theo request là cách đăng ký dịch vụ trong code; một tiến trình nên không có trạng thái chia sẻ giữa các máy" },
+    { "id": "NFR1.1", "status": "OK", "target": "monitoring-design: Alerts, thiếu chuỗi kết nối thì log Critical tiếng Việt rồi thoát" },
+    { "id": "NFR1.4", "status": "OK", "target": "infrastructure-specification: PostgreSQL không retry; pool Npgsql tự nối lại" },
+    { "id": "NFR3.3", "status": "OK", "target": "cicd-pipeline bước 4: dotnet test chạy unit test bộ đổi lỗi trước mỗi commit" },
+    { "id": "NFR1.2", "status": "OK", "target": "infrastructure-specification: dotnet-ef tool cục bộ; cicd-pipeline mục 3: dotnet ef database update khi chưa có migration (W4)" },
+    { "id": "NFR1.3", "status": "OK", "target": "infrastructure-specification: Environments chỉ Development trong launchSettings.json" }
+  ]
+}
