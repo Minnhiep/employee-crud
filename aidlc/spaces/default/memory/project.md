@@ -40,7 +40,7 @@
 ## Tech Stack
 
 <!-- Technology choices locked for this project. -->
-- Frontend: React with JavaScript (not TypeScript), created with Vite as a single-page app that calls the separate ASP.NET Core API (not Next.js or another server framework).
+- Frontend: React with TypeScript (strict mode, `.tsx`/`.ts` files), created with Vite as a single-page app that calls the separate ASP.NET Core API (not Next.js or another server framework). Changed from JavaScript by Hiệp on 2026-11-01 (U2 Code Generation) for a professional, maintainable codebase.
 - Backend: ASP.NET Core on .NET 10 (LTS), Web API controller-based (Controller → Service → DTO), Dependency Injection.
 - Data access: Entity Framework Core + Npgsql.EntityFrameworkCore.PostgreSQL (10.x), migrations.
 - Database: PostgreSQL 18 (local, port 5432, database `employee_db`).
@@ -77,7 +77,7 @@ NEVER set up CI/CD in this scope (affirmed 2026-10-30, docs/ke-hoach.md section 
 NEVER commit secrets such as the PostgreSQL password; use user-secrets or local config excluded from git (affirmed 2026-10-30)
 NEVER add authentication, login or user roles — not in docs/ke-hoach.md (affirmed 2026-10-30)
 NEVER use Docker or containers in this scope — run directly on the local machine (affirmed 2026-10-30)
-NEVER use TypeScript or Next.js for the frontend in this scope (affirmed 2026-10-30)
+NEVER use Next.js or another server framework for the frontend in this scope (affirmed 2026-10-30; the TypeScript ban was lifted by Hiệp on 2026-11-01)
 
 NEVER cài công cụ hoặc gói ra ngoài thư mục dự án (ví dụ `dotnet tool install --global`, `npm install -g`) hay đổi PATH khi Hiệp chưa duyệt. (affirmed 2026-10-30)
 

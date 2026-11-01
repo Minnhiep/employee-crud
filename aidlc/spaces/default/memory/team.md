@@ -47,7 +47,7 @@
 ## Code Style
 
 - C# / ASP.NET Core: theo quy ước chuẩn của .NET: PascalCase cho class, method, property; camelCase cho biến cục bộ và tham số; `_camelCase` cho field private; method bất đồng bộ có hậu tố `Async`; bật nullable reference types. Định dạng theo file `.editorconfig` và lệnh `dotnet format` (Q9).
-- React / JavaScript: ESLint theo cấu hình Vite tạo sẵn (`npm run lint`) cộng Prettier với cấu hình mặc định (Q9). File component dạng `.jsx`, tên component PascalCase, biến và hàm camelCase.
+- React / TypeScript: ESLint (cấu hình theo mẫu Vite cho React + `typescript-eslint`, chạy bằng `npm run lint`) cộng Prettier với cấu hình mặc định (Q9). TypeScript bật `strict`, kiểm bằng `tsc` khi build. File component dạng `.tsx`, file không có JSX dạng `.ts`; tên component PascalCase, biến và hàm camelCase. (Hiệp đổi từ JavaScript sang TypeScript ngày 2026-11-01.)
 - Format và lint chạy trên máy trước khi commit; dự án không có CI.
 - Database: tên bảng và cột viết thường dạng `snake_case` (`employees`, `departments`, `full_name`, `department_id`), khai báo tay trong cấu hình EF Core (`ToTable`, `HasColumnName`), không thêm gói `EFCore.NamingConventions` (Q10).
 - API: đường dẫn chữ thường, danh từ số nhiều (`/api/employees`, `/api/departments`); JSON dùng camelCase (mặc định của ASP.NET Core); lỗi trả theo ProblemDetails với mã 400/404/409.

@@ -1,1 +1,1 @@
-dotnet test backend/EmployeeCrud.slnx
+npm --prefix frontend run verify

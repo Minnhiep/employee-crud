@@ -1,0 +1,24 @@
+{
+  "stage": "nfr-design",
+  "unit": "u2-web-shell",
+  "upstream_ids": ["NFR5.1","NFR5.2","NFR5.3","NFR5.4","NFR8.1","NFR8.2","NFR8.3","NFR8.4","NFR8.5","NFR2.1","NFR2.2","NFR7.1","NFR7.2","NFR7.3","NFR7.4","NFR7.5","NFR2.3"],
+  "coverage": [
+    { "id": "NFR5.1", "status": "OK", "target": "performance-design §1: ba thư viện, font hệ thống, đo trên bản build; đo lại sau U3/U4" },
+    { "id": "NFR5.2", "status": "OK", "target": "performance-design §1: NavLink/Link cho mọi đường dẫn nội bộ" },
+    { "id": "NFR5.3", "status": "OK", "target": "performance-design §1: AbortController 10 giây bao cả đọc body, gộp signal của trang" },
+    { "id": "NFR5.4", "status": "OK", "target": "performance-design §1: chỉ react, react-dom, react-router ở dependencies" },
+    { "id": "NFR8.1", "status": "OK", "target": "performance-design §5: npm run lint, format, format:check" },
+    { "id": "NFR8.2", "status": "OK", "target": "performance-design §5 + logical-components §2: phần khung WCAG" },
+    { "id": "NFR8.3", "status": "OK", "target": "performance-design §5: một h1 mỗi trang, đo trên cổng 5173" },
+    { "id": "NFR8.4", "status": "OK", "target": "performance-design §5: meta, key, favicon; console.error chỉ khi lỗi thật" },
+    { "id": "NFR8.5", "status": "OK", "target": "performance-design §5: không trùng id, lồng thẻ đúng" },
+    { "id": "NFR2.1", "status": "OK", "target": "security-design §1: .env.development chỉ có VITE_API_BASE_URL, quét git grep" },
+    { "id": "NFR2.2", "status": "OK", "target": "security-design §1: node_modules, dist trong .gitignore" },
+    { "id": "NFR7.1", "status": "OK", "target": "security-design §2: vite.config port 5173 strictPort cho dev và preview" },
+    { "id": "NFR7.2", "status": "OK", "target": "security-design §2: fetch không đặt credentials include" },
+    { "id": "NFR7.3", "status": "OK", "target": "security-design §2: VITE_API_BASE_URL mặc định http://localhost:5081, phụ thuộc U1 đã kiểm" },
+    { "id": "NFR7.4", "status": "OK", "target": "security-design §3: cấm dangerouslySetInnerHTML/innerHTML/eval, kiểm git grep" },
+    { "id": "NFR7.5", "status": "OK", "target": "security-design §3: ApiError chỉ mang message/errors" },
+    { "id": "NFR2.3", "status": "N/A", "target": "Mã của U1 (500 không lộ chi tiết ở backend), chỉ được nhắc tới trong NFR7.5 của U2" }
+  ]
+}

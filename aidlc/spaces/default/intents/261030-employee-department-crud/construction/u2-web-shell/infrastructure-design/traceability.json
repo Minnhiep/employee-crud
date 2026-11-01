@@ -1,0 +1,22 @@
+{
+  "stage": "infrastructure-design",
+  "unit": "u2-web-shell",
+  "upstream_ids": ["NFR5.1","NFR5.4","NFR8.1","NFR8.5","NFR5.2","NFR5.3","NFR8.2","NFR8.3","NFR8.4","NFR2.1","NFR2.2","NFR7.1","NFR7.5","NFR7.3","NFR7.4"],
+  "coverage": [
+    { "id": "NFR5.1", "status": "OK", "target": "infrastructure-specification: Vite preview cổng 5173; monitoring-design: Lighthouse Performance" },
+    { "id": "NFR5.4", "status": "OK", "target": "infrastructure-specification: npm registry, package-lock.json được commit" },
+    { "id": "NFR8.1", "status": "OK", "target": "cicd-pipeline bước 2–3: npm run lint, npm run format:check" },
+    { "id": "NFR8.5", "status": "OK", "target": "monitoring-design: W3C Validator; cicd-pipeline §3" },
+    { "id": "NFR5.2", "status": "OK", "target": "monitoring-design: tab Network lọc Doc khi bấm menu" },
+    { "id": "NFR5.3", "status": "N/A", "target": "Hạn 10 giây là logic trong client.js, không cần tài nguyên hạ tầng" },
+    { "id": "NFR8.2", "status": "N/A", "target": "WCAG là thiết kế giao diện trong code; kiểm tay ở Build and Test" },
+    { "id": "NFR8.3", "status": "OK", "target": "monitoring-design: Lighthouse Accessibility trên npm run preview cổng 5173" },
+    { "id": "NFR8.4", "status": "OK", "target": "monitoring-design: Best Practices, Logs & Tracing console sạch" },
+    { "id": "NFR2.1", "status": "OK", "target": "cicd-pipeline bước 5: git grep bí mật trong frontend; §6" },
+    { "id": "NFR2.2", "status": "OK", "target": "infrastructure-specification: Shared Infrastructure, .gitignore gốc loại node_modules và dist" },
+    { "id": "NFR7.1", "status": "OK", "target": "infrastructure-specification: Vite dev server và preview port 5173 strictPort" },
+    { "id": "NFR7.5", "status": "N/A", "target": "Lời báo lỗi không lộ chi tiết là logic trong client.js, không cần tài nguyên hạ tầng" },
+    { "id": "NFR7.3", "status": "OK", "target": "infrastructure-specification: Backend U1 qua VITE_API_BASE_URL=http://localhost:5081, hồ sơ http" },
+    { "id": "NFR7.4", "status": "OK", "target": "cicd-pipeline bước 5: git grep dangerouslySetInnerHTML/innerHTML/eval" }
+  ]
+}

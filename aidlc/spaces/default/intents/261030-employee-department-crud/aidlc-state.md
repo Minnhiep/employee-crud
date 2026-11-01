@@ -63,9 +63,27 @@
 
 
 
-- **Construction Verification Command**: dotnet test backend/EmployeeCrud.slnx
+- **Construction Verification Command**: npm --prefix frontend run verify
 
-- **Parked**: 2026-11-01T14:46:24Z
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- **Parked**: 2026-11-01T15:52:55Z
 
 - **Parked At Stage**: functional-design
 
@@ -131,7 +149,7 @@
 - **Current Stage**: functional-design
 - **Next Stage**: nfr-requirements
 - **Status**: Running
-- **Last Updated**: 2026-11-01T14:46:24Z
+- **Last Updated**: 2026-11-01T15:52:55Z
 
 - **Construction Autonomy Mode**: autonomous
 
