@@ -36,3 +36,5 @@ node_modules/
 dist/
 TestResults/
 coverage*/
+# Log của công cụ kiểm trình duyệt (Playwright) khi kiểm tay
+.playwright-mcp/

@@ -1,0 +1,47 @@
+/*
+ * Bộ biến dùng chung (design tokens) - nguồn: refined-mockups/design-system-mapping.md.
+ * Mọi màu, cỡ chữ, khoảng cách trong ứng dụng chỉ lấy từ đây, để các trang trông giống nhau.
+ * Tỉ lệ tương phản đã chọn để đạt WCAG 2.1 AA.
+ */
+:root {
+  /* Màu */
+  --color-text: #1f2937;
+  --color-text-muted: #4b5563;
+  --color-bg: #ffffff;
+  --color-surface: #f3f4f6;
+  --color-border: #6b7280;
+  --color-primary: #1d4ed8;
+  --color-primary-hover: #1e40af;
+  --color-danger: #b91c1c;
+  --color-danger-hover: #991b1b;
+  --color-danger-bg: #fef2f2;
+  --color-success: #166534;
+  --color-success-bg: #f0fdf4;
+  --color-focus: #1d4ed8;
+  --color-on-primary: #ffffff;
+
+  /* Chữ - dùng rem để phóng to 200% không vỡ giao diện */
+  --font-family: system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-size-base: 1rem;
+  --font-size-sm: 0.875rem;
+  --font-size-h1: 1.75rem;
+  --font-size-brand: 1.25rem;
+  --line-height: 1.5;
+
+  /* Khoảng cách: 4 - 8 - 16 - 24 - 32 - 48 px */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --space-6: 3rem;
+
+  /* Viền, focus, kích thước */
+  --radius: 4px;
+  --border-width: 1px;
+  --border-width-strong: 2px;
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  --content-max-width: 1100px;
+  --control-min-height: 2.75rem;
+}

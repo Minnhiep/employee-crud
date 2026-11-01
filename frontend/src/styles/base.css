@@ -1,0 +1,83 @@
+/* Kiểu nền cho thẻ HTML - chỉ dùng biến trong tokens.css. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+h1 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-h1);
+  line-height: 1.25;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* Luôn thấy được focus khi dùng bàn phím (WCAG 2.4.7). Không bao giờ dùng outline: none. */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* h1 và main nhận focus bằng code (tabindex="-1"), không cần viền khi focus kiểu đó. */
+h1:focus:not(:focus-visible),
+main:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Ẩn khỏi mắt nhưng trình đọc màn hình vẫn đọc. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Liên kết bỏ qua: nằm ngoài màn hình, chỉ hiện khi nhận focus (WCAG 2.4.1). */
+.skip-link {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 10;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border-radius: var(--radius);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  color: var(--color-on-primary);
+  transform: translateY(0);
+}
+
+/* Máy bật "giảm chuyển động" thì tắt mọi hiệu ứng chuyển động (WCAG 2.3.1). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
