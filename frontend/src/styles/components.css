@@ -177,6 +177,27 @@
   flex: 1 1 16rem;
 }
 
+/* ---- Đầu trang danh sách: tiêu đề bên trái, nút thêm bên phải (mockup mục 3, 5) ---- */
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+/* Dòng "Có N ..." dưới bảng. */
+.list-count {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+}
+
 /* ---- Form ---- */
 
 .form {

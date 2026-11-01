@@ -1,3 +1,5 @@
+using EmployeeCrud.Api.Departments;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace EmployeeCrud.Api.Platform.Data;
@@ -8,6 +10,8 @@ namespace EmployeeCrud.Api.Platform.Data;
 /// </summary>
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<Department> Departments => Set<Department>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Tự nạp mọi lớp IEntityTypeConfiguration trong project, để mỗi unit giữ cấu hình bảng

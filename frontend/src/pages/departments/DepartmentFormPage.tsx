@@ -1,0 +1,256 @@
+import { useEffect, useRef, useState } from "react";
+import type { SubmitEvent } from "react";
+import { Link, useNavigate, useParams } from "react-router";
+import { ApiError } from "../../api/client";
+import type { FieldErrors } from "../../api/client";
+import {
+  createDepartment,
+  getDepartment,
+  updateDepartment,
+} from "../../api/departments";
+import { ErrorSummary } from "../../components/ErrorSummary";
+import { FormField } from "../../components/FormField";
+import { StatusMessage } from "../../components/StatusMessage";
+import { splitErrors } from "../../components/splitErrors";
+import { usePageTitle } from "../../hooks/usePageTitle";
+import { useSubmitGuard } from "../../hooks/useSubmitGuard";
+import {
+  DEPARTMENT_NAME_MAX_LENGTH,
+  validateDepartment,
+} from "./validateDepartment";
+
+const GENERIC_MESSAGE = "Đã có lỗi xảy ra, vui lòng thử lại sau.";
+const FIELD_NAMES = ["name"] as const;
+const FIELD_LABELS = { name: "Tên phòng ban" };
+
+type LoadStatus = "loading" | "ready" | "not-found" | "error";
+
+type DepartmentFormPageProps = {
+  mode: "create" | "edit";
+};
+
+/**
+ * Form thêm và sửa phòng ban (US1.2, US1.3).
+ * Kiểm trên trình duyệt như API (BR4.2), khóa nút Lưu khi chờ (BR4.6), lưu xong về danh sách kèm lời báo (BR4.4).
+ */
+export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
+  const isEdit = mode === "edit";
+  const title = isEdit ? "Sửa phòng ban" : "Thêm phòng ban";
+  const headingRef = usePageTitle(title);
+  const navigate = useNavigate();
+  const { isSubmitting, run } = useSubmitGuard();
+
+  const params = useParams();
+  const id = Number(params.id);
+  // Địa chỉ như /departments/abc/edit: không phải mã hợp lệ, coi như không tìm thấy, không gọi API.
+  const hasValidId = Number.isInteger(id) && id > 0;
+
+  const [name, setName] = useState("");
+  const [loadStatus, setLoadStatus] = useState<LoadStatus>(() =>
+    !isEdit ? "ready" : hasValidId ? "loading" : "not-found",
+  );
+  const [loadError, setLoadError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [touched, setTouched] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [summaryMessages, setSummaryMessages] = useState<string[]>([]);
+
+  const summaryRef = useRef<HTMLDivElement>(null);
+  // Tăng số này để đưa focus vào khung tóm tắt lỗi SAU khi khung đã được vẽ.
+  const [summaryFocusRequest, setSummaryFocusRequest] = useState(0);
+
+  useEffect(() => {
+    if (summaryFocusRequest > 0) {
+      summaryRef.current?.focus();
+    }
+  }, [summaryFocusRequest]);
+
+  // Chế độ sửa: tải phòng ban để điền sẵn tên (BR4.3).
+  useEffect(() => {
+    if (!isEdit || !hasValidId) {
+      return;
+    }
+    const controller = new AbortController();
+    getDepartment(id, { signal: controller.signal }).then(
+      (department) => {
+        setName(department.name);
+        setLoadStatus("ready");
+      },
+      (error: unknown) => {
+        if (error instanceof ApiError && error.kind === "aborted") {
+          return;
+        }
+        if (error instanceof ApiError && error.status === 404) {
+          setLoadStatus("not-found");
+          return;
+        }
+        setLoadError(
+          error instanceof ApiError ? error.message : GENERIC_MESSAGE,
+        );
+        setLoadStatus("error");
+      },
+    );
+    return () => controller.abort();
+  }, [isEdit, hasValidId, id, reloadKey]);
+
+  function retryLoad() {
+    setLoadStatus("loading");
+    setReloadKey((key) => key + 1);
+  }
+
+  function handleNameChange(value: string) {
+    setName(value);
+    // Đã rời ô một lần thì kiểm lại ngay khi gõ, để lỗi biến mất khi đã sửa đúng.
+    if (touched) {
+      setFieldErrors(validateDepartment(value));
+    }
+  }
+
+  function handleNameBlur() {
+    setTouched(true);
+    const localErrors = validateDepartment(name);
+    // Chỉ thay lỗi khi kiểm trên trình duyệt thấy sai. Lỗi của API (ví dụ "đã tồn tại") được giữ tới khi
+    // người dùng sửa ô (onChange kiểm lại). Vì sao: lưu lỗi thì focus chuyển sang khung tóm tắt, ô tên bị
+    // blur; nếu thay hết ở đây thì lỗi API vừa nhận bị xóa ngay và người dùng không thấy gì.
+    setFieldErrors((current) =>
+      Object.keys(localErrors).length > 0 ? localErrors : current,
+    );
+  }
+
+  function showSaveError(error: unknown) {
+    if (error instanceof ApiError && error.kind === "aborted") {
+      return;
+    }
+    if (!(error instanceof ApiError)) {
+      setSummaryMessages([GENERIC_MESSAGE]);
+    } else if (error.status === 404) {
+      setSummaryMessages(["Không tìm thấy phòng ban, có thể đã bị xóa"]);
+    } else if (error.kind === "client") {
+      // 400/409: lỗi của ô tên hiện cạnh ô, lỗi khác (hoặc chỉ có detail) hiện ở khung tóm tắt.
+      const { fieldErrors: apiFieldErrors, otherMessages } = splitErrors(
+        error.errors,
+        FIELD_NAMES,
+      );
+      setFieldErrors(apiFieldErrors);
+      const hasAnyFieldError = Object.keys(error.errors).length > 0;
+      setSummaryMessages(
+        hasAnyFieldError ? otherMessages : [error.message || GENERIC_MESSAGE],
+      );
+    } else {
+      // Lỗi mạng hoặc lỗi máy chủ.
+      setSummaryMessages([error.message || GENERIC_MESSAGE]);
+    }
+    setSummaryFocusRequest((request) => request + 1);
+  }
+
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setTouched(true);
+    setSummaryMessages([]);
+
+    const errors = validateDepartment(name);
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      // Có lỗi thì không gửi request; đưa focus vào khung tóm tắt (AC4.1.1).
+      setSummaryFocusRequest((request) => request + 1);
+      return;
+    }
+
+    const request = { name: name.trim() };
+    await run(async () => {
+      try {
+        const saved = isEdit
+          ? await updateDepartment(id, request)
+          : await createDepartment(request);
+        const message = isEdit
+          ? `Đã cập nhật phòng ban "${saved.name}"`
+          : `Đã thêm phòng ban "${saved.name}"`;
+        void navigate("/departments", { state: { message } });
+      } catch (error) {
+        showSaveError(error);
+      }
+    });
+  }
+
+  return (
+    <>
+      <h1 ref={headingRef} tabIndex={-1}>
+        {title}
+      </h1>
+
+      {loadStatus === "loading" && (
+        <StatusMessage kind="loading" message="Đang tải..." />
+      )}
+      {loadStatus === "not-found" && (
+        <StatusMessage
+          kind="error"
+          message="Không tìm thấy phòng ban"
+          action={{ label: "Về danh sách phòng ban", to: "/departments" }}
+        />
+      )}
+      {loadStatus === "error" && (
+        <StatusMessage
+          kind="error"
+          message={loadError}
+          action={{ label: "Thử lại", onClick: retryLoad }}
+        />
+      )}
+
+      {loadStatus === "ready" && (
+        <form
+          className="form"
+          noValidate
+          onSubmit={(event) => void handleSubmit(event)}
+        >
+          <ErrorSummary
+            ref={summaryRef}
+            fieldErrors={fieldErrors}
+            fieldLabels={FIELD_LABELS}
+            messages={summaryMessages}
+          />
+
+          <p className="form__note">(* là ô bắt buộc)</p>
+
+          <FormField
+            id="name"
+            label="Tên phòng ban"
+            required
+            hint="Tối đa 100 ký tự"
+            errors={fieldErrors.name}
+          >
+            {(controlProps) => (
+              <input
+                {...controlProps}
+                type="text"
+                maxLength={DEPARTMENT_NAME_MAX_LENGTH}
+                autoComplete="off"
+                value={name}
+                onChange={(event) => handleNameChange(event.target.value)}
+                onBlur={handleNameBlur}
+                data-testid="department-name"
+              />
+            )}
+          </FormField>
+
+          <div className="form__actions">
+            <button
+              type="submit"
+              className="btn btn--primary"
+              disabled={isSubmitting}
+              data-testid="department-save"
+            >
+              {isSubmitting ? "Đang lưu..." : "Lưu"}
+            </button>
+            <Link
+              className="btn btn--secondary"
+              to="/departments"
+              data-testid="department-cancel"
+            >
+              Hủy
+            </Link>
+          </div>
+        </form>
+      )}
+    </>
+  );
+}

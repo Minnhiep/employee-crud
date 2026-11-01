@@ -1,3 +1,4 @@
+using EmployeeCrud.Api.Departments;
 using EmployeeCrud.Api.Platform;
 using EmployeeCrud.Api.Platform.Cors;
 using EmployeeCrud.Api.Platform.Data;
@@ -29,6 +30,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<AppDbContext>((services, options) =>
     options.UseNpgsql(services.GetRequiredService<IConfiguration>()
         .GetConnectionString(StartupChecks.ConnectionStringName)));
+
+// Service nghiệp vụ: Scoped, cùng vòng đời với AppDbContext của request (NFR5.6).
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 
 var app = builder.Build();
 
