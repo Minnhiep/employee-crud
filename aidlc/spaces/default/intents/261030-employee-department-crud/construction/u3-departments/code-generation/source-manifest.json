@@ -1,0 +1,21 @@
+{
+  "stage": "code-generation",
+  "unit": "u3-departments",
+  "version": 1,
+  "writes": [
+    { "path": "backend/EmployeeCrud.Api/Departments/" },
+    { "path": "backend/EmployeeCrud.Api/Migrations/" },
+    { "path": "backend/EmployeeCrud.Api/Platform/Data/AppDbContext.cs" },
+    { "path": "backend/EmployeeCrud.Api/Program.cs" },
+    { "path": "backend/EmployeeCrud.Api/EmployeeCrud.Api.csproj" },
+    { "path": "backend/EmployeeCrud.Api.Tests/EmployeeCrud.Api.Tests.csproj" },
+    { "path": "backend/EmployeeCrud.Api.Tests/Departments/" },
+    { "path": "dotnet-tools.json" },
+    { "path": "frontend/package.json" },
+    { "path": "frontend/src/App.tsx" },
+    { "path": "frontend/src/api/departments.ts" },
+    { "path": "frontend/src/pages/DepartmentsPage.tsx" },
+    { "path": "frontend/src/pages/departments/" },
+    { "path": "frontend/src/styles/components.css" }
+  ]
+}

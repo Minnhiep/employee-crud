@@ -1,0 +1,26 @@
+## Review
+
+**Verdict:** READY
+**Reviewer:** aidlc-architecture-reviewer-agent
+**Date:** 2026-11-01T18:24:08Z
+**Iteration:** 1
+**Verdict Dictated:** no
+
+### Findings
+
+| ID | Severity | Location | Finding | Required action | Status |
+|---|---|---|---|---|---|
+| R-01 | Minor | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u3-departments/infrastructure-design/cicd-pipeline.md > §1 bước 4 (Độ phủ) và §2 | Ngưỡng 80% dòng của `DepartmentService` chỉ được đọc bằng mắt từ `TextSummary` của reportgenerator. Lệnh `verify` đã duyệt (typecheck, lint, format:check, build, dotnet test) không hề kiểm độ phủ, và bước 4 chưa ghi lệnh chính xác (hoãn cho Code Generation và README). Nếu Hiệp bỏ qua bước 4 thì không có gì chặn commit. | Ghi lệnh độ phủ đầy đủ (kể cả đường dẫn thư mục kết quả cố định) ngay trong bước 4 hoặc chốt nó là mục bắt buộc ở kế hoạch Code Generation, để Hiệp copy chạy được mà không phải đoán. | New |
+| R-02 | Minor | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u3-departments/infrastructure-design/infrastructure-specification.md > Infrastructure Services (hàng `Microsoft.EntityFrameworkCore.InMemory` và `dotnet-reportgenerator-globaltool`) | Hai mục mới ghi phiên bản lỏng (`10.0.x`) hoặc không ghi số phiên bản. Dự án test hiện đã có `Microsoft.AspNetCore.Mvc.Testing Version="10.*"` (trôi phiên bản). Trong khi đó `dotnet-tools.json` ghim `dotnet-ef` 10.0.14 với `rollForward: false`. Bản InMemory lệch với EF Core đang dùng có thể làm test vỡ ở lần restore sau. | Ghim đúng số phiên bản cho InMemory (khớp EF Core của backend) và reportgenerator trong manifest. Tùy chọn: ghim luôn `Mvc.Testing` để cả ba cùng một quy tắc. | New |
+| R-03 | Minor | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u3-departments/infrastructure-design/cicd-pipeline.md > §1 bước 5.1 (kiểm `lower('KẾ TOÁN')`) | Phép kiểm khả năng `lower()` của PostgreSQL với chữ có dấu (nền của chỉ mục duy nhất `ux_departments_name`) nằm ở bước thứ 5 của danh sách trước khi commit, tức là sau khi migration đã được viết và test đã chạy. Nếu kết quả là `false`, Hiệp phải làm lại thiết kế chỉ mục khi code đã xong. Ngoài ra, InMemory không thi hành chỉ mục duy nhất, nên nhánh 409 do chỉ mục chỉ được kiểm bằng tay ở bước 6. | Chuyển phép kiểm `lower()` lên làm việc đầu tiên của Code Generation, trước khi viết migration. Ghi rõ trong §1 rằng nhánh 409 do chỉ mục chỉ được chứng minh bằng pgAdmin và Postman, không phải bằng unit test. | New |
+
+### Validation Tool Results
+
+| Tool | Result | Interpretation |
+|---|---|---|
+| traceability | PASS (theo brief) | Các tham chiếu NFR và component khớp. |
+| Đối chiếu repo (`dotnet-tools.json`, `frontend/package.json`, `.gitignore`, `EmployeeCrud.Api.Tests.csproj`) | Lệnh `verify` đúng như tài liệu mô tả; `TestResults/` và `coverage*/` đã bị `.gitignore` loại; manifest hiện chỉ có `dotnet-ef`; chưa có thư mục `Migrations`, nên `dotnet ef database update 0` an toàn ở U3 | Không có mâu thuẫn giữa tài liệu và mã nguồn. |
+
+### Summary
+
+Thiết kế hạ tầng của U3 khớp ràng buộc (không Docker, không CI/CD, không bí mật mới) và có thể làm theo mà không phải đoán. Chỉ còn ba điểm nhỏ về cách ghim phiên bản, thứ tự kiểm `lower()` và việc ngưỡng độ phủ chưa được ép bằng lệnh.

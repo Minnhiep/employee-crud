@@ -1,0 +1,29 @@
+{
+  "stage": "nfr-design",
+  "unit": "u3-departments",
+  "upstream_ids": ["NFR5.1","NFR5.2","NFR5.3","NFR5.4","NFR2.1","NFR2.2","NFR2.3","NFR2.4","NFR2.5","NFR7.4","NFR7.1","NFR5.5","NFR5.6","NFR3.1","NFR3.2","NFR3.3","NFR1.1","NFR1.2","NFR1.3","NFR4.1","NFR4.2","NFR4.3"],
+  "coverage": [
+    { "id": "NFR5.1", "status": "OK", "target": "performance-design §1: GET danh sách 1 lần gọi database, ORDER BY trong database; đo Postman 3 lần" },
+    { "id": "NFR5.2", "status": "OK", "target": "performance-design §1: tối đa 3 lần gọi database cho mỗi thao tác ghi" },
+    { "id": "NFR5.3", "status": "OK", "target": "performance-design §2: AsNoTracking + Select ra DTO; kiểm trùng bằng lower() khớp chỉ mục" },
+    { "id": "NFR5.4", "status": "OK", "target": "performance-design §3: không cache, hủy request khi rời trang, đo Lighthouse ở Build and Test" },
+    { "id": "NFR2.1", "status": "OK", "target": "security-design §5: không thêm bí mật, quét git grep trước commit" },
+    { "id": "NFR2.2", "status": "OK", "target": "security-design §1: [Required] ở DTO, service trim + bắt buộc + ≤100 là nguồn đúng duy nhất" },
+    { "id": "NFR2.3", "status": "OK", "target": "security-design §2: chỉ LINQ lúc chạy; SQL tay cố định trong migration; cấm FromSqlRaw nối chuỗi" },
+    { "id": "NFR2.4", "status": "OK", "target": "security-design §3: DomainError, detail chỉ có mã hoặc tên phòng ban; lỗi lạ để U1 trả 500" },
+    { "id": "NFR2.5", "status": "OK", "target": "security-design §4: JSX tự thoát ký tự, không dangerouslySetInnerHTML" },
+    { "id": "NFR7.4", "status": "OK", "target": "security-design §4: theo đúng luật hiển thị an toàn NFR7.4 của U2 (nguồn của NFR2.5)" },
+    { "id": "NFR7.1", "status": "OK", "target": "security-design §6: dùng chính sách CORS Frontend của U1; kiểm POST thật từ 5173" },
+    { "id": "NFR5.5", "status": "OK", "target": "scalability-design §1: khoảng 100 phòng ban, không phân trang, ngưỡng xem lại 1.000" },
+    { "id": "NFR5.6", "status": "OK", "target": "scalability-design §2: AddScoped, không field static" },
+    { "id": "NFR3.1", "status": "OK", "target": "reliability-design §1, §5: CREATE UNIQUE INDEX ux_departments_name ON departments (lower(name)); kiểm SQL tay 23505" },
+    { "id": "NFR3.2", "status": "OK", "target": "reliability-design §1: varchar(100) NOT NULL" },
+    { "id": "NFR3.3", "status": "OK", "target": "reliability-design §3: bảng ai bắt lỗi nào; U3 bắt DbUpdateConcurrencyException → 404 và 23503 → 409" },
+    { "id": "NFR1.1", "status": "OK", "target": "reliability-design §4: migration CreateDepartments, Down xóa chỉ mục rồi bảng; kiểm update / update 0 / update" },
+    { "id": "NFR1.2", "status": "OK", "target": "reliability-design §2: InsertData không id, không HasData" },
+    { "id": "NFR1.3", "status": "OK", "target": "reliability-design §4: U4 dùng migration mới" },
+    { "id": "NFR4.1", "status": "OK", "target": "reliability-design §6: bảng ca test theo thao tác trên InMemory" },
+    { "id": "NFR4.2", "status": "OK", "target": "reliability-design §6: reportgenerator cài cục bộ (Q1: A), TextSummary theo lớp, DepartmentService ≥ 80%" },
+    { "id": "NFR4.3", "status": "OK", "target": "reliability-design §6: ThrowingAppDbContext ném concurrency và 23503; §5 kiểm trên PostgreSQL thật" }
+  ]
+}

@@ -2,6 +2,7 @@
 > This file is kept up to date automatically while the stage runs. Add observations at the review step, not by editing here directly.
 
 ## Interpretations
+- 2026-11-01T16:12:00Z [unit u3-departments] — Không hỏi thêm: luật FR1.1–FR1.7, C1/C4/C5, mockup mục 5–8 đã chốt. U3 bắt 23503 fk_employees_department khi xóa (đường dự phòng, theo rà soát Code Generation U1), U4 thêm kiểm trước. Ba điểm phải kiểm thật: lower() với chữ có dấu, thứ tự A-Z tiếng Việt theo collation English_United States.1252, dữ liệu mẫu không làm hỏng số tự tăng.
 - 2026-11-01T15:05:00Z [unit u2-web-shell] — Unit giao diện nhưng vẫn viết rules.md (BR1–BR4) để truy vết AC có đích BR; không viết entities.md (không có thực thể). Thêm ErrorSummary, FormField vào phần dùng chung vì story map giao U2 "cách hiện lỗi dùng chung" (US4.1) và "CSS cho nhãn và lỗi" (US4.6). Q1 = A: VITE_API_BASE_URL=http://localhost:5081 (C3 ghi HTTPS; Hiệp chọn http cho chạy trên máy).
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
@@ -15,4 +16,5 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-11-02T01:20:00Z [unit u3-departments] — Review (READY, advisory), đưa vào NFR/kế hoạch code U3: (Major) chỉ mục ux_departments_name trên lower(name) tạo bằng SQL thô trong migration 1 (+ DROP INDEX ở Down), seed bằng InsertData không kèm id; kiểm sau migration bằng pgAdmin + SQL tay chèn trùng. (Minor) DbUpdateConcurrencyException khi sửa/xóa → 404; đọc tên phòng ban trước khi xóa để ghi detail 409; unit test đường 23505/23503 bằng DbContext/interceptor giả ném PostgresException, chèn trùng thật kiểm bằng Postman/pgAdmin; thêm tên "Đ..."/"Ă/Â" khi kiểm thứ tự và so trùng, chọn một cách so duy nhất; id không phải số hoặc < 1 → 404 và form "Không tìm thấy phòng ban".
 - 2026-11-01T15:10:00Z [unit u2-web-shell] — Review (READY, advisory), đưa vào NFR/kế hoạch code U2: (1) hook dùng chung chặn gửi đôi bằng cờ useRef (AC4.4.1), khóa có hiệu lực ngay lúc bấm; (2) đo G1–G6 trên `vite preview --port 5173` (hoặc dev server) để khớp CORS của U1, ghi rõ bản build dùng giá trị mặc định http://localhost:5081; (3) client nhận `{ signal }`, hủy do người dùng không báo lỗi network, hạn 10 giây bao cả đọc body; (4) cách hiện Toast sau xóa (navigate cùng đường dẫn kèm state, replace), vùng role=status luôn có trong DOM; (5) kiểm POST thật qua cổng 5081 ở U3; (6) body không phải JSON / rỗng → ApiError server.
