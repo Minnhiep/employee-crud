@@ -40,23 +40,42 @@ cd employee-crud
 
 Backend cần biết cách vào PostgreSQL. Mật khẩu **không** để trong file nào của repo; nó được lưu riêng trên máy bạn bằng user-secrets (nằm trong thư mục hồ sơ người dùng của Windows, ngoài repo).
 
+Dán cả khối dưới đây vào PowerShell, bấm Enter, rồi gõ mật khẩu PostgreSQL khi được hỏi (chỉ hiện dấu `*`):
+
 ```powershell
-dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=employee_db;Username=postgres;Password=<mật-khẩu-của-bạn>" --project backend/EmployeeCrud.Api
+$s = Read-Host "Mat khau PostgreSQL" -AsSecureString
+$p = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=employee_db;Username=postgres;Password=$p" --project backend/EmployeeCrud.Api
+Remove-Variable p, s
 ```
 
-Thay `<mật-khẩu-của-bạn>` bằng mật khẩu PostgreSQL của bạn (giữ nguyên dấu ngoặc kép bao ngoài). Kiểm lại bằng `dotnet user-secrets list --project backend/EmployeeCrud.Api`.
+Vì sao không gõ thẳng mật khẩu vào lệnh: PowerShell ghi mọi lệnh đã gõ vào một file lịch sử trên máy, mật khẩu gõ thẳng sẽ nằm lại trong file đó. Nhập qua `Read-Host -AsSecureString` thì mật khẩu không vào lịch sử; dòng `Remove-Variable` xóa nó khỏi bộ nhớ sau khi dùng xong.
+
+Kiểm lại (mật khẩu được che thành `***` khi in ra):
+
+```powershell
+(dotnet user-secrets list --project backend/EmployeeCrud.Api) -replace 'Password=[^;]*', 'Password=***'
+```
+
+Phải thấy `ConnectionStrings:Default = Host=localhost;Port=5432;Database=employee_db;Username=postgres;Password=***`.
 
 Không dán mật khẩu vào `appsettings.json` hay `appsettings.Development.json`: hai file này nằm trong Git.
 
 Nếu quên bước này, backend sẽ dừng ngay khi chạy và in lời báo "Thiếu cấu hình ConnectionStrings:Default" kèm lệnh cần gõ.
 
-## 4. Khôi phục công cụ của dự án
+## 4. Khôi phục công cụ và gói thư viện của dự án
 
 ```powershell
 dotnet tool restore
 ```
 
-Lệnh này đọc `dotnet-tools.json` ở thư mục gốc và cài `dotnet-ef` 10.0.14 (chạy migration) và `reportgenerator` (đọc báo cáo độ phủ test) **cục bộ cho dự án**, không cài ra toàn máy.
+Lệnh này đọc `dotnet-tools.json` ở thư mục gốc và cài `dotnet-ef` 10.0.14 (chạy migration) và `reportgenerator` (đọc báo cáo độ phủ test) **cục bộ cho dự án**, không cài ra toàn máy. Phải thấy `Restore was successful.`
+
+```powershell
+dotnet restore backend/EmployeeCrud.slnx
+```
+
+Lệnh này tải các gói thư viện NuGet mà backend và project test dùng. Phải thấy `Restore complete`. **Đừng bỏ qua bước này:** lệnh migration ở mục 5 cần các gói đã được tải về, nếu không sẽ báo lỗi `NETSDK1004: Assets file '...project.assets.json' not found`.
 
 ## 5. Tạo database bằng migration
 
@@ -64,7 +83,7 @@ Lệnh này đọc `dotnet-tools.json` ở thư mục gốc và cài `dotnet-ef`
 dotnet ef database update --project backend/EmployeeCrud.Api
 ```
 
-Lệnh này tạo database `employee_db` (nếu chưa có) và chạy hai migration: bảng `departments` kèm 4 phòng ban mẫu (Nhân sự, Kế toán, Kỹ thuật, Kinh doanh), rồi bảng `employees`. Cấu trúc bảng xem ở [docs/so-do-database.md](docs/so-do-database.md).
+Lệnh này build backend, rồi tạo database `employee_db` (nếu chưa có) và chạy hai migration; cuối cùng in `Done.`. Hai migration là: bảng `departments` kèm 4 phòng ban mẫu (Nhân sự, Kế toán, Kỹ thuật, Kinh doanh), rồi bảng `employees`. Cấu trúc bảng xem ở [docs/so-do-database.md](docs/so-do-database.md).
 
 Muốn quay lui chỉ phần nhân viên: `dotnet ef database update CreateDepartments --project backend/EmployeeCrud.Api`.
 
