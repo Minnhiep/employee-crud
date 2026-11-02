@@ -1,4 +1,5 @@
 using EmployeeCrud.Api.Departments;
+using EmployeeCrud.Api.Employees;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +12,8 @@ namespace EmployeeCrud.Api.Platform.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Department> Departments => Set<Department>();
+
+    public DbSet<Employee> Employees => Set<Employee>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

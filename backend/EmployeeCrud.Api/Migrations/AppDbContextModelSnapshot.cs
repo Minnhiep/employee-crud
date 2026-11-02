@@ -40,6 +40,51 @@ namespace EmployeeCrud.Api.Migrations
 
                     b.ToTable("departments", (string)null);
                 });
+
+            modelBuilder.Entity("EmployeeCrud.Api.Employees.Employee", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DepartmentId")
+                        .HasColumnType("integer")
+                        .HasColumnName("department_id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("full_name");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId")
+                        .HasDatabaseName("ix_employees_department_id");
+
+                    b.ToTable("employees", (string)null);
+                });
+
+            modelBuilder.Entity("EmployeeCrud.Api.Employees.Employee", b =>
+                {
+                    b.HasOne("EmployeeCrud.Api.Departments.Department", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_employees_department");
+
+                    b.Navigation("Department");
+                });
 #pragma warning restore 612, 618
         }
     }

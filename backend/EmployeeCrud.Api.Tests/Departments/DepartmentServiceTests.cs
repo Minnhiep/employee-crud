@@ -1,6 +1,7 @@
 using EmployeeCrud.Api.Departments;
 using EmployeeCrud.Api.Platform.Data;
 using EmployeeCrud.Api.Platform.Errors;
+using EmployeeCrud.Api.Tests.TestSupport;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -270,6 +271,51 @@ public class DepartmentServiceTests
         var exception = await Record.ExceptionAsync(() => service.DeleteAsync(seeded[0].Id));
 
         Assert.Same(original, exception);
+    }
+
+    [Fact] // D1 (U4, BR2.7). Còn nhân viên thì service chặn TRƯỚC khi xóa, phòng ban vẫn còn.
+    public async Task Delete_WhenDepartmentHasEmployees_ThrowsConflict_AndKeepsDepartment()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
+        await TestDb.SeedEmployeeAsync(_options, "Minh Le", "minh@congty.vn", seeded[0].Id);
+
+        var exception = await Record.ExceptionAsync(() => CreateService().DeleteAsync(seeded[0].Id));
+
+        var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
+        Assert.Equal("Không thể xóa phòng ban", error.Title);
+        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì vẫn còn nhân viên.", error.Message);
+        Assert.Equal(["Kế toán"], await NamesInDatabaseAsync());
+    }
+
+    [Fact] // D2 (U4, NFR3.5). Bước kiểm trước và nhánh dự phòng 23503 ra cùng title và cùng câu.
+    public async Task Delete_PreCheckAndForeignKeyFallback_ReturnTheSameError()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
+        var fallbackService = CreateServiceThatFailsOnSave(
+            PostgresError(PostgresErrorCodes.ForeignKeyViolation, DbConstraintNames.EmployeeDepartmentForeignKey));
+        var fallback = AssertDomainError(
+            (await Record.ExceptionAsync(() => fallbackService.DeleteAsync(seeded[0].Id)))!, DomainErrorKind.Conflict);
+
+        await TestDb.SeedEmployeeAsync(_options, "Minh Le", "minh@congty.vn", seeded[0].Id);
+        var preCheck = AssertDomainError(
+            (await Record.ExceptionAsync(() => CreateService().DeleteAsync(seeded[0].Id)))!, DomainErrorKind.Conflict);
+
+        Assert.Equal(fallback.Title, preCheck.Title);
+        Assert.Equal(fallback.Message, preCheck.Message);
+    }
+
+    [Fact] // D3 (U4). PostgreSQL thật báo 23001 cho khóa ngoại RESTRICT (thấy khi chạy trên pgAdmin): vẫn ra 409, không 500.
+    public async Task Delete_WhenRestrictViolationOnSave_ThrowsConflictWithDepartmentName()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
+        var service = CreateServiceThatFailsOnSave(
+            PostgresError(PostgresErrorCodes.RestrictViolation, DbConstraintNames.EmployeeDepartmentForeignKey));
+
+        var exception = await Record.ExceptionAsync(() => service.DeleteAsync(seeded[0].Id));
+
+        var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
+        Assert.Equal("Không thể xóa phòng ban", error.Title);
+        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì vẫn còn nhân viên.", error.Message);
     }
 
     // ---- Kiểm tồn tại (cho U4) ----

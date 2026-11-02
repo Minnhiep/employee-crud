@@ -1,4 +1,5 @@
 using EmployeeCrud.Api.Departments;
+using EmployeeCrud.Api.Employees;
 using EmployeeCrud.Api.Platform;
 using EmployeeCrud.Api.Platform.Cors;
 using EmployeeCrud.Api.Platform.Data;
@@ -33,6 +34,7 @@ builder.Services.AddDbContext<AppDbContext>((services, options) =>
 
 // Service nghiệp vụ: Scoped, cùng vòng đời với AppDbContext của request (NFR5.6).
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
 var app = builder.Build();
 

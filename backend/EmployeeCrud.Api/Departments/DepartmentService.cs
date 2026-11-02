@@ -73,6 +73,12 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         // Đọc dòng trước khi xóa: vừa để báo 404, vừa có sẵn tên để đưa vào lời báo khi còn nhân viên.
         var department = await FindTrackedAsync(id, cancellationToken);
 
+        // BR2.7 (U4): kiểm trước, còn nhân viên thì không xóa. Câu này dùng chỉ mục ix_employees_department_id.
+        if (await db.Employees.AnyAsync(e => e.DepartmentId == id, cancellationToken))
+        {
+            throw HasEmployeesConflict(department.Name);
+        }
+
         db.Departments.Remove(department);
         try
         {
@@ -84,11 +90,9 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         }
         catch (DbUpdateException exception) when (IsEmployeeForeignKeyViolation(exception))
         {
-            // Đường dự phòng của BR2.5: phòng ban còn nhân viên (khóa ngoại do U4 tạo).
-            // U4 sẽ kiểm trước khi xóa; nhánh này lo trường hợp hai thao tác chen nhau.
-            throw DomainError.Conflict(
-                $"Không thể xóa phòng ban \"{department.Name}\" vì vẫn còn nhân viên.",
-                title: CannotDeleteTitle);
+            // Đường dự phòng của BR2.5: có người vừa thêm nhân viên vào phòng ban này sau bước kiểm ở trên,
+            // khóa ngoại RESTRICT (U4) báo 23503. Trả cùng lời báo với bước kiểm trước.
+            throw HasEmployeesConflict(department.Name);
         }
     }
 
@@ -133,12 +137,22 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         await db.Departments.FirstOrDefaultAsync(d => d.Id == id, cancellationToken)
         ?? throw NotFound(id);
 
+    // Khóa ngoại fk_employees_department khai ON DELETE RESTRICT, nên khi xóa phòng ban còn nhân viên
+    // PostgreSQL báo 23001 (restrict_violation), không phải 23503 (đã thấy khi chạy thật trên pgAdmin, U4).
+    // Bắt cả hai mã để đường dự phòng không lọt thành lỗi 500.
     private static bool IsEmployeeForeignKeyViolation(DbUpdateException exception) =>
         exception.InnerException is PostgresException
         {
-            SqlState: PostgresErrorCodes.ForeignKeyViolation,
+            SqlState: PostgresErrorCodes.ForeignKeyViolation or PostgresErrorCodes.RestrictViolation,
             ConstraintName: DbConstraintNames.EmployeeDepartmentForeignKey,
         };
+
+    // Một hàm duy nhất tạo lỗi "còn nhân viên", gọi từ cả bước kiểm trước lẫn nhánh bắt 23503,
+    // để hai đường luôn ra cùng một câu (NFR3.5).
+    private static DomainError HasEmployeesConflict(string departmentName) =>
+        DomainError.Conflict(
+            $"Không thể xóa phòng ban \"{departmentName}\" vì vẫn còn nhân viên.",
+            title: CannotDeleteTitle);
 
     private static DomainError NotFound(int id) =>
         DomainError.NotFound($"Không tìm thấy phòng ban có mã {id}.");

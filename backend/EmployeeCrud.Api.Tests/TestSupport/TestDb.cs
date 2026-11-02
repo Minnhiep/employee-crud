@@ -1,9 +1,10 @@
 using EmployeeCrud.Api.Departments;
+using EmployeeCrud.Api.Employees;
 using EmployeeCrud.Api.Platform.Data;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace EmployeeCrud.Api.Tests.Departments;
+namespace EmployeeCrud.Api.Tests.TestSupport;
 
 /// <summary>
 /// Tạo AppDbContext chạy trên database InMemory cho unit test service.
@@ -26,5 +27,16 @@ internal static class TestDb
         db.Departments.AddRange(departments);
         await db.SaveChangesAsync();
         return departments;
+    }
+
+    /// <summary>Nạp sẵn một nhân viên thuộc phòng ban đã có, trả về nhân viên đã có id.</summary>
+    public static async Task<Employee> SeedEmployeeAsync(
+        DbContextOptions<AppDbContext> options, string fullName, string email, int departmentId)
+    {
+        await using var db = new AppDbContext(options);
+        var employee = new Employee { FullName = fullName, Email = email, DepartmentId = departmentId };
+        db.Employees.Add(employee);
+        await db.SaveChangesAsync();
+        return employee;
     }
 }

@@ -2,7 +2,7 @@ using EmployeeCrud.Api.Platform.Data;
 
 using Microsoft.EntityFrameworkCore;
 
-namespace EmployeeCrud.Api.Tests.Departments;
+namespace EmployeeCrud.Api.Tests.TestSupport;
 
 /// <summary>
 /// AppDbContext giả: đọc dữ liệu bình thường từ InMemory, nhưng khi lưu thì ném sẵn lỗi được truyền vào.
