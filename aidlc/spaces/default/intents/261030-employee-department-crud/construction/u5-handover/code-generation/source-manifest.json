@@ -1,0 +1,10 @@
+{
+  "stage": "code-generation",
+  "unit": "u5-handover",
+  "version": 1,
+  "writes": [
+    { "path": "README.md" },
+    { "path": "docs/so-do-database.md" },
+    { "path": "docs/danh-sach-api.md" }
+  ]
+}

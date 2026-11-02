@@ -2,6 +2,7 @@
 > This file is kept up to date automatically while the stage runs. Add observations at the review step, not by editing here directly.
 
 ## Interpretations
+- 2026-11-02T09:29:11Z [unit u5-handover] — Unit loại spec nên "thực thể" là ba tài liệu bàn giao (README, sơ đồ DB, danh sách API) cùng các phần bắt buộc của chúng; luật BR1–BR4 là luật nội dung và luật đối chiếu với code. Hỏi 5 câu, Hiệp chọn A cả năm: ba file riêng; có mục sự cố thường gặp; Hiệp tự clone và làm theo README; AI gọi API bằng PowerShell lấy JSON thật, Hiệp kiểm lại bằng Postman; ba việc còn mở để Build and Test.
 - 2026-11-02T02:30:00Z [unit u4-employees] — Hỏi 3 câu, Hiệp chọn A cả ba: giữ email như đã gõ (chặn trùng bằng chỉ mục lower(email)); một luật định dạng email chung cho form và API; form báo và chỉ đường khi chưa có phòng ban. Thứ tự kiểm ở service: dữ liệu → phòng ban tồn tại (400) → email trùng (409). Danh sách sắp họ tên rồi id. Chuỗi tìm lấy từ địa chỉ (useSearchParams) làm nguồn đúng duy nhất. Áp bài học U3: route form có key theo id; onBlur không xóa lỗi API.
 - 2026-11-01T16:12:00Z [unit u3-departments] — Không hỏi thêm: luật FR1.1–FR1.7, C1/C4/C5, mockup mục 5–8 đã chốt. U3 bắt 23503 fk_employees_department khi xóa (đường dự phòng, theo rà soát Code Generation U1), U4 thêm kiểm trước. Ba điểm phải kiểm thật: lower() với chữ có dấu, thứ tự A-Z tiếng Việt theo collation English_United States.1252, dữ liệu mẫu không làm hỏng số tự tăng.
 - 2026-11-01T15:05:00Z [unit u2-web-shell] — Unit giao diện nhưng vẫn viết rules.md (BR1–BR4) để truy vết AC có đích BR; không viết entities.md (không có thực thể). Thêm ErrorSummary, FormField vào phần dùng chung vì story map giao U2 "cách hiện lỗi dùng chung" (US4.1) và "CSS cho nhãn và lỗi" (US4.6). Q1 = A: VITE_API_BASE_URL=http://localhost:5081 (C3 ghi HTTPS; Hiệp chọn http cho chạy trên máy).
@@ -14,6 +15,7 @@
 
 ## Tradeoffs
 <!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
+- 2026-11-02T09:29:11Z [unit u5-handover] — Kết quả đối chiếu (ngày, lệnh, mã nhận được) ghi vào code-summary của U5 chứ không vào ba tài liệu bàn giao, để tài liệu gọn và không cũ đi khi code đổi. Bỏ frontend-components.md (unit spec, không có giao diện).
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->

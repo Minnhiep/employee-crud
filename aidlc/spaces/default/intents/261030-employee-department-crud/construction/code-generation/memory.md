@@ -3,6 +3,7 @@
 
 ## Interpretations
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
+- 2026-11-03T00:55:00Z [unit u5-handover] — Build làm ở phiên chính (mode subagent nhưng plan có bước Hiệp làm tay: pgAdmin, Postman, quét mật khẩu, commit, clone) theo cách Hiệp đã chọn từ U1. Hiệp muốn "chỉ từng bước": mỗi tin nhắn một bước, Hiệp gửi ảnh chụp. Clone sạch tìm ra README thiếu `dotnet restore` (NETSDK1004) và mục user-secrets làm lộ mật khẩu vào lịch sử PowerShell; đã sửa, Hiệp commit b78a4eb. SQLSTATE khi vi phạm FK RESTRICT trên PG18 là 23001 (không phải 23503). Lỗi 400 trả application/json chứ không phải problem+json — chuyển Build and Test.
 
 ## Deviations
 - 2026-11-02T01:58:00Z [unit u3-departments] — Hai chỗ khác kế hoạch, Hiệp chọn bằng form: thêm `Microsoft.EntityFrameworkCore.Relational` 10.* vào project API (test nhận 10.0.4 qua Npgsql, API build với 10.0.14 qua gói Design → MSB3277); thêm `.page-header`, `.list-count` vào components.css (mockup để tiêu đề và nút thêm cùng hàng). Kiểm tay phát hiện lỗi: onBlur ô tên xóa lỗi 409 của API khi focus chuyển sang khung tóm tắt → chỉ thay lỗi khi kiểm cục bộ thấy sai. Lint `set-state-in-effect` bắt hàm async có setState gọi trong effect → đổi sang `.then(...)`. `FormEvent` lỗi thời ở React 19 → `SubmitEvent`.

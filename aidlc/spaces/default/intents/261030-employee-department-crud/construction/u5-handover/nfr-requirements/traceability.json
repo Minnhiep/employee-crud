@@ -1,0 +1,15 @@
+{
+  "stage": "nfr-requirements",
+  "unit": "u5-handover",
+  "upstream_ids": ["NFR1", "NFR2", "NFR3", "NFR4", "NFR5", "NFR6", "NFR7", "NFR8"],
+  "coverage": [
+    { "id": "NFR1", "status": "OK", "target": "NFR1.1" },
+    { "id": "NFR2", "status": "OK", "target": "NFR2.1, NFR2.2, NFR2.3, NFR2.4" },
+    { "id": "NFR3", "status": "OK", "target": "NFR3.1" },
+    { "id": "NFR4", "status": "OK", "target": "NFR4.1" },
+    { "id": "NFR5", "status": "N/A", "target": "U5 không đổi code; tốc độ đo ở Build and Test" },
+    { "id": "NFR6", "status": "OK", "target": "NFR6.1" },
+    { "id": "NFR7", "status": "OK", "target": "NFR7.1" },
+    { "id": "NFR8", "status": "N/A", "target": "U5 không có code để định dạng hay lint" }
+  ]
+}

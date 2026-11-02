@@ -1,0 +1,12 @@
+{
+  "stage": "nfr-design",
+  "unit": "u5-handover",
+  "upstream_ids": ["NFR2.1", "NFR2.2", "NFR2.3", "NFR2.4", "NFR7.1"],
+  "coverage": [
+    { "id": "NFR2.1", "status": "OK", "target": "security-design S1: chữ giữ chỗ, kiểm .gitignore và appsettings, git grep + git log -S quét lịch sử do Hiệp gõ" },
+    { "id": "NFR2.2", "status": "OK", "target": "security-design S2: bản ghi mẫu tên giả, miền example.com, cắt bớt danh sách" },
+    { "id": "NFR2.3", "status": "OK", "target": "security-design S3: chỉ chép trường ProblemDetails theo C3" },
+    { "id": "NFR2.4", "status": "OK", "target": "security-design S4: dùng dòng có sẵn làm mồi, lệnh bị từ chối nên không cần dọn, đếm trước và sau" },
+    { "id": "NFR7.1", "status": "OK", "target": "security-design S5: địa chỉ lấy từ cấu hình, so với CORS, không mở CORS cho mọi nguồn" }
+  ]
+}
