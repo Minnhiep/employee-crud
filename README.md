@@ -49,7 +49,7 @@ dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Da
 Remove-Variable p, s
 ```
 
-Vì sao không gõ thẳng mật khẩu vào lệnh: PowerShell ghi mọi lệnh đã gõ vào một file lịch sử trên máy, mật khẩu gõ thẳng sẽ nằm lại trong file đó. Nhập qua `Read-Host -AsSecureString` thì mật khẩu không vào lịch sử; dòng `Remove-Variable` xóa nó khỏi bộ nhớ sau khi dùng xong.
+Vì sao không gõ thẳng mật khẩu vào lệnh: PowerShell ghi mọi lệnh đã gõ vào một file lịch sử trên máy, mật khẩu gõ thẳng sẽ nằm lại trong file đó. Nhập qua `Read-Host -AsSecureString` thì mật khẩu không vào lịch sử. Dòng `Remove-Variable` bỏ hai biến sau khi dùng xong, để các lệnh gõ sau trong cửa sổ đó không vô tình in hay dùng lại mật khẩu (nó không hứa xóa sạch mật khẩu khỏi bộ nhớ máy; đóng cửa sổ PowerShell là chắc nhất).
 
 Kiểm lại (mật khẩu được che thành `***` khi in ra):
 
@@ -152,7 +152,7 @@ Mức sàn của dự án: ít nhất 80% số dòng của các lớp service. K
 
 Các lỗi dưới đây đã gặp thật khi làm bài trên Windows 11, không phải lỗi code.
 
-- **`dotnet run` / `dotnet test` báo "Application Control policy has blocked this file" (0x800711C7).** Windows Smart App Control chặn file `.dll` vừa build. Thử build lại; nếu vẫn bị chặn thì cần chỉnh Smart App Control trong Windows Security (việc này đổi cài đặt máy, cân nhắc trước khi làm).
+- **`dotnet run` / `dotnet test` báo "Application Control policy has blocked this file" (0x800711C7).** Windows Smart App Control chặn file `.dll` vừa build. Thử build lại trước (`dotnet build backend/EmployeeCrud.slnx`) rồi chạy lại lệnh; vẫn bị chặn thì báo người hướng dẫn. **Đừng vội tắt Smart App Control:** trên Windows 11, tắt đi có thể không bật lại được nếu không cài lại Windows (tùy phiên bản; chưa kiểm trên máy làm bài). Muốn tắt thì đọc hướng dẫn của Microsoft về Smart App Control trước và hỏi người quản lý máy.
 - **Build hoặc test báo không chép được file vì "being used by another process".** Backend vẫn đang chạy ở cửa sổ khác và giữ file `.exe`. Bấm `Ctrl+C` ở cửa sổ backend rồi chạy lại lệnh.
 - **Gõ `psql` báo không tìm thấy lệnh.** Bộ cài PostgreSQL không tự thêm `psql` vào PATH. Dùng pgAdmin 4 (Query Tool) hoặc "SQL Shell (psql)" trong menu Start thay vì đổi PATH.
 

@@ -11,7 +11,7 @@ API của ứng dụng quản lý nhân viên và phòng ban: 10 thao tác, nh�
 | Định dạng gửi lên | `Content-Type: application/json`, tên trường viết kiểu camelCase (`fullName`, `departmentId`) |
 | Định dạng trả về khi thành công | `application/json; charset=utf-8` |
 | Định dạng trả về khi lỗi 404, 409 | `application/problem+json` (chuẩn ProblemDetails, RFC 9457) |
-| Định dạng trả về khi lỗi 400 | `application/json; charset=utf-8`, cùng hình dạng ProblemDetails (`title`, `status`, `errors`) |
+| Định dạng trả về khi lỗi 400 | `application/json; charset=utf-8`, cùng hình dạng ProblemDetails (`title`, `status`, `errors`) nhưng thiếu `type` (xem ghi chú ở mục Lỗi 400) |
 | Ai được gọi từ trình duyệt | Chỉ trang `http://localhost:5173` (CORS). Postman không bị CORS chặn |
 | Đăng nhập | Không có |
 
@@ -242,6 +242,8 @@ Response `400`, `Content-Type: application/json; charset=utf-8`:
 ```
 
 `errors` gom lỗi theo từng trường, để form React hiện lời báo ngay dưới ô nhập tương ứng.
+
+> **Lệch đã biết:** theo hợp đồng API của dự án, lỗi 400 cũng phải trả `Content-Type: application/problem+json` và có trường `type` như lỗi 404, 409. Hiện tại API trả `application/json` và thiếu `type`; danh sách này ghi đúng hành vi hiện tại. Việc sửa cho khớp hợp đồng đã được chuyển cho bước kiểm thử cuối (Build and Test). Ảnh hưởng tới giao diện: `frontend/src/api/client.ts` chỉ đọc lời báo lỗi khi `Content-Type` là `application/problem+json`, nên với lỗi 400 này giao diện hiện câu báo chung thay vì lời báo theo từng ô. Bình thường người dùng ít gặp, vì form React đã tự kiểm dữ liệu trước khi gửi.
 
 ### Lỗi 404 Not Found
 
