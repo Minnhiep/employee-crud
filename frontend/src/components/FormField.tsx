@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Icon } from "./Icon";
 
 /** Các thuộc tính FormField truyền cho ô nhập để trình đọc màn hình đọc đủ nhãn, gợi ý và lỗi. */
 export type FieldControlProps = {
@@ -24,6 +25,7 @@ type FormFieldProps = {
  *     {(props) => <input {...props} value={...} onChange={...} />}
  *   </FormField>
  * Dùng "hàm vẽ" thay vì sao chép phần tử con để TypeScript kiểm được các thuộc tính truyền vào ô.
+ * Thứ tự như các form doanh nghiệp: nhãn, ô nhập, rồi gợi ý (hoặc lỗi thay chỗ gợi ý) ngay dưới ô.
  */
 export function FormField({
   id,
@@ -42,20 +44,14 @@ export function FormField({
 
   return (
     <div className={hasError ? "field field--invalid" : "field"}>
-      <label htmlFor={id}>
+      <label className="field__label" htmlFor={id}>
         {label}
         {required && (
           <span className="field__required" aria-hidden="true">
-            {" "}
             *
           </span>
         )}
       </label>
-      {hint && (
-        <p className="field__hint" id={hintId}>
-          {hint}
-        </p>
-      )}
       {children({
         id,
         "aria-invalid": hasError,
@@ -64,10 +60,18 @@ export function FormField({
       })}
       {hasError && (
         <p className="field__error" id={errorId}>
-          <span className="icon" aria-hidden="true">
-            (!)
-          </span>{" "}
-          {errors.join(" ")}
+          <Icon name="alertCircle" size={1.125} />
+          <span>{errors.join(" ")}</span>
+        </p>
+      )}
+      {hint && (
+        <p
+          className={
+            hasError ? "field__hint field__hint--hidden" : "field__hint"
+          }
+          id={hintId}
+        >
+          {hint}
         </p>
       )}
     </div>

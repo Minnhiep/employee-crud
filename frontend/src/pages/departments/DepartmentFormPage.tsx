@@ -10,6 +10,7 @@ import {
 } from "../../api/departments";
 import { ErrorSummary } from "../../components/ErrorSummary";
 import { FormField } from "../../components/FormField";
+import { PageHeader } from "../../components/PageHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import { splitErrors } from "../../components/splitErrors";
 import { usePageTitle } from "../../hooks/usePageTitle";
@@ -46,6 +47,8 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
   const hasValidId = Number.isInteger(id) && id > 0;
 
   const [name, setName] = useState("");
+  // Tên lúc mở form sửa, để mô tả ghi rõ đang sửa phòng nào; không đổi theo lúc gõ.
+  const [loadedName, setLoadedName] = useState("");
   const [loadStatus, setLoadStatus] = useState<LoadStatus>(() =>
     !isEdit ? "ready" : hasValidId ? "loading" : "not-found",
   );
@@ -74,6 +77,7 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
     getDepartment(id, { signal: controller.signal }).then(
       (department) => {
         setName(department.name);
+        setLoadedName(department.name);
         setLoadStatus("ready");
       },
       (error: unknown) => {
@@ -174,83 +178,118 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
 
   return (
     <>
-      <h1 ref={headingRef} tabIndex={-1}>
-        {title}
-      </h1>
+      <PageHeader
+        title={title}
+        headingRef={headingRef}
+        breadcrumbs={[
+          { label: "Nhân sự" },
+          { label: "Phòng ban", to: "/departments" },
+          { label: isEdit ? "Sửa" : "Thêm mới" },
+        ]}
+        description={
+          isEdit
+            ? `Cập nhật tên phòng ban${loadedName ? ` ${loadedName}` : ""}. Trường có dấu * là bắt buộc.`
+            : "Nhập thông tin phòng ban mới. Trường có dấu * là bắt buộc."
+        }
+      />
 
-      {loadStatus === "loading" && (
-        <StatusMessage kind="loading" message="Đang tải..." />
-      )}
-      {loadStatus === "not-found" && (
-        <StatusMessage
-          kind="error"
-          message="Không tìm thấy phòng ban"
-          action={{ label: "Về danh sách phòng ban", to: "/departments" }}
-        />
-      )}
-      {loadStatus === "error" && (
-        <StatusMessage
-          kind="error"
-          message={loadError}
-          action={{ label: "Thử lại", onClick: retryLoad }}
-        />
-      )}
-
-      {loadStatus === "ready" && (
-        <form
-          className="form"
-          noValidate
-          onSubmit={(event) => void handleSubmit(event)}
-        >
-          <ErrorSummary
-            ref={summaryRef}
-            fieldErrors={fieldErrors}
-            fieldLabels={FIELD_LABELS}
-            messages={summaryMessages}
-          />
-
-          <p className="form__note">(* là ô bắt buộc)</p>
-
-          <FormField
-            id="name"
-            label="Tên phòng ban"
-            required
-            hint="Tối đa 100 ký tự"
-            errors={fieldErrors.name}
-          >
-            {(controlProps) => (
-              <input
-                {...controlProps}
-                type="text"
-                maxLength={DEPARTMENT_NAME_MAX_LENGTH}
-                autoComplete="off"
-                value={name}
-                onChange={(event) => handleNameChange(event.target.value)}
-                onBlur={handleNameBlur}
-                data-testid="department-name"
+      <div className="page-body">
+        {loadStatus !== "ready" && (
+          <section className="panel panel--form">
+            {loadStatus === "loading" && (
+              <StatusMessage kind="loading" message="Đang tải dữ liệu…" />
+            )}
+            {loadStatus === "not-found" && (
+              <StatusMessage
+                kind="error"
+                message="Không tìm thấy phòng ban"
+                description="Phòng ban có thể đã bị xóa, hoặc đường dẫn không đúng."
+                action={{
+                  label: "Về danh sách phòng ban",
+                  to: "/departments",
+                  icon: "arrowLeft",
+                }}
               />
             )}
-          </FormField>
+            {loadStatus === "error" && (
+              <StatusMessage
+                kind="error"
+                message="Không tải được thông tin phòng ban"
+                description={loadError}
+                action={{ label: "Thử lại", onClick: retryLoad }}
+              />
+            )}
+          </section>
+        )}
 
-          <div className="form__actions">
-            <button
-              type="submit"
-              className="btn btn--primary"
-              disabled={isSubmitting}
-              data-testid="department-save"
-            >
-              {isSubmitting ? "Đang lưu..." : "Lưu"}
-            </button>
-            <Link
-              className="btn btn--secondary"
-              to="/departments"
-              data-testid="department-cancel"
-            >
-              Hủy
-            </Link>
-          </div>
-        </form>
-      )}
+        {loadStatus === "ready" && (
+          <form
+            className="panel panel--form"
+            aria-labelledby="thong-tin-phong-ban"
+            noValidate
+            onSubmit={(event) => void handleSubmit(event)}
+          >
+            <div className="panel__header">
+              <h2 id="thong-tin-phong-ban" className="panel__title">
+                Thông tin phòng ban
+              </h2>
+            </div>
+
+            <div className="panel__body form">
+              <ErrorSummary
+                ref={summaryRef}
+                fieldErrors={fieldErrors}
+                fieldLabels={FIELD_LABELS}
+                messages={summaryMessages}
+              />
+
+              {/* Cùng lưới hai cột với form nhân viên: ô chỉ rộng một cột, hai form trông đồng bộ. */}
+              <div className="form__grid">
+                <FormField
+                  id="name"
+                  label="Tên phòng ban"
+                  required
+                  hint="Tối đa 100 ký tự, không trùng với phòng ban khác."
+                  errors={fieldErrors.name}
+                >
+                  {(controlProps) => (
+                    <input
+                      {...controlProps}
+                      type="text"
+                      maxLength={DEPARTMENT_NAME_MAX_LENGTH}
+                      autoComplete="off"
+                      placeholder="Ví dụ: Kế toán"
+                      value={name}
+                      onChange={(event) => handleNameChange(event.target.value)}
+                      onBlur={handleNameBlur}
+                      data-testid="department-name"
+                    />
+                  )}
+                </FormField>
+              </div>
+            </div>
+
+            {/* Thứ tự chuẩn: Hủy trước, nút chính "Lưu" ở ngoài cùng bên phải. */}
+            <div className="panel__footer">
+              <Link
+                className="btn btn--secondary"
+                to="/departments"
+                data-testid="department-cancel"
+              >
+                Hủy
+              </Link>
+              <button
+                type="submit"
+                className="btn btn--primary"
+                disabled={isSubmitting}
+                data-testid="department-save"
+              >
+                {isSubmitting ? "Đang lưu…" : "Lưu phòng ban"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </>
   );
 }

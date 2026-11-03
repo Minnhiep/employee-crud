@@ -8,6 +8,7 @@ export type DataTableColumn<Row> = {
 };
 
 type DataTableProps<Row extends { id: number }> = {
+  /** Tên bảng cho trình đọc màn hình (ẩn khỏi mắt vì tấm chứa bảng đã có tiêu đề). */
   caption: string;
   columns: DataTableColumn<Row>[];
   rows: Row[];
@@ -16,7 +17,7 @@ type DataTableProps<Row extends { id: number }> = {
 };
 
 /**
- * Bảng danh sách dùng chung cho nhân viên và phòng ban.
+ * Bảng danh sách dùng chung cho nhân viên và phòng ban, đặt bên trong tấm nội dung (class "panel").
  * Không có dòng nào thì không vẽ gì: trang cha hiện StatusMessage kind="empty".
  */
 export function DataTable<Row extends { id: number }>({
@@ -33,7 +34,7 @@ export function DataTable<Row extends { id: number }>({
     // Khung cuộn ngang nhận được focus để người dùng bàn phím cuộn được bảng rộng.
     <div className="table-wrap" role="region" aria-label={caption} tabIndex={0}>
       <table className="table">
-        <caption>{caption}</caption>
+        <caption className="sr-only">{caption}</caption>
         <thead>
           <tr>
             {columns.map((column) => (
@@ -41,7 +42,11 @@ export function DataTable<Row extends { id: number }>({
                 {column.header}
               </th>
             ))}
-            {renderActions && <th scope="col">Thao tác</th>}
+            {renderActions && (
+              <th scope="col" className="table__actions-header">
+                Thao tác
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -51,7 +56,7 @@ export function DataTable<Row extends { id: number }>({
                 <td key={column.key}>{column.render(row)}</td>
               ))}
               {renderActions && (
-                <td>
+                <td className="table__actions-cell">
                   <div className="table__actions">{renderActions(row)}</div>
                 </td>
               )}

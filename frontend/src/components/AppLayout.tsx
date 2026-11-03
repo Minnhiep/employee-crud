@@ -1,26 +1,32 @@
-import { Outlet } from "react-router";
+import { Link, Outlet } from "react-router";
+import { BrandMark } from "./Icon";
 import { NavMenu } from "./NavMenu";
 
 /**
- * Khung chung của mọi trang: liên kết bỏ qua, header có menu, vùng nội dung chính.
+ * Khung chung của mọi trang, kiểu phần mềm quản trị: thanh bên trái (logo + menu) và vùng nội dung.
+ * Màn hẹp dưới 960px: thanh bên thành thanh ngang trên cùng (xem components.css).
  * Trang con được React Router vẽ vào chỗ <Outlet />.
  */
 export function AppLayout() {
   return (
-    <>
+    <div className="app">
       <a className="skip-link" href="#noi-dung">
         Bỏ qua, tới nội dung chính
       </a>
-      <header className="layout__header">
-        <div className="layout__header-inner">
-          <p className="layout__brand">Quản lý nhân sự</p>
-          <NavMenu />
-        </div>
+      {/* Thanh bên là phần đầu trang (logo + menu chính) nên dùng <header>, không dùng <aside>. */}
+      <header className="sidebar">
+        <Link className="sidebar__brand" to="/employees">
+          <BrandMark />
+          <span className="sidebar__brand-name">Quản lý nhân sự</span>
+        </Link>
+        <NavMenu />
       </header>
       {/* tabIndex -1 để liên kết bỏ qua đưa được focus vào đây. */}
-      <main id="noi-dung" className="layout__main" tabIndex={-1}>
-        <Outlet />
+      <main id="noi-dung" className="app__main" tabIndex={-1}>
+        <div className="app__content">
+          <Outlet />
+        </div>
       </main>
-    </>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { Ref } from "react";
 import type { FieldErrors } from "../api/client";
+import { Icon } from "./Icon";
 
 type ErrorSummaryProps = {
   /** { tênÔ: [lời báo] }, tênÔ cũng là id của ô trên form. */
@@ -30,32 +31,36 @@ export function ErrorSummary({
 
   return (
     <div className="alert alert--error" role="alert" tabIndex={-1} ref={ref}>
-      <p className="alert__title">
-        <span className="icon" aria-hidden="true">
-          (!)
-        </span>{" "}
-        Vui lòng sửa các lỗi sau:
-      </p>
-      <ul className="alert__list">
-        {fieldItems.map(({ field, message }) => (
-          <li key={`${field}-${message}`}>
-            <a
-              href={`#${field}`}
-              onClick={(event) => {
-                // Đưa focus thẳng vào ô lỗi, không đổi địa chỉ trang (#hash) để React Router không coi là đổi trang.
-                event.preventDefault();
-                document.getElementById(field)?.focus();
-              }}
-            >
-              {fieldLabels[field] ? `${fieldLabels[field]}: ` : ""}
-              {message}
-            </a>
-          </li>
-        ))}
-        {messages.map((message) => (
-          <li key={message}>{message}</li>
-        ))}
-      </ul>
+      <span className="alert__icon" aria-hidden="true">
+        <Icon name="alertCircle" />
+      </span>
+      <div className="alert__content">
+        <p className="alert__title">
+          {fieldItems.length > 0
+            ? "Chưa lưu được. Kiểm tra lại các trường sau:"
+            : "Chưa lưu được."}
+        </p>
+        <ul className="alert__list">
+          {fieldItems.map(({ field, message }) => (
+            <li key={`${field}-${message}`}>
+              <a
+                href={`#${field}`}
+                onClick={(event) => {
+                  // Đưa focus thẳng vào ô lỗi, không đổi địa chỉ trang (#hash) để React Router không coi là đổi trang.
+                  event.preventDefault();
+                  document.getElementById(field)?.focus();
+                }}
+              >
+                {fieldLabels[field] ? `${fieldLabels[field]}: ` : ""}
+                {message}
+              </a>
+            </li>
+          ))}
+          {messages.map((message) => (
+            <li key={message}>{message}</li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

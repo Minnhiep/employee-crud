@@ -1,47 +1,83 @@
 /*
- * Bộ biến dùng chung (design tokens) - nguồn: refined-mockups/design-system-mapping.md.
- * Mọi màu, cỡ chữ, khoảng cách trong ứng dụng chỉ lấy từ đây, để các trang trông giống nhau.
- * Tỉ lệ tương phản đã chọn để đạt WCAG 2.1 AA.
+ * Bộ biến dùng chung (design tokens). Mọi màu, cỡ chữ, khoảng cách trong ứng dụng chỉ lấy từ đây.
+ * Phong cách: phần mềm quản trị doanh nghiệp (một màu thương hiệu cho hành động, còn lại xám trung tính),
+ * mật độ theo chuẩn Ant Design / Microsoft Fluent: chữ 14px, nút và ô nhập cao 36px.
+ * Tỉ lệ tương phản đã đo bằng công thức WCAG (17/17 cặp đạt AA): chữ >= 4.5:1, viền ô nhập và viền focus >= 3:1.
  */
 :root {
-  /* Màu */
-  --color-text: #1f2937;
-  --color-text-muted: #4b5563;
-  --color-bg: #ffffff;
-  --color-surface: #f3f4f6;
-  --color-border: #6b7280;
-  --color-primary: #1d4ed8;
-  --color-primary-hover: #1e40af;
-  --color-danger: #b91c1c;
-  --color-danger-hover: #991b1b;
-  --color-danger-bg: #fef2f2;
-  --color-success: #166534;
-  --color-success-bg: #f0fdf4;
-  --color-focus: #1d4ed8;
+  /* Màu nền và bề mặt */
+  --color-canvas: #f3f5f8; /* nền ứng dụng phía sau các tấm nội dung */
+  --color-surface: #ffffff; /* dải đầu trang, tấm nội dung, ô nhập, hộp thoại */
+  --color-surface-muted: #f7f8fa; /* đầu cột bảng, chân tấm, dòng rê chuột */
+  --color-sidebar: #12304a; /* thanh bên */
+  --color-sidebar-text: #c9d6e3; /* 9.2:1 trên thanh bên */
+  --color-sidebar-active: rgb(255 255 255 / 10%);
+  --color-sidebar-divider: rgb(255 255 255 / 12%);
+  --color-sidebar-marker: #5ea2ef;
+
+  /* Chữ */
+  --color-text: #1b2430;
+  --color-text-muted: #5a6472; /* 6:1 trên nền trắng, 5.5:1 trên nền ứng dụng */
   --color-on-primary: #ffffff;
 
-  /* Chữ - dùng rem để phóng to 200% không vỡ giao diện */
-  --font-family: system-ui, "Segoe UI", Roboto, Arial, sans-serif;
-  --font-size-base: 1rem;
-  --font-size-sm: 0.875rem;
-  --font-size-h1: 1.75rem;
-  --font-size-brand: 1.25rem;
-  --line-height: 1.5;
+  /* Đường viền */
+  --color-border: #e1e6ec; /* đường kẻ trang trí: viền tấm, kẻ dòng bảng */
+  --color-border-control: #7b8794; /* viền ô nhập: 3.7:1 (WCAG 1.4.11) */
 
-  /* Khoảng cách: 4 - 8 - 16 - 24 - 32 - 48 px */
+  /* Màu hành động và trạng thái */
+  --color-primary: #0f62c5; /* 5.9:1 với chữ trắng */
+  --color-primary-hover: #0b4f9f;
+  --color-primary-subtle: #eaf1fb;
+  --color-primary-strong: #164a8a; /* chữ trên nền primary-subtle: 7.8:1 */
+  --color-danger: #b42318; /* 6.6:1 trên nền trắng */
+  --color-danger-hover: #912018;
+  --color-danger-subtle: #fef3f2;
+  --color-success: #067647;
+  --color-success-subtle: #ecfdf3;
+  --color-focus: #0f62c5;
+  --color-focus-on-dark: #8ec5ff; /* viền focus trên thanh bên xanh đậm: 7.5:1 */
+
+  /* Chữ: dùng rem để phóng to 200% không vỡ giao diện. Phông hệ thống, không tải phông ngoài. */
+  --font-family:
+    "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-size-xs: 0.75rem; /* 12px: chữ cái đầu trong vòng tròn */
+  --font-size-sm: 0.8125rem; /* 13px: gợi ý, đường dẫn trang, đầu cột, nút trong dòng */
+  --font-size-base: 0.875rem; /* 14px: chữ thân, ô nhập, nút, bảng */
+  --font-size-lg: 1rem; /* 16px: tiêu đề tấm, tên ứng dụng */
+  --font-size-h1: 1.25rem; /* 20px: tiêu đề trang */
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --line-height: 1.5;
+  --line-height-tight: 1.3;
+
+  /* Khoảng cách: 4 - 8 - 12 - 16 - 20 - 24 - 32 - 48 px */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
-  --space-3: 1rem;
-  --space-4: 1.5rem;
-  --space-5: 2rem;
-  --space-6: 3rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 2rem;
+  --space-8: 3rem;
 
-  /* Viền, focus, kích thước */
-  --radius: 4px;
+  /* Bo góc theo cấp: điều khiển nhỏ hơn tấm, thẻ tròn hẳn */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-pill: 999px;
+
+  /* Kích thước */
   --border-width: 1px;
-  --border-width-strong: 2px;
   --focus-ring-width: 3px;
   --focus-ring-offset: 2px;
-  --content-max-width: 1100px;
-  --control-min-height: 2.75rem;
+  --control-height: 2.25rem; /* 36px: ô nhập, ô chọn, nút */
+  --control-height-sm: 1.75rem; /* 28px: nút trong dòng bảng */
+  --sidebar-width: 14.5rem; /* 232px */
+  --brand-height: 3.5rem; /* 56px: vùng logo, cao bằng hàng đường dẫn của dải đầu trang */
+  --content-max-width: 90rem; /* 1440px */
+  --form-max-width: 55rem; /* 880px: ô nhập không kéo quá dài trên màn rộng */
+
+  /* Đổ bóng: chỉ dùng cho lớp nổi (hộp thoại, thông báo), không dùng cho tấm nội dung */
+  --shadow-overlay:
+    0 12px 32px rgb(18 48 74 / 18%), 0 2px 6px rgb(18 48 74 / 12%);
 }

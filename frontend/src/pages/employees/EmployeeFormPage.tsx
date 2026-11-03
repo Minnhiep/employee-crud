@@ -12,6 +12,8 @@ import {
 } from "../../api/employees";
 import { ErrorSummary } from "../../components/ErrorSummary";
 import { FormField } from "../../components/FormField";
+import { Icon } from "../../components/Icon";
+import { PageHeader } from "../../components/PageHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import { splitErrors } from "../../components/splitErrors";
 import { usePageTitle } from "../../hooks/usePageTitle";
@@ -80,6 +82,8 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
   const hasValidId = Number.isInteger(id) && id > 0;
 
   const [values, setValues] = useState<EmployeeFormValues>(EMPTY_VALUES);
+  // Họ tên lúc mở form sửa, để mô tả ghi rõ đang sửa ai; không đổi theo lúc gõ.
+  const [loadedName, setLoadedName] = useState("");
   const [loadStatus, setLoadStatus] = useState<LoadStatus>(() =>
     !isEdit ? "ready" : hasValidId ? "loading" : "not-found",
   );
@@ -123,6 +127,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
           email: employee.email,
           departmentId: String(employee.departmentId),
         });
+        setLoadedName(employee.fullName);
         setLoadStatus("ready");
       },
       (error: unknown) => {
@@ -260,171 +265,228 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
 
   return (
     <>
-      <h1 ref={headingRef} tabIndex={-1}>
-        {title}
-      </h1>
+      <PageHeader
+        title={title}
+        headingRef={headingRef}
+        breadcrumbs={[
+          { label: "Nhân sự" },
+          { label: "Nhân viên", to: "/employees" },
+          { label: isEdit ? "Sửa" : "Thêm mới" },
+        ]}
+        description={
+          isEdit
+            ? `Cập nhật thông tin ${loadedName ? `của ${loadedName}` : "nhân viên"}. Trường có dấu * là bắt buộc.`
+            : "Nhập thông tin nhân viên mới. Trường có dấu * là bắt buộc."
+        }
+      />
 
-      {isLoading && <StatusMessage kind="loading" message="Đang tải..." />}
-      {loadStatus === "not-found" && (
-        <StatusMessage
-          kind="error"
-          message="Không tìm thấy nhân viên"
-          action={{ label: "Về danh sách nhân viên", to: "/employees" }}
-        />
-      )}
-      {loadStatus === "error" && (
-        <>
-          <StatusMessage kind="error" message={loadError} />
-          <button
-            type="button"
-            className="btn btn--secondary"
-            onClick={retryLoad}
-            data-testid="employee-retry"
-          >
-            Thử lại
-          </button>
-        </>
-      )}
-
-      {!isLoading && loadStatus === "ready" && (
-        <form
-          className="form"
-          noValidate
-          onSubmit={(event) => void handleSubmit(event)}
-        >
-          <ErrorSummary
-            ref={summaryRef}
-            fieldErrors={fieldErrors}
-            fieldLabels={FIELD_LABELS}
-            messages={summaryMessages}
-          />
-
-          <p className="form__note">(* là ô bắt buộc)</p>
-
-          <FormField
-            id="fullName"
-            label="Họ tên"
-            required
-            hint="Tối đa 100 ký tự"
-            errors={fieldErrors.fullName}
-          >
-            {(controlProps) => (
-              <input
-                {...controlProps}
-                type="text"
-                maxLength={FULL_NAME_MAX_LENGTH}
-                autoComplete="off"
-                value={values.fullName}
-                onChange={(event) =>
-                  handleChange("fullName", event.target.value)
-                }
-                onBlur={() => handleBlur("fullName")}
-                data-testid="employee-full-name"
+      <div className="page-body">
+        {(isLoading ||
+          loadStatus === "not-found" ||
+          loadStatus === "error") && (
+          <section className="panel panel--form">
+            {isLoading && (
+              <StatusMessage kind="loading" message="Đang tải dữ liệu…" />
+            )}
+            {loadStatus === "not-found" && (
+              <StatusMessage
+                kind="error"
+                message="Không tìm thấy nhân viên"
+                description="Nhân viên có thể đã bị xóa, hoặc đường dẫn không đúng."
+                action={{
+                  label: "Về danh sách nhân viên",
+                  to: "/employees",
+                  icon: "arrowLeft",
+                }}
               />
             )}
-          </FormField>
-
-          <FormField
-            id="email"
-            label="Email"
-            required
-            hint="Ví dụ: ten@congty.vn"
-            errors={fieldErrors.email}
-          >
-            {(controlProps) => (
-              <input
-                {...controlProps}
-                type="email"
-                maxLength={EMAIL_MAX_LENGTH}
-                autoComplete="off"
-                value={values.email}
-                onChange={(event) => handleChange("email", event.target.value)}
-                onBlur={() => handleBlur("email")}
-                data-testid="employee-email"
+            {loadStatus === "error" && (
+              <StatusMessage
+                kind="error"
+                message="Không tải được thông tin nhân viên"
+                description={loadError}
+                action={{
+                  label: "Thử lại",
+                  onClick: retryLoad,
+                  testId: "employee-retry",
+                }}
               />
             )}
-          </FormField>
+          </section>
+        )}
 
-          <FormField
-            id="departmentId"
-            label="Phòng ban"
-            required
-            errors={fieldErrors.departmentId}
+        {!isLoading && loadStatus === "ready" && (
+          <form
+            className="panel panel--form"
+            aria-labelledby="thong-tin-nhan-vien"
+            noValidate
+            onSubmit={(event) => void handleSubmit(event)}
           >
-            {(controlProps) => (
-              <select
-                {...controlProps}
-                value={values.departmentId}
-                // Khóa khi đang nạp, khi nạp lỗi, hoặc khi chưa có phòng ban nào để chọn.
-                disabled={departmentsStatus !== "ready" || noDepartments}
-                onChange={(event) =>
-                  handleChange("departmentId", event.target.value)
-                }
-                onBlur={() => handleBlur("departmentId")}
-                data-testid="employee-department"
-              >
-                {noDepartments ? (
-                  <option value="">-- Chưa có phòng ban --</option>
-                ) : (
-                  <option value="">-- Chọn phòng ban --</option>
-                )}
-                {departments.map((department) => (
-                  <option key={department.id} value={String(department.id)}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </FormField>
+            <div className="panel__header">
+              <h2 id="thong-tin-nhan-vien" className="panel__title">
+                Thông tin nhân viên
+              </h2>
+            </div>
 
-          {departmentsStatus === "loading" && (
-            <p className="field__hint" role="status">
-              Đang tải danh sách phòng ban...
-            </p>
-          )}
-          {departmentsStatus === "error" && (
-            <div className="field__error" role="alert">
-              <span className="icon" aria-hidden="true">
-                (!)
-              </span>{" "}
-              Không tải được danh sách phòng ban.{" "}
-              <button
-                type="button"
+            <div className="panel__body form">
+              <ErrorSummary
+                ref={summaryRef}
+                fieldErrors={fieldErrors}
+                fieldLabels={FIELD_LABELS}
+                messages={summaryMessages}
+              />
+
+              {/* Hai cột trên màn rộng (Họ tên | Email, rồi Phòng ban), một cột trên màn hẹp. */}
+              <div className="form__grid">
+                <FormField
+                  id="fullName"
+                  label="Họ tên"
+                  required
+                  hint="Tối đa 100 ký tự."
+                  errors={fieldErrors.fullName}
+                >
+                  {(controlProps) => (
+                    <input
+                      {...controlProps}
+                      type="text"
+                      maxLength={FULL_NAME_MAX_LENGTH}
+                      autoComplete="off"
+                      placeholder="Ví dụ: Nguyễn Văn An"
+                      value={values.fullName}
+                      onChange={(event) =>
+                        handleChange("fullName", event.target.value)
+                      }
+                      onBlur={() => handleBlur("fullName")}
+                      data-testid="employee-full-name"
+                    />
+                  )}
+                </FormField>
+
+                <FormField
+                  id="email"
+                  label="Email"
+                  required
+                  hint="Không trùng với email của nhân viên khác."
+                  errors={fieldErrors.email}
+                >
+                  {(controlProps) => (
+                    <input
+                      {...controlProps}
+                      type="email"
+                      maxLength={EMAIL_MAX_LENGTH}
+                      autoComplete="off"
+                      placeholder="ten@congty.vn"
+                      value={values.email}
+                      onChange={(event) =>
+                        handleChange("email", event.target.value)
+                      }
+                      onBlur={() => handleBlur("email")}
+                      data-testid="employee-email"
+                    />
+                  )}
+                </FormField>
+
+                {/* Ô chọn và dòng trạng thái nạp phòng ban nằm chung một cột, ngay dưới nhau. */}
+                <div className="field-group">
+                  <FormField
+                    id="departmentId"
+                    label="Phòng ban"
+                    required
+                    errors={fieldErrors.departmentId}
+                  >
+                    {(controlProps) => (
+                      <select
+                        {...controlProps}
+                        value={values.departmentId}
+                        // Chưa chọn thì chữ "Chọn phòng ban" màu mờ như chữ mẫu của các ô nhập khác.
+                        className={
+                          values.departmentId === ""
+                            ? "field__control--placeholder"
+                            : undefined
+                        }
+                        // Khóa khi đang nạp, khi nạp lỗi, hoặc khi chưa có phòng ban nào để chọn.
+                        disabled={
+                          departmentsStatus !== "ready" || noDepartments
+                        }
+                        onChange={(event) =>
+                          handleChange("departmentId", event.target.value)
+                        }
+                        onBlur={() => handleBlur("departmentId")}
+                        data-testid="employee-department"
+                      >
+                        {noDepartments ? (
+                          <option value="">Chưa có phòng ban</option>
+                        ) : (
+                          <option value="">Chọn phòng ban</option>
+                        )}
+                        {departments.map((department) => (
+                          <option
+                            key={department.id}
+                            value={String(department.id)}
+                          >
+                            {department.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </FormField>
+
+                  {departmentsStatus === "loading" && (
+                    <p className="field__hint" role="status">
+                      Đang tải danh sách phòng ban…
+                    </p>
+                  )}
+                  {departmentsStatus === "error" && (
+                    <div
+                      className="field__error field__error--action"
+                      role="alert"
+                    >
+                      <Icon name="alertCircle" size={1.125} />
+                      <span>Không tải được danh sách phòng ban.</span>
+                      <button
+                        type="button"
+                        className="btn btn--sm btn--secondary"
+                        onClick={retryDepartments}
+                        data-testid="employee-departments-retry"
+                      >
+                        <Icon name="refresh" />
+                        Thử lại
+                      </button>
+                    </div>
+                  )}
+                  {noDepartments && (
+                    <p className="field__hint">
+                      Chưa có phòng ban nào.{" "}
+                      <Link to="/departments/new">Thêm phòng ban</Link> trước
+                      khi thêm nhân viên.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Thứ tự chuẩn: Hủy trước, nút chính "Lưu" ở ngoài cùng bên phải. */}
+            <div className="panel__footer">
+              <Link
                 className="btn btn--secondary"
-                onClick={retryDepartments}
-                data-testid="employee-departments-retry"
+                to="/employees"
+                data-testid="employee-cancel"
               >
-                Thử lại
+                Hủy
+              </Link>
+              <button
+                type="submit"
+                className="btn btn--primary"
+                // Nạp phòng ban lỗi thì không cho lưu (BR4.4); đang lưu thì khóa để bấm đúp chỉ gửi một lần (BR4.8).
+                disabled={isSubmitting || departmentsStatus === "error"}
+                data-testid="employee-save"
+              >
+                {isSubmitting ? "Đang lưu…" : "Lưu nhân viên"}
               </button>
             </div>
-          )}
-          {noDepartments && (
-            <p className="field__hint">
-              Chưa có phòng ban nào. Hãy thêm phòng ban trước.{" "}
-              <Link to="/departments/new">Thêm phòng ban</Link>
-            </p>
-          )}
-
-          <div className="form__actions">
-            <button
-              type="submit"
-              className="btn btn--primary"
-              // Nạp phòng ban lỗi thì không cho lưu (BR4.4); đang lưu thì khóa để bấm đúp chỉ gửi một lần (BR4.8).
-              disabled={isSubmitting || departmentsStatus === "error"}
-              data-testid="employee-save"
-            >
-              {isSubmitting ? "Đang lưu..." : "Lưu"}
-            </button>
-            <Link
-              className="btn btn--secondary"
-              to="/employees"
-              data-testid="employee-cancel"
-            >
-              Hủy
-            </Link>
-          </div>
-        </form>
-      )}
+          </form>
+        )}
+      </div>
     </>
   );
 }
