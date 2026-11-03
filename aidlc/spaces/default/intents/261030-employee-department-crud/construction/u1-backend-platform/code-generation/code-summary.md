@@ -175,3 +175,8 @@ Nguồn: `build-and-test/ra-soat-tong-the.md` (3 chuyên gia AI-DLC rà độc l
 - **U3, U4:** báo lỗi nghiệp vụ bằng `throw DomainError...`, **không** `return NotFound()` (vì 404 không nội dung sẽ nhận detail "Không có đường dẫn API này."). Cấu hình bảng bằng `IEntityTypeConfiguration`, đặt đúng tên ràng buộc trong `DbConstraintNames`. DTO đặt `ErrorMessage` tiếng Việt cho mọi luật kiểm.
 - **Trước U3:** chọn cách đọc mức sàn 80% của service (`dotnet-reportgenerator-globaltool` cục bộ, hoặc ngưỡng của coverlet).
 - **U5 (README):** ghi `dotnet ef database update 0` để lùi hết migration, và thứ tự quay lui: lùi database trước, rồi mới `git revert`.
+
+## 5e. Change Request 03/11/2026 (FR8): U1 không đổi
+
+- FR8 không chạm phần nền; Hiệp chọn Keep mọi bước thiết kế của U1 và duyệt lại plan cũ (tin nhắn 6123452d).
+- Thay đổi nhỏ ngoài plan: thêm 2 comment giải thích trong `backend/EmployeeCrud.Api/Platform/StartupChecks.cs` (vì sao chỉ kiểm có chuỗi kết nối mà không mở kết nối thử; khóa `ConnectionStrings:Default` khớp README) và 2 comment trong `Platform/Errors/DbConstraintNames.cs` (03/11, Build and Test lượt 4). Không đổi logic. Lý do: build ra file dll mới để vượt Smart App Control (luật trong `27-10/CLAUDE.md`).

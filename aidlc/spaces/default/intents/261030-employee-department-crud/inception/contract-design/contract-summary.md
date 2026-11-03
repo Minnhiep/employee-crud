@@ -40,7 +40,7 @@ servers:
 paths:
   /api/departments:
     get:
-      summary: Danh sách phòng ban, sắp theo tên A-Z (FR1.1)
+      summary: Danh sách phòng ban, sắp theo tên A-Z, mỗi phòng có employeeCount (FR1.1, FR8.1; 1 truy vấn SQL cho cả danh sách)
       responses:
         "200":
           description: Mảng phòng ban (có thể rỗng)
@@ -63,14 +63,14 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DepartmentDto" }
-              example: { id: 5, name: "Kỹ thuật" }
+              example: { id: 5, name: "Kỹ thuật", employeeCount: 0 }
         "400": { $ref: "#/components/responses/ValidationError" }
         "409": { $ref: "#/components/responses/DuplicateName" }
   /api/departments/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
     get:
-      summary: Một phòng ban
+      summary: Một phòng ban, có employeeCount (FR8.1, FR8.2: trang chi tiết)
       responses:
         "200":
           description: Phòng ban
@@ -87,7 +87,7 @@ paths:
             schema: { $ref: "#/components/schemas/DepartmentRequest" }
       responses:
         "200":
-          description: Phòng ban sau khi sửa
+          description: Phòng ban sau khi sửa (employeeCount đếm lại sau khi lưu)
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DepartmentDto" }
@@ -100,7 +100,9 @@ paths:
         "204": { description: Đã xóa, không có body }
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
-          description: Phòng ban còn nhân viên (có hiệu lực từ U4; trước U4 chưa có bảng nhân viên)
+          description: >
+            Phòng ban còn nhân viên (có hiệu lực từ U4). Từ Change Request 03/11 (FR8.4): detail có số N đếm lúc xóa,
+            cả khi phát hiện trước lúc xóa lẫn khi khóa ngoại chặn do chen nhau.
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/ProblemDetails" }
@@ -108,15 +110,16 @@ paths:
                 type: "https://tools.ietf.org/html/rfc9110#section-15.5.10"
                 title: "Không thể xóa phòng ban"
                 status: 409
-                detail: "Không thể xóa phòng ban \"Kế toán\" vì vẫn còn nhân viên."
+                detail: "Không thể xóa phòng ban \"Kế toán\" vì còn 3 nhân viên."
 components:
   schemas:
     DepartmentDto:
       type: object
-      required: [id, name]
+      required: [id, name, employeeCount]
       properties:
         id: { type: integer }
         name: { type: string }
+        employeeCount: { type: integer, minimum: 0, description: "Số nhân viên của phòng lúc đọc (FR8.1). Thay đổi kiểu thêm: client cũ bỏ qua được." }
     DepartmentRequest:
       type: object
       required: [name]
@@ -186,6 +189,15 @@ paths:
             Bỏ khoảng trắng hai đầu. Rỗng hoặc không có thì trả tất cả.
             Khớp khi fullName HOẶC email chứa chuỗi, không phân biệt hoa thường, có phân biệt dấu.
             Ký tự % và _ được coi là chữ thường, không phải ký tự đại diện.
+        - name: departmentId
+          in: query
+          required: false
+          schema: { type: string, pattern: "^[1-9][0-9]*$" }
+          description: >
+            Change Request 03/11 (FR8.3, ADR-007). Chỉ lấy nhân viên của phòng này; ghép AND với search.
+            Phải là số nguyên dương trong phạm vi int; sai kiểu, 0, số âm hoặc quá lớn → 400
+            errors.departmentId ["Phòng ban lọc không hợp lệ"] (service kiểm, câu tiếng Việt).
+            Số hợp lệ nhưng không có phòng đó → 200 [] (lọc không ra kết quả, không phải 404).
       responses:
         "200":
           description: Mảng nhân viên (có thể rỗng)
@@ -194,6 +206,15 @@ paths:
               schema: { type: array, items: { $ref: "#/components/schemas/EmployeeDto" } }
               example:
                 - { id: 1, fullName: "Nguyễn Văn An", email: "an@congty.vn", departmentId: 2, departmentName: "Kế toán" }
+        "400":
+          description: departmentId không hợp lệ (FR8.3)
+          content:
+            application/problem+json:
+              example:
+                type: "https://tools.ietf.org/html/rfc9110#section-15.5.1"
+                title: "Dữ liệu không hợp lệ"
+                status: 400
+                errors: { departmentId: ["Phòng ban lọc không hợp lệ"] }
     post:
       summary: Thêm nhân viên (FR2.2, FR2.5, FR2.6)
       requestBody:
@@ -305,7 +326,7 @@ problem_details:
     detail: lời báo cụ thể, tiếng Việt (có khi lỗi không gắn với ô nào)
     errors: "{ <tênTrường camelCase>: [ <lời báo tiếng Việt>, ... ] } - có ở 400 và ở 409 khi lỗi gắn với một trường (Q2)"
   mapping:
-    - { status: 400, title: "Dữ liệu không hợp lệ", when: "sai luật kiểm (thiếu, quá dài, sai định dạng) hoặc departmentId không tồn tại", errors: bắt buộc }
+    - { status: 400, title: "Dữ liệu không hợp lệ", when: "sai luật kiểm (thiếu, quá dài, sai định dạng); POST/PUT nhân viên có departmentId không tồn tại; GET /api/employees có departmentId sai dạng (lọc phòng không tồn tại là 200 [], không phải 400)", errors: bắt buộc }
     - { status: 404, title: "Không tìm thấy", when: "id không có, hoặc đường dẫn API không tồn tại", errors: không }
     - { status: 409, title: "Dữ liệu bị trùng", when: "trùng tên phòng ban / trùng email", errors: "bắt buộc (name / email)" }
     - { status: 409, title: "Không thể xóa phòng ban", when: "phòng ban còn nhân viên", errors: "không; chỉ detail" }
@@ -314,7 +335,7 @@ problem_details:
     - { postgres_code: "23505 unique_violation trên chỉ mục email", status: 409, errors: { email: ["Email đã được sử dụng"] } }
     - { postgres_code: "23505 unique_violation trên chỉ mục tên phòng ban", status: 409, errors: { name: ["Tên phòng ban đã tồn tại"] } }
     - { postgres_code: "23503 foreign_key_violation khi ghi nhân viên", status: 400, errors: { departmentId: ["Phòng ban không tồn tại"] } }
-    - { postgres_code: "23503 foreign_key_violation khi xóa phòng ban", status: 409, title: "Không thể xóa phòng ban", detail: "Không thể xóa phòng ban vì vẫn còn nhân viên." }
+    - { postgres_code: "23503 foreign_key_violation khi xóa phòng ban", status: 409, title: "Không thể xóa phòng ban", detail: "Không thể xóa phòng ban \"<tên>\" vì còn N nhân viên." (DepartmentService tự bắt lỗi này theo tên ràng buộc, đếm lại bằng CountAsync rồi dựng câu; Platform chỉ là đường dự phòng chung) }
 client_rules:
   - Mọi lời gọi đi qua src/api/client.js
   - Lời báo hiển thị lấy từ title/detail/errors của API, giao diện không tự viết lại (Q2)
@@ -378,6 +399,22 @@ domain_errors:
 ```
 
 ---
+
+### Thay đổi của Change Request 03/11/2026 (FR8, ADR-006, ADR-007)
+
+| Hợp đồng | Thay đổi | Kiểu | Chủ sở hữu thực hiện |
+|---|---|---|---|
+| C1 | `DepartmentDto` thêm `employeeCount` ở GET danh sách, GET một phòng, và phản hồi POST/PUT | Thêm (không phá client cũ) | U4 (đếm cần bảng `employees`, xem story map) |
+| C1 | DELETE 409: `detail` có số N | Đổi câu chữ, giữ mã và hình dạng | U4 |
+| C2 | GET thêm tham số `departmentId`; 400 `errors.departmentId` khi sai | Thêm | U4 |
+| C3, C4, C5 | Không đổi | — | — |
+
+Không tăng `version`: mọi thay đổi là kiểu thêm hoặc đổi câu chữ, đúng luật ở mục 3.
+
+Ghi chú cho Code Generation U4:
+- **Mẫu câu 409 duy nhất:** `Không thể xóa phòng ban "<tên>" vì còn N nhân viên.` (chứa đúng cụm "còn N nhân viên" của FR8.4). Dùng chung cho nhánh kiểm trước khi xóa và nhánh chen nhau (bắt lỗi ràng buộc rồi đếm lại). Test và `docs/danh-sach-api.md` có câu cũ "vì vẫn còn nhân viên" phải sửa theo.
+- `DepartmentDto` hiện là record `(int Id, string Name)`; thêm `int EmployeeCount` làm đổi mọi chỗ gọi constructor (service, test): sửa trong cùng bước.
+- `departmentId`: pattern chỉ là mô tả; service dùng `int.TryParse` (phạm vi int) và kiểm > 0, số quá lớn cũng ra 400.
 
 ## 3. Luật sở hữu và thay đổi hợp đồng
 

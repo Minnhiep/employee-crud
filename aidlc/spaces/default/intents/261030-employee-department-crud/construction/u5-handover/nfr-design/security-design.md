@@ -50,3 +50,7 @@ Mật khẩu có thể lọt theo ba đường; mỗi đường một lớp ch�
 ## Giới hạn đã biết
 
 - Bản clone trên cùng máy dùng lại user-secrets và database có sẵn, nên bước "đặt user-secrets lần đầu" và "tạo database mới" chỉ kiểm được bằng cách đọc lệnh, không chạy từ đầu. Kết quả đối chiếu ghi rõ điều này (BR4.3).
+
+## Change Request 03/11/2026 (FR8)
+
+Đã rà theo FR8. File SQL dùng WHERE NOT EXISTS (lower(name)) cho phòng ban (cùng biểu thức với chỉ mục ux_departments_name) và ON CONFLICT DO NOTHING cho email; JOIN theo tên phòng không phân biệt hoa thường; chữ ở dạng NFC, không ký tự lạ (SQL không đi qua bước chuẩn hóa của API). Khối xóa bọc BEGIN/COMMIT.

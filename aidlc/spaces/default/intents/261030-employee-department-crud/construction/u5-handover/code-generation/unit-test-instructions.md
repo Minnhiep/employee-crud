@@ -42,3 +42,10 @@ Quy ước tên mục để T1, T2 khớp: mỗi thao tác là một tiêu đề
 
 - Không dùng mock: JSON mẫu lấy từ backend thật đang chạy với PostgreSQL thật (BR3.2).
 - Dữ liệu thử: bản ghi mẫu tên giả (`Phòng Mẫu`, `Nguyễn Văn Mẫu`, email `@example.com`), tạo ở Step 5 và xóa ngay sau khi lấy JSON. Thử ràng buộc dùng dòng có sẵn làm mồi; các lệnh bị từ chối nên không thêm dòng (security-design S2, S4).
+
+## Change Request 03/11/2026 (FR8): kiểm tài liệu và dữ liệu mẫu
+
+- T-CR1: chạy `docs/du-lieu-mau.sql` hai lần → tổng 80, bảng từng phòng khớp ghi chú trong file (đã làm 04/11, Hiệp).
+- T-CR2: `GET /api/departments` có `employeeCount` từng phòng; `GET /api/employees?departmentId=<Kế toán>&search=mai` ra Nguyễn Thị Mai.
+- T-CR3 (khi muốn gỡ): bỏ `--` 5 dòng khối gỡ, chạy → 0 người `@congty.example`, 4 phòng thêm biến mất nếu rỗng, 4 phòng mẫu còn nguyên.
+- T-CR4: README mục 12 và "Quy ước tên phòng ban" đọc khớp hành vi giao diện; `docs/danh-sach-api.md` khớp hợp đồng C1/C2.

@@ -238,6 +238,76 @@ Dùng hộp hỏi sẵn có của trình duyệt (`window.confirm`):
 - Tự ẩn sau 5 giây. Đặt trong `role="status"` (`aria-live="polite"`) để trình đọc màn hình đọc.
 - Câu chữ theo từng việc: Đã thêm / Đã cập nhật / Đã xóa + loại + tên.
 
+## 8b. Change Request 03/11/2026: quan hệ phòng ban – nhân viên (US6.1–US6.5)
+
+Dựng trên giao diện quản trị đã làm lại ngày 03/11 (thanh bên, đầu trang có đường dẫn, panel, nút dòng). Thêm một đường dẫn: `/departments/:id` (chi tiết phòng ban, US6.2).
+
+### 8b-1. Danh sách phòng ban có số nhân viên (US6.1, US6.2)
+
+```
++------------------------------------------------------------------------+
+| Nhân sự > Phòng ban                                 [ + Thêm phòng ban ] |
+| Phòng ban                                                                |
++------------------------------------------------------------------------+
+| Danh sách phòng ban                                       8 phòng ban   |
+| Tên phòng ban            | Số nhân viên |                     Thao tác |
+| Kế toán  (liên kết)      |           12 |           [Sửa]  [Xóa]       |
+| Kinh doanh (liên kết)    |            0 |           [Sửa]  [Xóa]       |
++------------------------------------------------------------------------+
+```
+- Tên phòng là liên kết tới `/departments/:id`. Cột số căn phải, dạng số nguyên.
+
+### 8b-2. Chi tiết phòng ban (`/departments/:id`, US6.2)
+
+```
++------------------------------------------------------------------------+
+| Nhân sự > Phòng ban > Kế toán                                           |
+| Kế toán                               [Sửa phòng ban]  [Xóa phòng ban] |
+| 12 nhân viên                                                            |
++------------------------------------------------------------------------+
+| Nhân viên của phòng                                [ + Thêm nhân viên ] |
+| Họ tên                 | Email                         |       Thao tác |
+| (AB) Bùi Văn Nam       | nam.bui@congty.example        |          [Sửa] |
++------------------------------------------------------------------------+
+```
+- Phòng 0 người: panel hiện "Phòng ban chưa có nhân viên nào" + "Thêm nhân viên".
+- Không tìm thấy: dùng khung "Không tìm thấy phòng ban" + liên kết "Về danh sách phòng ban".
+- "Thêm nhân viên" mở `/employees/new?departmentId=:id`; Sửa nhân viên và Hủy/Lưu quay về trang này.
+
+### 8b-3. Lọc theo phòng ban ở trang Nhân viên (US6.3)
+
+```
+| Tìm theo họ tên hoặc email          Phòng ban                          |
+| [ an                    ] [Tìm]     [ Tất cả phòng ban          v ]    |
+| Tìm thấy 3 nhân viên ở phòng Kế toán                                    |
+```
+- Đổi ô chọn là lọc ngay (không cần bấm Tìm), cập nhật `?departmentId=`; ô tìm vẫn cần bấm Tìm như cũ.
+- Phòng trên địa chỉ không còn: ô chọn về "Tất cả phòng ban" + dòng báo "Phòng ban đã chọn không còn tồn tại".
+- Dòng đếm: không tìm, có lọc → "Phòng Kế toán có N nhân viên"; có tìm, có lọc → "Tìm thấy N nhân viên ở phòng Kế toán"; có tìm, không lọc → giữ câu cũ "Tìm thấy N nhân viên".
+- Lọc mà 0 kết quả: không tìm → "Phòng ban Kế toán chưa có nhân viên nào" + nút "Thêm nhân viên" (chọn sẵn phòng); có tìm → "Không tìm thấy nhân viên phù hợp" + "Xóa bộ lọc" (bỏ cả tìm và phòng).
+- Đổi phòng khi ô tìm đang gõ dở: dùng chuỗi tìm đã có trên địa chỉ (lần bấm Tìm gần nhất), không dùng chữ đang gõ.
+
+### 8b-4. Hộp xóa phòng còn nhân viên (US6.4)
+
+```
++--------------------------------------------------+
+| Không thể xóa phòng ban                           |
+| Phòng ban Kế toán còn 12 nhân viên. Hãy chuyển    |
+| hoặc xóa các nhân viên này trước.                 |
+|                       [Đóng]  [Xem 12 nhân viên]  |
++--------------------------------------------------+
+```
+- Không có nút xóa. "Xem 12 nhân viên" là liên kết tới `/employees?departmentId=:id`. Phòng 0 người dùng hộp ở mục 7.
+- 409 chen nhau (AC6.4.3): hộp xác nhận đóng, khung lỗi đỏ trên bảng (StatusMessage lỗi, như 409 hiện nay) ghi lời API "Không thể xóa phòng ban vì còn 1 nhân viên", danh sách tải lại để số đúng.
+
+### 8b-5. Gợi ý quy ước tên (US6.5)
+
+```
+| Tên phòng ban *                                   |
+| [ Kế toán                                      ]  |
+| Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT. |
+```
+
 ## 9. Liên hệ giữa story và màn hình
 
 | Story | Màn hình hoặc trạng thái |

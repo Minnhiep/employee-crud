@@ -10,3 +10,7 @@
 | NFR5.4 | Trang Phòng ban đạt Lighthouse Performance ≥ 90 | Đo lại G3 của U2 khi đã có dữ liệu thật | Lighthouse trên `npm run preview` cổng 5173 | U2 NFR5.1 (G3) |
 
 Không phân trang, không cache: số phòng ban nhỏ (FR1.1 "không phân trang").
+
+## Change Request 03/11/2026 (FR8)
+
+Đã rà theo FR8: phần của U3 chỉ là gợi ý quy ước tên (BR4.8, US6.5), không thêm yêu cầu phi chức năng. Yêu cầu trợ năng của gợi ý (gắn aria-describedby) theo accessibility-checklist mục Change Request. Hiệu năng đếm nhân viên, tải 80 nhân viên thuộc U4 và Build and Test (AC6.6.3).

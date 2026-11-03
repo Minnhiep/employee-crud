@@ -252,6 +252,43 @@ Sửa sau review (Hiệp duyệt checkpoint U4, gõ 1, yêu cầu sửa R-07, R-
 
 **Không đổi:** đường dẫn API, mã lỗi đã có, dạng JSON; giao diện (CSS, bố cục); migration và dữ liệu đang có trong database.
 
+### Step 12: Quan hệ phòng ban – nhân viên (Change Request FR8, 03/11/2026; US6.1–US6.4, BR5.1–BR6.4)
+
+**Backend (C1, C2, ADR-006, ADR-007)**
+- [x] `Departments/DepartmentDto.cs`: `record DepartmentDto(int Id, string Name, int EmployeeCount)`; sửa mọi chỗ gọi constructor.
+- [x] `DepartmentService`: `GetAllAsync`, `GetByIdAsync` chiếu `db.Employees.Count(e => e.DepartmentId == d.Id)` trong `Select` (1 câu SQL); `CreateAsync` trả 0; `UpdateAsync` đếm sau khi lưu.
+- [x] `DepartmentService.DeleteAsync`: `CountAsync` thay `AnyAsync`; `HasEmployeesConflict(name, count)` → `Không thể xóa phòng ban "<tên>" vì còn N nhân viên.`; nhánh bắt 23503/23001 đếm lại, `Math.Max(1, n)` (comment vì sao).
+- [x] `EmployeesController.GetAll`: thêm `[FromQuery] string? departmentId`; `IEmployeeService.GetAllAsync(string? search, string? departmentId, …)`.
+- [x] `EmployeeService.GetAllAsync`: kiểm `departmentId` trước `search`: rỗng/khoảng trắng → không lọc; `int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out id) && id > 0` sai → `DomainError.Validation("departmentId", "Phòng ban lọc không hợp lệ")`; hợp lệ → `Where(e => e.DepartmentId == id)` trong cùng truy vấn.
+- [x] Test `DepartmentServiceTests` (U4 viết tiếp chuỗi D): D4 danh sách có `employeeCount` 0 và 2; D5 GetById có số; D6 Create trả 0, Update trả số sau lưu; D7 xóa phòng còn 2 người → 409 câu "còn 2 nhân viên"; D8 nhánh chen nhau (ThrowingAppDbContext 23001) đếm lại → "còn 1 nhân viên"; D9 chen nhau mà đếm lại ra 0 → vẫn "còn 1 nhân viên". Sửa các test cũ còn câu "vì vẫn còn nhân viên".
+- [x] Test `EmployeeServiceTests`: #42 lọc theo phòng; #43 lọc + tìm (AND); #44 `departmentId` rỗng → tất cả; #45 "abc" → 400 `departmentId`; #46 "0", "-1" → 400; #47 "99999999999" (quá int) → 400; #48 " 5", "+5" → 400; #49 số hợp lệ không có phòng → `[]`; #50 `departmentId` sai + search lạ → 400 (thứ tự kiểm).
+
+**Frontend**
+- [x] `api/departments.ts`: `Department.employeeCount: number`. `api/employees.ts`: `getEmployees(search, departmentId: number | null, options)` ghép query bằng `URLSearchParams`.
+- [x] `components/ConfirmDialog.tsx` (file U2, Hiệp duyệt tin nhắn e15b90f2): thêm `variant?: "confirm" | "notice"` (kiểu union để TypeScript bắt buộc `onConfirm`/`confirmLabel` chỉ ở chế độ xác nhận), chế độ thông báo: icon cảnh báo, nút "Đóng" nhận focus, `extraAction?: ReactNode` (liên kết); id bằng `useId`. Hai trang đang dùng không đổi hành vi.
+- [x] `components/DataTable.tsx` (file U2): `DataTableColumn.align?: "end"` → lớp `table__cell--end` ở `th` và `td`; CSS `text-align: right; font-variant-numeric: tabular-nums` trong `styles/components.css`.
+- [x] `pages/departments/DepartmentsPage.tsx`: cột "Số nhân viên" (`align: "end"`); tên phòng là `Link` tới `/departments/:id` (`aria-label` "Xem phòng ban <tên>"); bấm Xóa: N > 0 → hộp thông báo "Phòng ban <tên> còn N nhân viên. Hãy chuyển hoặc xóa các nhân viên này trước." + liên kết "Xem N nhân viên" (`/employees?departmentId=`); N = 0 → hộp xác nhận cũ; 409 → khung lỗi + tải lại.
+- [x] `pages/departments/DepartmentDetailPage.tsx` (mới): `getDepartment` + `getEmployees("", id)` song song, hủy khi rời trang; tải / lỗi + Thử lại / "Không tìm thấy phòng ban" / "Phòng ban chưa có nhân viên nào" / bảng (họ tên, email, Sửa); đầu trang "N nhân viên"; breadcrumb Nhân sự > Phòng ban (liên kết) > tên; Sửa phòng ban, Xóa phòng ban (cùng luật hộp như trên; xóa xong → `/departments` + Toast, focus `h1`); "Thêm nhân viên" → `/employees/new?departmentId=:id` kèm `state.returnTo`. `App.tsx`: route `departments/:id` có `key` theo id.
+- [x] `pages/employees/EmployeesPage.tsx`: ô chọn "Phòng ban" (label, "Tất cả phòng ban" + từng phòng, nạp `getDepartments`), đổi là lọc ngay, ghi `?departmentId=` giữ `search`; id không có trong danh sách → bỏ khỏi địa chỉ (replace) + câu "Phòng ban đã chọn không còn tồn tại" (`aria-live`); câu đếm và trạng thái rỗng theo mockups 8b-3; "Xóa bộ lọc" bỏ cả tìm và phòng; Sửa gửi `state` gồm `search` và `departmentId`.
+- [x] `pages/employees/EmployeeFormPage.tsx`: chế độ thêm đọc `?departmentId=` để chọn sẵn khi phòng có trong danh sách; `listPathFrom` nhận `returnTo` (chỉ `^/departments/[1-9][0-9]*$`) và `departmentId` cùng `search`.
+- [x] Kiểm: `verify` xanh; độ phủ service ≥ 80% (Microsoft Code Coverage nếu coverlet bị chặn); API thật (log SQL đếm 1 câu; 400/[]/409 có N); Playwright các AC US6.1–US6.4 (không để lại dữ liệu thử); console sạch.
+- [x] Tài liệu: code-summary §5e, unit-test-instructions (test mới + kiểm tay), source-manifest (thêm `DepartmentDetailPage.tsx`, file U2 đã sửa).
+
+### Step 13: Loop-back 3 từ Build and Test (04/11/2026): liên kết "Thêm nhân viên" ở trạng thái rỗng giữ bộ lọc
+
+- [x] `frontend/src/components/StatusMessage.tsx` (file U2, thay đổi tối thiểu): kiểu hành động dạng liên kết thêm `state?: unknown`, truyền vào `<Link state={action.state}>`. Các chỗ dùng khác không đổi (trường tùy chọn).
+- [x] `frontend/src/pages/employees/EmployeesPage.tsx`: hai hành động "Thêm nhân viên" ở trạng thái rỗng (chưa có ai; phòng đang lọc chưa có ai) truyền `state: editState`, như nút Thêm ở đầu trang.
+- [x] Kiểm: `verify` xanh (138 test); Playwright: lọc một phòng 0 người → "Thêm nhân viên" ở trạng thái rỗng → Hủy → về `/employees?departmentId=…` (không để lại dữ liệu thử).
+- [x] Ghi `code-summary.md` §5f, `source-manifest.json` thêm `StatusMessage.tsx`.
+
+### Step 14: Change Request (Hiệp, 04/11/2026): kiểu liên kết tên phòng ban trong bảng
+
+Hiệp chê gạch dưới "giống PowerPoint", chọn kiểu "chữ đậm màu thường" (tin nhắn 0d91de90), như bảng của các phần mềm quản trị (Jira, Linear).
+- [x] `frontend/src/styles/components.css` `.table__link`: màu chữ thường (`--color-text`), đậm vừa, không gạch dưới; rê chuột: màu chính (`--color-primary`) + gạch dưới (offset 0.2em); `:focus-visible` dùng viền focus chung; không đổi `<a>` ở chỗ khác.
+- [x] Trợ năng: liên kết đứng riêng một ô bảng (không nằm trong đoạn văn) nên không vi phạm WCAG 1.4.1 (kỹ thuật lỗi F73 chỉ áp cho liên kết trong khối chữ); tên truy cập vẫn "Xem phòng ban <tên>".
+- [x] Kiểm: `verify`; Playwright: kiểu chữ lúc thường và lúc rê chuột (`getComputedStyle`), Tab tới liên kết có viền focus; Lighthouse Accessibility vẫn 100 (Hiệp chấm ở Build and Test).
+- [x] Ghi `code-summary.md` §5g.
+
 ## Không làm trong U4
 
 - Không lọc theo phòng ban, không phân trang, không tìm không dấu, không nhân viên mẫu (requirements mục 7).

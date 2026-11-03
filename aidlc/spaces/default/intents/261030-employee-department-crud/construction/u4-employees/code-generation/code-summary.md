@@ -184,3 +184,39 @@ File: `frontend/src/components/SearchBox.tsx`, `frontend/src/pages/employees/Emp
 
 - Chạy lại toàn bộ test và đo độ phủ trên cả dự án (mức sàn 80% các service).
 - 3 Minor của U3 vẫn để riêng (không sửa trong U4): route form phòng ban chưa có `key` theo id; sửa không đổi giá trị trả 200.
+
+## 5e. Change Request 03/11/2026 (FR8): quan hệ phòng ban – nhân viên (Step 12, US6.1–US6.4)
+
+**Backend**
+- `DepartmentDto(Id, Name, EmployeeCount)`. `DepartmentService`: danh sách và một phòng đếm bằng truy vấn con trong cùng câu SELECT (log SQL thật: `SELECT d.id, d.name, (SELECT count(*)::int FROM employees AS e …)`, 1 câu cho cả danh sách); POST trả 0, PUT đếm sau lưu.
+- Xóa: `CountAsync`, câu 409 duy nhất `Không thể xóa phòng ban "<tên>" vì còn N nhân viên.` (`HasEmployeesMessage`); nhánh chen nhau (23503/23001) đếm lại, tối thiểu 1.
+- `GET /api/employees?departmentId=`: controller nhận chuỗi; `EmployeeService.ParseDepartmentFilter` (`NumberStyles.None`, phạm vi int, > 0) sai → 400 `departmentId` "Phòng ban lọc không hợp lệ"; kiểm trước `search`; hợp lệ → `Where` trong cùng truy vấn; không có phòng → `[]`.
+- Test: D4–D9 (`DepartmentServiceTests`, thêm `TestSupport/SeedBeforeSaveThenFailContext.cs` mô phỏng chen nhau), #42–#50 (`EmployeeServiceTests`); sửa 3 test cũ sang câu "còn 1 nhân viên" và 2 phép so DTO. **138/138**.
+
+**Frontend**
+- `api/departments.ts` (`employeeCount`), `api/employees.ts` (`getEmployees(search, departmentId)` dùng URLSearchParams).
+- File U2 (Hiệp duyệt): `ConfirmDialog` thêm `variant: "notice"` (nút Đóng + `extraAction`, kiểu union bắt buộc `onConfirm` chỉ ở chế độ xác nhận, id bằng `useId`); `DataTable` thêm `align: "end"`; `PageHeader` key đường dẫn = vị trí + chữ (phòng "Nhân sự" trùng chữ mục đầu); CSS `.table__cell--end`, `.table__link`, `.dialog__icon--info`, `.alert--info`, `.filter`.
+- `useDepartmentDelete.tsx` (mới, dùng chung): N > 0 → hộp thông báo + "Xem N nhân viên"; N = 0 → hộp xác nhận; trang cha báo 404/409.
+- `DepartmentsPage`: cột "Số nhân viên", tên là liên kết. `DepartmentDetailPage.tsx` (mới) + route `departments/:id` (key theo id), có `<Toast />`.
+- `EmployeesPage`: ô lọc "Phòng ban", câu đếm và trạng thái rỗng theo mockups 8b-3, phòng không còn → bỏ tham số (replace) + câu báo suy ra khi vẽ (không setState trong effect, theo ESLint react-hooks), Sửa gửi `search`/`departmentId`.
+- `EmployeeFormPage`: `?departmentId=` chọn sẵn (chỉ khi phòng có thật), `returnTo` chỉ nhận `/departments/<số>`.
+
+**Đã kiểm**
+- `verify` xanh (typecheck, ESLint 0 cảnh báo, Prettier, build, 138/138).
+- API thật (backend 5081 chạy từ dll, log SQL bật bằng biến môi trường): employeeCount đúng (Kế toán 3…), lọc đúng phòng, lọc + tìm AND, 6 giá trị sai → 400 có `type`, phòng không có → `[]`, xóa Kế toán → 409 "còn 3 nhân viên".
+- Playwright (dev 5173): AC6.1.1, AC6.2.1–6.2.5, AC6.3.1–6.3.4, AC6.4.1–6.4.3 đạt; console sạch; dữ liệu thử đã xóa (0 phòng, 0 người còn lại). Lỗi tìm thấy và đã sửa: trang chi tiết thiếu `<Toast />` nên không hiện "Đã thêm nhân viên…".
+- Dữ liệu trên máy Hiệp còn "Nhân Sự", "Văn Phòng" sai quy ước tên (FR8.5): Hiệp sửa bằng nút Sửa.
+
+**Sửa theo rà soát U4 lượt 1 (Minor):** (1) nút "Thêm nhân viên" ở trang đang lọc gửi kèm state như nút Sửa, Hủy về đúng `/employees?search=…&departmentId=…` (Playwright đạt); (2) `DepartmentDetailPage` đọc id bằng biểu thức chữ số, `/departments/1e3` → "Không tìm thấy phòng ban" (Playwright đạt). Ghi nhận, không sửa: giới hạn 9 chữ số ở frontend (id thật nhỏ hơn nhiều; số dài hơn coi như không hợp lệ và hiện câu báo); câu báo phòng không còn hiện lại khi F5 đúng mục lịch sử đó (chấp nhận); gợi ý quy ước tên ở `DepartmentFormPage` là việc của U3 (Step 12 U3, US6.5), đã rà ở U3.
+
+## 5f. Loop-back 3 từ Build and Test (04/11/2026, Step 13)
+
+- `components/StatusMessage.tsx` (file U2): hành động dạng liên kết nhận `state` tùy chọn, truyền vào `Link`.
+- `EmployeesPage.tsx`: hai liên kết "Thêm nhân viên" ở trạng thái rỗng truyền `state: editState`.
+- Kiểm: `verify` xanh 138/138; Playwright: lọc "Văn Phòng" (0 người) → "Thêm nhân viên" ở trạng thái rỗng → `/employees/new?departmentId=21` → Hủy → về `/employees?departmentId=21`. Không tạo dữ liệu thử.
+
+## 5g. Change Request (Hiệp, 04/11/2026, Step 14): kiểu liên kết tên phòng ban
+
+- `styles/components.css` `.table .table__link`: màu chữ thường #1B2430, đậm 600, không gạch; rê chuột xanh #0F62C5 + gạch dưới (offset 0.2em). Không đổi React.
+- Kiểm (Playwright, bản build trên preview của Hiệp): lúc thường color rgb(27,36,48) weight 600 decoration none; hover rgb(15,98,197) underline; Tab tới liên kết: viền solid 3px rgb(15,98,197). ESLint, Prettier, Vite build sạch. Ảnh: `.playwright-mcp/phong-ban-lien-ket.png`, `phong-ban-lien-ket-hover.png`.
+- Chưa chạy `dotnet test` lại ở bước này vì backend đang chạy giữ file; backend không đổi (checkpoint chạy `verify` đầy đủ).

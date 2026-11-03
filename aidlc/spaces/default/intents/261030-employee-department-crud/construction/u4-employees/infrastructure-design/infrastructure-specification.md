@@ -43,3 +43,7 @@
 | `TestDb`, `ThrowingAppDbContext` | U3 | U3, U4 | Dời sang `backend/EmployeeCrud.Api.Tests/TestSupport/` bằng `git mv` để hai bộ test dùng chung (NFR4.7) |
 | `client.ts`, component chung, `src/api/departments.ts` | U2, U3 | U4 (`employees.ts`, các trang nhân viên) | U4 chỉ sửa `App.tsx` (đường dẫn) và dời `EmployeesPage.tsx` sang `pages/employees/` (logical-components §3) |
 | `dotnet-tools.json` | U1, U3 | U4, Build and Test | Không thêm tool |
+
+## Change Request 03/11/2026 (FR8)
+
+Đã rà theo FR8: không đổi hạ tầng, không migration mới (chỉ mục ix_employees_department_id đã có). Không thêm gói npm hay NuGet. Thêm đường dẫn giao diện /departments/:id (route React, không phải cấu hình máy chủ).

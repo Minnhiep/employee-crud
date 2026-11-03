@@ -40,3 +40,9 @@ var list = await _db.Departments.AsNoTracking()
 ## 4. Không làm
 
 Không phân trang, không cache phía server, không nén phản hồi. Lý do: chỉ có khoảng 100 phòng ban và một người dùng (scalability-design).
+
+## Change Request 03/11/2026 (FR8)
+
+Đã rà theo FR8: không đổi thiết kế phi chức năng của U3. Gợi ý tên là chữ tĩnh, không gọi API, không ảnh hưởng hiệu năng hay bảo mật.
+
+Trợ năng: gợi ý gắn `aria-describedby`, kiểm theo accessibility-checklist (refined-mockups) mục Change Request 03/11/2026 (US6).

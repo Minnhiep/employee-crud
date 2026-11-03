@@ -89,3 +89,7 @@ flowchart TD
 | Thêm | `createDepartment` | `POST /api/departments` | 400/409 → cạnh ô |
 | Sửa | `updateDepartment` | `PUT /api/departments/{id}` | 400/409 → cạnh ô; 404 → tóm tắt |
 | Xóa | `deleteDepartment` | `DELETE /api/departments/{id}` | 409 → alert đầu trang; 404 → tải lại |
+
+## Change Request 03/11/2026 (FR8)
+
+- Ô tên (FormField id `name`): gợi ý đổi thành "Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT. Tối đa 100 ký tự, không trùng với phòng ban khác." (BR4.8).

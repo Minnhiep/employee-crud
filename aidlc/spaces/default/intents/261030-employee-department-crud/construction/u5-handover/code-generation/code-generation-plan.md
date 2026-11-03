@@ -97,6 +97,17 @@ Sửa sau review (Hiệp duyệt checkpoint U5, gõ 1, yêu cầu sửa R-07 đ�
 
 **Không đổi:** code backend và frontend, migration, `appsettings*.json`, cấu hình CORS.
 
+> Ghi chú: Phần H ghi 10 nhân viên mẫu; từ Phần I file dữ liệu mẫu có 80 nhân viên, 8 phòng ban.
+
+### Phần I: Change Request FR8 (03/11/2026; US6.5 phần README, US6.6; BR-CR1–BR-CR4)
+
+- [x] `docs/du-lieu-mau.sql`: thêm 4 phòng (Hành chính, Truyền thông, Mua hàng, Chăm sóc khách hàng) bằng `INSERT … SELECT … WHERE NOT EXISTS (… lower(name) = lower(…))`; 80 nhân viên giả `@congty.example` (giữ 10 người cũ, 70 người mới, sinh từ danh sách họ, đệm, tên có kiểm trùng) chia vào 8 phòng (9–12 người/phòng), `ON CONFLICT DO NOTHING`; câu đếm cuối file (8 phòng có số người, tổng 80); khối gỡ bọc `BEGIN; … COMMIT;`: xóa nhân viên `@congty.example`, rồi xóa 4 phòng thêm chỉ khi `NOT EXISTS` nhân viên.
+- [x] AI quét file: NFC, không ký tự lạ, 80 email hợp lệ theo luật API và không trùng, 80 họ tên không trùng, tên phòng theo quy ước FR8.5.
+- [x] README mục 12: 80 người / 8 phòng, cách đo tốc độ (gọi `GET /api/employees` 10 lần, Lighthouse trên bản build). Thêm mục "Quy ước tên phòng ban" (FR8.5): viết hoa chữ cái đầu, không kèm chữ "Phòng", hệ thống không tự đổi chữ; sửa tên sai bằng nút Sửa. Mục 8 (địa chỉ) thêm trang `/departments/{id}`.
+- [x] `docs/danh-sach-api.md`: `employeeCount` ở mọi ví dụ phòng ban (GET danh sách, GET một, POST, PUT); `GET /api/employees` thêm `departmentId` (ví dụ lọc, ví dụ 400 `errors.departmentId`, phòng không có → `[]`); câu 409 xóa phòng ban mới `Không thể xóa phòng ban "<tên>" vì còn N nhân viên.`; bảng tóm tắt. Mọi ví dụ JSON là kết quả gọi thật.
+- [x] **Hiệp** chạy file trong pgAdmin hai lần; AI kiểm qua API: 8 phòng có đủ 4 phòng thêm, 80 người `@congty.example`, số người từng phòng đúng câu đếm. Khối gỡ: kiểm lại khi Hiệp muốn gỡ (không bắt buộc chạy ngay, vì cần dữ liệu để đo ở Build and Test).
+- [x] Cập nhật `code-summary.md` (mục Phần I), `unit-test-instructions.md`, `source-manifest.json` nếu cần.
+
 ## Các tầng của Testing Contract
 
 Hợp đồng kiểm thử là test-after. U5 không có code, nên mọi tầng có test (data model, data access, business logic, API, frontend) **không áp dụng** (BR4.1). Không tạo file test và không đổi cấu hình test. Thay vào đó: 6 lệnh kiểm tài liệu (Step 2, Step 8) và kiểm tay (Step 4, 10, 11). Bộ test hiện có không bị đụng tới; Build and Test chạy lại toàn bộ và đo mức sàn 80%.

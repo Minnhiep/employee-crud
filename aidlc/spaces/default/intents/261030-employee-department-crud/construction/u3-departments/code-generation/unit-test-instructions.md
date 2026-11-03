@@ -128,3 +128,10 @@ Cách chạy bên TypeScript: Node 24 chạy thẳng được file `.ts` (không
 | 14 | dấu cách, tab, U+3000, dấu cách | chuỗi rỗng |
 
 Kết quả ngày 03/11/2026: 14/14 ca hai bên khớp.
+
+## Change Request 03/11/2026 (FR8): kiểm tay gợi ý tên
+
+- K-tên 1: mở /departments/new và /departments/{id}/edit → dưới ô tên có "Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT."; trình đọc màn hình đọc gợi ý khi vào ô.
+- K-tên 2: nhập "kế TOÁN mới", Lưu → phòng ban lưu đúng như gõ, không báo lỗi. Xóa phòng thử sau khi kiểm.
+- Không thêm unit test: không đổi service (team.md chỉ test service).
+- K-tên 3: để trống ô rồi Lưu → hiện lời báo lỗi, gợi ý tạm ẩn khỏi mắt nhìn (vẫn đọc được bằng trình đọc màn hình); sửa xong lỗi thì gợi ý hiện lại.

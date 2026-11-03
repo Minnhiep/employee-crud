@@ -154,3 +154,14 @@ Reviewer kết luận READY; 4 góp ý Minor, chỉ sửa câu chữ.
 - Step 5 chạy hai lần do lỗi in kết quả ở lần đầu (không ảnh hưởng dữ liệu).
 - Step 11 thêm commit thứ hai (`b78a4eb`) để sửa README theo 2 chỗ vướng, đúng WF5 bước 4.
 - Hiệp gửi ca 409 bằng tên cùng hoa thường thay vì viết hoa; ca khác hoa thường đã được kiểm ở Step 5 và Step 4.
+
+## 6d. Change Request 03/11/2026 (FR8): Phần I
+
+- `docs/du-lieu-mau.sql`: thêm 4 phòng (Hành chính, Truyền thông, Mua hàng, Chăm sóc khách hàng) bằng `WHERE NOT EXISTS (lower(name))`; 80 nhân viên giả `@congty.example` (10 người cũ giữ nguyên email, 70 người mới sinh từ danh sách họ, đệm, tên), mỗi phòng 9–12 người, `ON CONFLICT DO NOTHING`; câu đếm từng phòng và tổng; khối gỡ `BEGIN … COMMIT` (xóa người `@congty.example`, rồi 4 phòng thêm chỉ khi rỗng).
+- AI quét: 80 dòng, 80 email và 80 họ tên không trùng, email hợp lệ theo luật API, NFC, không ký tự lạ.
+- **Hiệp chạy trong pgAdmin hai lần**: cả hai lần tổng 80. AI kiểm qua API: 9 phòng (8 phòng mẫu + "Văn Phòng" của Hiệp), số người khớp file (Kế toán 11 và Kỹ thuật 14 gồm 3 người Hiệp tự nhập); tổng 83 người. `GET /api/employees` 10 lần: trung vị 3,4 ms, chậm nhất 5,5 ms.
+- Khối gỡ chưa chạy (cần dữ liệu để đo ở Build and Test); kiểm khi Hiệp muốn gỡ.
+- README: mục 8 thêm trang `/departments/{id}`; mục 12 viết lại cho 80 người / 8 phòng, cách đo tốc độ, khối gỡ; thêm mục con "Quy ước tên phòng ban" (FR8.5).
+- `docs/danh-sach-api.md`: bảng tóm tắt; `employeeCount` ở GET danh sách, GET một, POST, PUT; tham số `departmentId` (ví dụ lọc + tìm, luật dạng số, `[]` khi không có phòng); ví dụ 400 `errors.departmentId`; ví dụ 409 mới "còn 3 nhân viên". Ví dụ phòng ban, lọc, 400, 409 là lời gọi thật ngày 04/11/2026 (phòng thử "Đào tạo" mã 25, đã xóa). Các ví dụ phần nhân viên cũ đổi tên phòng "Phòng Mẫu Đổi Tên" (mã 10) thành "Đào tạo nội bộ" (mã 25) cho khớp quy ước FR8.5; hình dạng JSON giữ như lời gọi thật trước đó.
+
+**Sửa theo rà soát U5 lượt 1:** (Major) README mục 16 đổi "10 nhân viên mẫu" thành "80 nhân viên mẫu và 4 phòng ban thêm". (Minor) README mục 12 bước 4 nói rõ khối gỡ xóa mọi email `@congty.example` (kể cả người tự nhập) và phòng trùng tên 4 phòng thêm khi rỗng, chỉ dùng cho database demo; câu dẫn Nghị định 30/2020 viết lại dễ hiểu. Ví dụ GET /api/departments và 409 trong `docs/danh-sach-api.md` gọi lại thật sau khi có dữ liệu mẫu (Kế toán 11, Kinh doanh 12, Kỹ thuật 14; "còn 11 nhân viên"). Ghi nhận: Lighthouse (AC6.6.3) đo ở Build and Test; khối gỡ chưa chạy thử.

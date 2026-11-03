@@ -145,3 +145,23 @@ Xóa phòng ban không còn nhân viên vẫn dùng test có sẵn của U3. M�
 19. Tìm "&nbsp;&nbsp;Đỗ&nbsp;&nbsp;&nbsp;Văn&nbsp;" → địa chỉ `?search=Đỗ+Văn`, ô tìm hiện "Đỗ Văn". Đang tìm "Đỗ Văn" mà gõ lại "Đỗ&nbsp;&nbsp;Văn" (2 dấu cách) rồi Enter → ô tìm vẫn về "Đỗ Văn", focus ở ô (rà soát R-07).
 20. Từ kết quả tìm bấm Sửa, rồi Hủy → về `/employees?search=…` đúng chuỗi đang tìm; bấm Sửa rồi Lưu → cũng về đó, có thông báo "Đã cập nhật…". Mở thẳng địa chỉ sửa (gõ tay hoặc F5) rồi Hủy → về `/employees` (N-07).
 21. Hộp xóa ghi họ tên in đậm kèm email trong ngoặc, ví dụ "Nhân viên **Đỗ Văn An** (`do.an@congty.vn`) sẽ bị xóa vĩnh viễn…" (N-05).
+
+## Change Request 03/11/2026 (FR8): test mới và kiểm tay
+
+**Unit test** (`dotnet test`, 138 test):
+| # | Test | Kiểm |
+|---|---|---|
+| D4 | GetAll_ReturnsEmployeeCountPerDepartment | employeeCount 2 và 0 |
+| D5 | GetById_ReturnsEmployeeCount | một phòng có số |
+| D6 | CreateAndUpdate_ReturnEmployeeCount | POST 0, PUT đếm sau lưu |
+| D7 | Delete_WhenTwoEmployees_MessageHasCount | 409 "còn 2 nhân viên", phòng còn |
+| D8 | Delete_WhenForeignKeyBlocksAfterRecount_ReportsCountNow | chen nhau, đếm lại ra 2 |
+| D9 | Delete_WhenForeignKeyBlocksButRecountIsZero_ReportsOne | đếm lại 0 → vẫn báo 1 |
+| #42 | GetAll_WithDepartmentId_ReturnsOnlyThatDepartment | chỉ người của phòng |
+| #43 | GetAll_WithDepartmentIdAndSearch_AppliesBoth | AND với search |
+| #44 | GetAll_WithEmptyDepartmentId_ReturnsEveryone | null, "", khoảng trắng → không lọc |
+| #45–#48 | GetAll_WithInvalidDepartmentId_ThrowsValidation | "abc", "0", "-1", "99999999999", " 5", "+5", "1.5" → 400 |
+| #49 | GetAll_WithUnknownDepartmentId_ReturnsEmptyList | không có phòng → [] |
+| #50 | GetAll_WithInvalidDepartmentIdAndInvalidSearch_ThrowsValidationFirst | thứ tự kiểm |
+
+**Kiểm tay** (trình duyệt): K-PB1 trang Phòng ban có cột số, bấm tên → chi tiết; K-PB2 phòng còn người bấm Xóa → hộp "còn N nhân viên", chỉ có Đóng và "Xem N nhân viên"; K-PB3 phòng 0 người xóa được từ chi tiết; K-NV1 ô lọc + tìm, F5 giữ; K-NV2 mở `/employees?departmentId=987654` → câu báo, hiện tất cả; K-NV3 "Thêm nhân viên" từ trang chi tiết chọn sẵn phòng, Lưu quay về chi tiết.

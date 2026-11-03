@@ -11,3 +11,7 @@
 | NFR5.5 | Trang Nhân viên đạt Lighthouse Performance ≥ 90 | Đo khi có dữ liệu mẫu (vài nhân viên) | Lighthouse trên `npm run preview` cổng 5173 | G3, như U3 |
 
 Không phân trang, không cache (FR2.1 "không phân trang", requirements mục 6: dưới 1.000 dòng). Tìm "chứa chuỗi" không dùng được chỉ mục thường, nhưng với 1.000 dòng thì quét cả bảng vẫn chỉ tốn vài mili giây.
+
+## Change Request 03/11/2026 (FR8)
+
+Đã rà theo FR8. Thêm: (1) Hiệu năng: GET /api/departments có employeeCount vẫn 1 câu SQL (kiểm bằng log SQL EF như U3-NFR6.3); GET /api/employees với 80 nhân viên mẫu, có hoặc không có departmentId, trung vị 10 lần ≤ 1 giây; Lighthouse Performance trang Nhân viên ≥ 90 trên bản build (AC6.6.3). Trang chi tiết gọi 2 API song song. (2) Bảo mật: departmentId từ query được kiểm ở server (số nguyên dương trong phạm vi int), sai → 400 tiếng Việt, không lộ lỗi parse; truy vấn tham số hóa. returnTo trong state chỉ nhận /departments/<số> (không mở chuyển hướng tùy ý). (3) Độ tin cậy: câu 409 có N ở cả nhánh chen nhau (BR5.2). (4) Kiểm thử: unit test cho đếm, lọc, 400, 409 có N; độ phủ service ≥ 80%.

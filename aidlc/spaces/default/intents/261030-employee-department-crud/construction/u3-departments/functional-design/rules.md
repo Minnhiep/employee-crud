@@ -237,3 +237,9 @@ rules:
 | BR4.5 | Xóa | Xác nhận, khóa nút, tải lại, 409 / 404 / lỗi mạng |
 | BR4.6 | Khóa nút Lưu | Bấm đúp chỉ một request |
 | BR4.7 | Nhãn nút | `aria-label` ghi đủ tên phòng ban |
+| BR4.8 | Gợi ý quy ước tên (CR 03/11, FR8.5, US6.5) | Dưới ô tên: "Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT." gắn `aria-describedby`; không tự đổi chữ, không thành lỗi |
+
+## Change Request 03/11/2026 (FR8)
+
+- **BR4.8 Gợi ý quy ước tên phòng ban (FR8.5, US6.5, AC6.5.2).** Form thêm và sửa phòng ban hiện dòng gợi ý cố định "Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT." ngay dưới ô tên, gắn vào ô bằng `aria-describedby` (cùng với lời báo lỗi nếu có). Khi ô đang có lỗi, gợi ý bị ẩn khỏi mắt nhìn theo cách FormField của U2 đang làm (lớp `field__hint--hidden`) nhưng trình đọc màn hình vẫn đọc; lời báo lỗi được ưu tiên hiển thị. Đây là gợi ý, không phải luật kiểm: "kế TOÁN mới" vẫn lưu đúng như gõ (API và form không đổi chữ, BR1.1–BR1.3 giữ nguyên). Lý do không tự đổi: giữ chữ viết tắt như "IT", "R&D".
+- **Ngoài U3 (story map):** `employeeCount`, trang chi tiết, hộp "Không thể xóa phòng ban" và câu 409 có số N do U4 làm (đếm cần bảng `employees`); BR2.5 giữ ở U3 cho tới khi U4 thay câu báo theo mẫu C1 mới.

@@ -91,3 +91,15 @@ Cột "Thiết kế" chỉ chỗ đã lo trong bản thiết kế. Cột "Kiểm
   - Chạy Lighthouse và W3C Validator.
   - Kiểm bằng bàn phím theo mục 2.
   - Ghi kết quả vào báo cáo test.
+
+## Bổ sung Change Request 03/11/2026 (US6)
+
+- [ ] Tên phòng ban trong bảng là liên kết thật (`<a>`), tên truy cập "Xem phòng ban <tên>".
+- [ ] Cột "Số nhân viên" có tiêu đề cột (`th scope=col`), số căn phải nhưng vẫn đọc được bằng trình đọc màn hình.
+- [ ] Ô chọn phòng ban có nhãn "Phòng ban" gắn với ô; đổi lựa chọn không làm mất focus.
+- [ ] Dòng "Tìm thấy N nhân viên…" và "Phòng ban đã chọn không còn tồn tại" đặt trong vùng `aria-live=polite`.
+- [ ] Hộp "Không thể xóa phòng ban" là `<dialog>` có tiêu đề, focus vào nút Đóng, Esc đóng được, focus trả về nút Xóa.
+- [ ] Gợi ý quy ước tên gắn vào ô bằng `aria-describedby`.
+- [ ] Trang chi tiết có đúng một `h1` (tên phòng), tiêu đề tab "<tên phòng> – Quản lý nhân sự".
+- [ ] Trang chi tiết: đường dẫn `nav` có nhãn "Đường dẫn", mục cuối có `aria-current="page"`.
+- [ ] Xóa phòng từ trang chi tiết xong: focus vào `h1` của trang Phòng ban.

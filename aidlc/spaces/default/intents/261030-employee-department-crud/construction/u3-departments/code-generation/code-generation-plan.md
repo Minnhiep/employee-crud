@@ -234,6 +234,14 @@ Sửa sau review (Hiệp duyệt checkpoint U3, gõ 1, yêu cầu sửa R-05 đ�
 
 **Không đổi:** API (đường dẫn, mã lỗi, dạng JSON), giao diện (CSS, bố cục), migration và dữ liệu đang có trong database.
 
+### Step 12: Gợi ý quy ước tên phòng ban (Change Request FR8, 03/11/2026; BR4.8, US6.5)
+
+- [x] `frontend/src/pages/departments/DepartmentFormPage.tsx`: đổi `hint` của ô "Tên phòng ban" thành "Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT. Tối đa 100 ký tự, không trùng với phòng ban khác." (`FormField` đã gắn gợi ý bằng `aria-describedby`, không cần sửa U2).
+- [x] Không đổi `validateDepartment.ts`, `DepartmentService`: quy ước là gợi ý, không phải luật; không tự đổi chữ (giữ "IT", "R&D").
+- [x] Kiểm: `npm --prefix frontend run verify` xanh (118 test không đổi số); Playwright: form thêm và sửa hiện gợi ý, `aria-describedby` của ô trỏ tới dòng gợi ý; nhập "kế TOÁN mới" → API nhận đúng chuỗi đó (chặn request, không lưu thật).
+- [x] Tài liệu: code-summary §4e, unit-test-instructions (kiểm tay K-tên), source-manifest nếu cần.
+- **Không làm ở U3 (story map):** `employeeCount`, trang chi tiết, hộp "Không thể xóa phòng ban", câu 409 có N (U4); README mục quy ước (U5).
+
 ## Không làm trong U3
 
 - Không kiểm "còn nhân viên" trước khi xóa, không bảng nhân viên (U4).

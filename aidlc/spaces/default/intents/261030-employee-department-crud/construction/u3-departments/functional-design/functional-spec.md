@@ -88,6 +88,10 @@ flowchart TD
 2. Migration 1 tạo bảng `departments`, chỉ mục `ux_departments_name` trên `lower(name)`, rồi chèn 4 phòng ban mẫu, để database tự cấp id (BR3.2).
 3. Mở trang Phòng ban thấy: Kế toán, Kinh doanh, Kỹ thuật, Nhân sự.
 
+## 6b. Change Request 03/11/2026: gợi ý quy ước tên (US6.5)
+
+Form thêm và sửa phòng ban có dòng gợi ý dưới ô tên (BR4.8). Không đổi luồng W1–W5, không đổi API.
+
 ## 7. Trạng thái
 
 `Department` không có vòng đời (chỉ có hoặc không có), nên **không có máy trạng thái thực thể**. Trạng thái màn hình theo khung của U2:

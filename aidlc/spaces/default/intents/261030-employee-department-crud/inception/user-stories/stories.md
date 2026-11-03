@@ -118,9 +118,7 @@ Tổng: 19 story, gồm 16 Must và 3 Should.
   - When tôi bấm Hủy
   - Then không có gì bị xóa.
 - **AC1.4.3**
-  - Given "Kế toán" còn ít nhất một nhân viên
-  - When tôi xác nhận xóa
-  - Then hiện "Không thể xóa phòng ban vì vẫn còn nhân viên" (409) và phòng ban vẫn còn.
+  - **Đã thay bằng US6.4 (Change Request 03/11):** phòng còn người thì hộp xóa không có nút xác nhận (AC6.4.1); 409 chỉ còn cho trường hợp chen nhau (AC6.4.3), câu báo có số nhân viên.
 
 ### US1.5. Có sẵn phòng ban mẫu khi mới cài (Must)
 
@@ -373,6 +371,123 @@ Tổng: 19 story, gồm 16 Must và 3 Should.
 
 ---
 
+## Nhóm 6. Quan hệ phòng ban – nhân viên (Change Request 03/11/2026)
+
+Nguồn: FR8.1–FR8.6 trong `requirements.md` (Hiệp yêu cầu, đã duyệt 03/11).
+
+### US6.1. Biết mỗi phòng ban có bao nhiêu người (Must)
+
+**Là** người quản lý nhân sự, **tôi muốn** thấy số nhân viên của từng phòng ngay trong danh sách phòng ban, **để** biết quy mô từng phòng mà không phải đếm tay.
+
+- **AC6.1.1**
+  - Given "Kế toán" có 3 nhân viên, "Kinh doanh" có 0
+  - When mở trang Phòng ban
+  - Then cột "Số nhân viên" hiện 3 và 0.
+- **AC6.1.2**
+  - Given có 8 phòng ban
+  - When gọi `GET /api/departments`
+  - Then mỗi phòng có `employeeCount`, và backend chỉ gửi 1 truy vấn tới database (kiểm tay: bật log SQL của EF Core như U3-NFR6.3, đếm câu SELECT).
+
+### US6.2. Xem một phòng ban gồm những ai (Must)
+
+**Là** người quản lý nhân sự, **tôi muốn** bấm vào tên phòng ban để xem danh sách nhân viên của phòng đó, **để** trả lời ngay câu "phòng này có ai".
+
+- **AC6.2.1**
+  - Given "Kế toán" có 3 nhân viên
+  - When bấm tên "Kế toán"
+  - Then mở `/departments/{id}`, thấy "3 nhân viên" và bảng 3 người (họ tên, email) sắp theo họ tên; mỗi dòng có nút Sửa mở form sửa nhân viên đó.
+- **AC6.2.2**
+  - Given "Kinh doanh" có 0 nhân viên
+  - When mở trang chi tiết
+  - Then thấy "Phòng ban chưa có nhân viên nào" và nút "Thêm nhân viên".
+- **AC6.2.3**
+  - Given đang ở trang chi tiết "Kinh doanh"
+  - When bấm "Thêm nhân viên"
+  - Then form thêm nhân viên đã chọn sẵn "Kinh doanh"; lưu hoặc Hủy thì quay lại đúng trang chi tiết đó (quyết định của người viết: cùng cách quay về nơi xuất phát như N-07 của đợt rà soát).
+- **AC6.2.4**
+  - Given id phòng ban không tồn tại
+  - When mở `/departments/{id}`
+  - Then thấy "Không tìm thấy phòng ban" và liên kết về danh sách phòng ban.
+- **AC6.2.5**
+  - Given đang ở trang chi tiết phòng ban 0 người
+  - When bấm Xóa và xác nhận
+  - Then phòng ban bị xóa và về danh sách phòng ban.
+
+### US6.3. Lọc nhân viên theo phòng ban (Must)
+
+**Là** người quản lý nhân sự, **tôi muốn** chọn một phòng ban ở trang Nhân viên, **để** chỉ thấy người của phòng đó, kết hợp được với tìm kiếm.
+
+- **AC6.3.1**
+  - Given có nhân viên ở nhiều phòng
+  - When chọn "Kế toán" và tìm "an"
+  - Then chỉ hiện người phòng Kế toán có họ tên hoặc email chứa "an"; địa chỉ có `departmentId` và `search`; F5, Back vẫn giữ đúng.
+- **AC6.3.2**
+  - Given đang lọc "Kế toán"
+  - When chọn "Tất cả phòng ban"
+  - Then bỏ lọc, `departmentId` biến khỏi địa chỉ.
+- **AC6.3.3**
+  - Given API đang chạy
+  - When gọi `GET /api/employees?departmentId=abc` hoặc `departmentId=0`
+  - Then trả 400 ProblemDetails.
+  - When gọi với `departmentId` là số nguyên dương không có phòng nào
+  - Then trả 200 `[]`.
+- **AC6.3.4**
+  - Given địa chỉ có `departmentId` của phòng đã bị xóa
+  - When mở trang Nhân viên
+  - Then ô chọn về "Tất cả phòng ban", hiện "Phòng ban đã chọn không còn tồn tại" và đủ danh sách.
+
+### US6.4. Biết trước vì sao không xóa được phòng ban (Must)
+
+**Là** người quản lý nhân sự, **tôi muốn** biết ngay phòng còn bao nhiêu người khi bấm Xóa và đi tới danh sách đó, **để** xử lý nhân viên trước rồi mới xóa phòng.
+
+- **AC6.4.1**
+  - Given "Kế toán" còn 3 nhân viên
+  - When bấm Xóa (ở danh sách hoặc trang chi tiết)
+  - Then hộp ghi "Phòng ban Kế toán còn 3 nhân viên…", không có nút xác nhận xóa, có liên kết "Xem 3 nhân viên" tới `/employees?departmentId={id}`.
+- **AC6.4.2**
+  - Given "Kinh doanh" có 0 nhân viên
+  - When bấm Xóa
+  - Then hiện hộp xác nhận như US1.4 và xóa được.
+- **AC6.4.3**
+  - Given danh sách đã tải ghi 0 người nhưng ngay trước đó có người được thêm vào phòng
+  - When xác nhận xóa
+  - Then API trả 409 "Không thể xóa phòng ban vì còn 1 nhân viên", phòng ban vẫn còn, giao diện hiện câu đó.
+
+### US6.5. Tên phòng ban viết thống nhất (Should)
+
+**Là** người quản lý nhân sự, **tôi muốn** tên phòng ban viết theo một quy ước, **để** danh sách nhìn chuyên nghiệp và dễ tìm.
+
+- **AC6.5.1**
+  - Given database mới tạo bằng migration
+  - Then 4 phòng mẫu đúng quy ước: viết hoa chữ đầu, không kèm chữ "Phòng".
+- **AC6.5.2**
+  - Given người dùng mở form thêm hoặc sửa phòng ban
+  - When nhìn ô tên
+  - Then dưới ô có gợi ý "Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT".
+  - When nhập "kế TOÁN mới" và Lưu
+  - Then lưu đúng như gõ, không báo lỗi (hệ thống không tự đổi chữ).
+- **AC6.5.3**
+  - Given README
+  - Then có mục quy ước tên phòng ban; "Nhân Sự" đang có trên máy Hiệp được sửa bằng chức năng Sửa.
+
+### US6.6. Có đủ dữ liệu mẫu để xem tốc độ (Should)
+
+**Là** người demo, **tôi muốn** nạp nhanh khoảng 80 nhân viên vào 8 phòng ban, **để** thấy ứng dụng chạy mượt khi có nhiều dữ liệu.
+
+- **AC6.6.1**
+  - Given database có 4 phòng mẫu
+  - When chạy `docs/du-lieu-mau.sql` hai lần
+  - Then có đúng 8 phòng và 80 nhân viên `@congty.example`.
+- **AC6.6.2**
+  - When chạy khối xóa trong file
+  - Then chỉ mất nhân viên `@congty.example` và 4 phòng thêm (khi không còn ai); dữ liệu khác giữ nguyên.
+- **AC6.6.3**
+  - Given 80 nhân viên mẫu, backend và bản build chạy trên máy này
+  - When gọi `GET /api/employees` 10 lần và chấm Lighthouse Desktop trang Nhân viên
+  - Then trung vị ≤ 1 giây; Performance ≥ 90.
+
+---
+
 ## Ghi chú INVEST và phụ thuộc
 
 - **Độc lập:** các story CRUD của cùng một thực thể chỉ cần danh sách (US1.1, US2.1) để có chỗ hiển thị kết quả. Thêm, sửa, xóa vẫn kiểm riêng được bằng API.
@@ -380,6 +495,7 @@ Tổng: 19 story, gồm 16 Must và 3 Should.
 - **Nhỏ:** mỗi story là một màn hình hoặc một thao tác, kèm 2–5 tiêu chí.
 - **Kiểm được:** mọi tiêu chí kiểm được bằng tay qua giao diện, Postman hoặc pgAdmin. Luật nghiệp vụ của nhóm 1–3 còn được kiểm bằng unit test cho service (`team-practices.md`, mục Testing Posture).
 - **Ba story Should (US4.4–US4.6):** là phần thêm ngoài đề. Nếu bỏ cả ba, mọi story Must vẫn đạt.
+- **Nhóm 6 (Change Request 03/11):** US6.5, US6.6 là Should. US6.4 cần US6.1 (`employeeCount`) và US6.3 (liên kết lọc). US6.2 giữ một story cho một màn hình (5 tiêu chí); AC6.2.5 chỉ là phòng 0 người, phòng còn người theo US6.4.
 
 ## Yêu cầu phi chức năng không thành story riêng
 

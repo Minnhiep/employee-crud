@@ -233,6 +233,63 @@ Mức cần: Performance ≥ 90 ở 2 trang danh sách, Accessibility = 100, Bes
 - `backend/EmployeeCrud.Api/Platform/Errors/DbConstraintNames.cs`: thêm 2 comment giải thích (không đổi code) khi xử lý Smart App Control; file thuộc U1, đổi sau review U1.
 - `postgresql.conf` trên máy (ngoài repo), có bản sao lưu.
 
+## Lượt chạy 5 — 2026-11-04 (Change Request FR8: quan hệ phòng ban – nhân viên)
+
+Code đã kiểm: cây làm việc sau Code Generation U3, U4, U5 của Change Request FR8, Loop-back 3 (U4) và Change Request kiểu liên kết (U4 Step 14). Hiệp duyệt kế hoạch lượt này (tin nhắn d652d18a). Chưa commit.
+
+### 1. Dữ liệu mẫu (Hiệp chạy trong pgAdmin)
+
+| Lần | Kết quả |
+|---|---|
+| Lần 1 | `tong_nhan_vien_mau` = 80 |
+| Lần 2 (chạy lại) | vẫn 80; 9 phòng (8 phòng mẫu + "Văn Phòng" của Hiệp) |
+
+### 2. Build, unit test, độ phủ
+
+| Lệnh | Kết quả |
+|---|---|
+| `npm --prefix frontend run verify` | typecheck, ESLint 0 cảnh báo, Prettier, Vite build, `dotnet test` **138/138** (checkpoint U4 chạy lại sau từng lần sửa) |
+| Microsoft Code Coverage + reportgenerator `-assemblyfilters:+EmployeeCrud.Api` | `DepartmentService` 100%, `EmployeeService` 100% (`ValidInput` 100%), `TextInput` 100%, `ErrorMapper` 97,6%; toàn assembly 47,6% (migration, OpenAPI sinh ra, controller ngoài phạm vi) |
+| `aidlc engine sensor-traceability --stage build-and-test` | Lần đầu thiếu FR8/AC6.x (chưa ghi vào traceability code-generation U3–U5); bổ sung ánh xạ tới file thật, chạy lại: `pass: true`, 0 ID chưa phủ |
+
+### 3. API thật (backend chạy từ dll, PostgreSQL localhost, 83 nhân viên)
+
+| Lời gọi | 10 lần: trung vị / chậm nhất |
+|---|---|
+| `GET /api/employees` (83 dòng) | 4,1 ms / 6,7 ms |
+| `GET /api/departments` (9 dòng, có `employeeCount`) | 1,8 ms / 11,2 ms |
+| `GET /api/employees?departmentId=3` (14 dòng) | 2,6 ms / 17,5 ms |
+| `GET /api/employees?search=nguyễn` (7 dòng) | 2,3 ms / 17,4 ms |
+
+Thêm: 6 giá trị `departmentId` sai → 400 `errors.departmentId`; phòng không có → `[]`; xóa Kế toán → 409 "còn 11 nhân viên"; log SQL danh sách phòng ban là 1 câu có truy vấn con.
+
+### 4. Playwright (bản build `npm run preview` của Hiệp, backend thật)
+
+| Mục | Kết quả |
+|---|---|
+| 9 trang × 2 độ rộng (1366, 320 px), gồm `/departments/3`, `/employees?departmentId=3` | 1 `h1`, `lang="vi"`, không tràn ngang, 0 id trùng; trang Nhân viên 83 dòng tải xong (networkidle) khoảng 0,6 giây |
+| Danh sách phòng ban | đủ 9 phòng với số người đúng API |
+| Lọc Kỹ thuật + tìm "nguyễn" | "Phòng Kỹ thuật có 14 nhân viên" → "Tìm thấy 5 nhân viên ở phòng Kỹ thuật", 5 dòng, địa chỉ giữ `search` và `departmentId` |
+| Hộp xóa Kỹ thuật | "Phòng ban Kỹ thuật còn 14 nhân viên…", nút Đóng + "Xem 14 nhân viên" |
+| Trang chi tiết Kỹ thuật | h1 "Kỹ thuật", "14 nhân viên", 14 dòng |
+| Hồi quy cũ | tìm "zzz" → "Không tìm thấy nhân viên phù hợp"; form bỏ trống → "Vui lòng nhập họ tên", không gửi POST |
+| Loop-back 3 | lọc "Văn Phòng" (0 người) → "Thêm nhân viên" ở trạng thái rỗng → Hủy → `/employees?departmentId=21` |
+| Kiểu liên kết (Step 14) | lúc thường rgb(27,36,48) đậm 600 không gạch; rê chuột rgb(15,98,197) gạch dưới; Tab: viền 3px |
+| Console | sạch (2 request "failed" ở lần chạy đầu là do kịch bản chuyển trang khi request đang chạy; chạy lại có chờ: 0 lỗi) |
+
+### 5. Khối gỡ dữ liệu mẫu (Hiệp, pgAdmin, không mất dữ liệu)
+
+`BEGIN;` + 2 câu DELETE của khối gỡ + câu đếm: còn 0 người mẫu, 3 người Hiệp tự nhập, 5 phòng (4 phòng thêm đã rỗng bị xóa; 4 phòng mẫu và "Văn Phòng" còn). Sau `ROLLBACK;`: 80 / 83 / 9, về đúng như trước.
+
+### 6. Lighthouse Desktop (Hiệp, Chrome ẩn danh, bản build, có 83 nhân viên)
+
+7 trang (`/employees`, `/departments` có Performance; `/departments/3`, `/employees/new`, `/employees/2127/edit`, `/departments/new`, `/departments/3/edit`): **tất cả 100** (Performance 100 × 2, Accessibility 100 × 7, Best Practices 100 × 7). Chấm sau Step 14.
+
+### 7. Thay đổi ngoài công việc của Unit trong lượt này
+
+- File U2 sửa trong U4 (Hiệp duyệt): `ConfirmDialog.tsx`, `DataTable.tsx`, `PageHeader.tsx`, `StatusMessage.tsx`, `styles/components.css`.
+- Comment giải thích trong `backend/EmployeeCrud.Api.Tests/TestSupport/ThrowingAppDbContext.cs` (vượt Smart App Control ở checkpoint U1).
+
 ## Loop-Back Log
 
 ### Loop-back 1 — 2026-11-02T18:29:13Z
@@ -248,3 +305,10 @@ Mức cần: Performance ≥ 90 ở 2 trang danh sách, Accessibility = 100, Bes
 - **Root-cause stage:** `code-generation`, Unit `u1-backend-platform` (`backend/EmployeeCrud.Api/appsettings.json`, cấu hình log do U1 sinh). Không mở lại U2–U5. Hiệp chọn sửa (form ba368783).
 - **Planned fix:** thêm vào `Logging:LogLevel` ba nhóm của EF Core ở mức `Critical`: `Microsoft.EntityFrameworkCore.Database.Connection`, `Microsoft.EntityFrameworkCore.Query`, `Microsoft.EntityFrameworkCore.Update`, để lỗi chỉ được ghi một lần bởi `ProblemDetailsExceptionHandler` (đã có phương thức, đường dẫn, loại lỗi, thông điệp và stack trace của exception, kể cả exception bên trong của Npgsql). Kiểm: chạy một backend phụ ở cổng khác với chuỗi kết nối trỏ tới cổng database không có ai nghe (biến môi trường, không cần mật khẩu, không cần Admin, không tắt DB thật), gọi `/api/employees` một lần, đếm đúng 1 dòng `fail:`; gọi 2 ca 409 vẫn 0 dòng `fail:`; `verify` xanh. Hiệp duyệt lại kế hoạch U1 trước khi sửa.
 - **Estimated impact:** công sức rất nhỏ (1 file cấu hình, 3 dòng; không đổi code C#, không thêm test tự động vì log là cấu hình); khoảng 20–30 phút kể cả duyệt và rà soát; chi phí tiền 0; rủi ro thấp: chỉ ẩn bản ghi lỗi trùng của EF Core, mọi lỗi 500 vẫn được ghi đủ một lần, phản hồi API không đổi.
+
+### Loop-back 3 — 2026-11-03T17:29:23Z
+
+- **Diagnosis:** rà soát Code Generation U4 (Change Request FR8, lần rà soát lại) còn 1 Minor: liên kết "Thêm nhân viên" trong trạng thái rỗng của trang Nhân viên (StatusMessage, khi đang lọc theo phòng hoặc chưa có ai) không gửi kèm state bộ lọc, nên Lưu/Hủy ở form về `/employees` chưa lọc (AC6.3.1 giữ bộ lọc, cùng kiểu lỗi đã sửa ở nút Thêm trên đầu trang). Hiệp chọn sửa qua loop-back (tin nhắn d652d18a).
+- **Root-cause stage:** `code-generation`, Unit `u4-employees` (`frontend/src/pages/employees/EmployeesPage.tsx`; cần `frontend/src/components/StatusMessage.tsx` của U2 nhận `state` cho hành động dạng liên kết). Không mở lại unit khác.
+- **Planned fix:** `StatusAction` dạng liên kết thêm `state?: unknown`, truyền vào `Link`; hai hành động "Thêm nhân viên" ở trạng thái rỗng của EmployeesPage truyền `state: editState`. Kiểm: `verify`, Playwright (lọc phòng 0 người → Thêm nhân viên → Hủy → về `/employees?departmentId=…`).
+- **Estimated impact:** rất nhỏ (2 file, vài dòng, không đổi backend, không thêm test tự động vì không có test React theo team.md); khoảng 20 phút kể cả duyệt, rà soát, checkpoint; rủi ro thấp: `state` là tùy chọn, các chỗ dùng StatusMessage khác không đổi.

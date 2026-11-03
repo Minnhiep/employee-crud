@@ -59,6 +59,26 @@ Giống F1, có hai điểm khác:
 4. Không có kết quả: hiện "Không tìm thấy nhân viên phù hợp với "<chuỗi>"." cùng nút "Xóa tìm kiếm".
 5. Chuỗi tìm được ghi lên địa chỉ trang (`/employees?search=an`). Tải lại trang hay bấm Back vẫn giữ kết quả. [assumption: theo checklist "giữ trạng thái lọc"; Hiệp bỏ được]
 
+### Luồng F5. Xem chi tiết phòng ban (US6.2, Change Request 03/11)
+
+1. Danh sách phòng ban → bấm tên → `/departments/:id`; trang gọi song song `GET /api/departments/:id` và `GET /api/employees?departmentId=:id`.
+2. Đang tải → StatusMessage "Đang tải dữ liệu…". 404 ở lời gọi phòng ban → khung "Không tìm thấy phòng ban". Lỗi mạng → StatusMessage lỗi + "Thử lại".
+   Số "N nhân viên" ở đầu trang và ở nút Xóa lấy từ `employeeCount` của `GET /api/departments/:id` (cùng lần tải với bảng).
+   `/employees/new?departmentId=` sai hoặc không có phòng đó → form để trống ô phòng ban như thêm mới thường.
+3. "Thêm nhân viên" → form đã chọn sẵn phòng; Lưu/Hủy → quay về trang chi tiết (qua `state` như N-07). Xóa phòng 0 người thành công → `/departments` + Toast.
+
+### Luồng F6. Lọc nhân viên theo phòng (US6.3)
+
+1. Trang Nhân viên tải danh sách phòng ban cho ô chọn và danh sách nhân viên theo `search` + `departmentId` trên địa chỉ.
+2. Đổi ô chọn → thay `departmentId` trên địa chỉ (giữ `search`) → tải lại danh sách. "Tất cả phòng ban" → bỏ `departmentId`.
+3. `departmentId` không có trong danh sách phòng ban → bỏ khỏi địa chỉ (replace), hiện dòng báo "Phòng ban đã chọn không còn tồn tại".
+
+### Luồng F7. Xóa phòng còn nhân viên (US6.4)
+
+1. Bấm Xóa → đọc `employeeCount` của lần tải gần nhất. N > 0 → hộp "Không thể xóa phòng ban" (Đóng / Xem N nhân viên). N = 0 → hộp xác nhận F3.
+2. Xác nhận mà API trả 409 (chen nhau) → hộp đóng, hiện lời báo của API ("…còn N nhân viên"), tải lại danh sách (ở trang chi tiết: tải lại cả phòng ban và bảng nhân viên) để số đúng.
+3. Xóa từ trang chi tiết thành công → `/departments`, Toast, focus vào `h1` của trang danh sách.
+
 ## 2. Component
 
 ### 2.1 `AppLayout`: khung trang

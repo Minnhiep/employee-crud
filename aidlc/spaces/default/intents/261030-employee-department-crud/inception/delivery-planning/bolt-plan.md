@@ -95,6 +95,16 @@
 - **Giả thuyết cần chứng minh:** một người khác (persona P2, ví dụ anh Hiếu) cài và kiểm được bài chỉ bằng tài liệu.
 - **Demo dự kiến:** clone ra một thư mục mới, làm theo README từng bước, gọi Postman theo danh sách API.
 
+## Change Request 03/11/2026: quan hệ phòng ban – nhân viên (FR8, US6.1–US6.6)
+
+Làm lại Code Generation theo thứ tự U3 → U4 → U5 (mỗi Unit: plan → Hiệp duyệt → code + test → rà soát → checkpoint), không có Bolt mới, không đổi U1, U2.
+
+- **B3' · U3:** gợi ý quy ước tên dưới ô tên phòng ban (US6.5). DoD: gợi ý gắn `aria-describedby`; nhập "kế TOÁN mới" vẫn lưu đúng như gõ; `verify` xanh.
+- **B4' · U4:** `employeeCount` (1 câu SQL) ở C1; `CountAsync` + mẫu câu 409 duy nhất ở cả hai nhánh; `departmentId` ở C2 (400 tiếng Việt, phạm vi int); trang `/departments/:id`; cột số nhân viên và tên phòng thành liên kết; ô lọc trên trang Nhân viên; hộp "Không thể xóa phòng ban"; form thêm nhân viên chọn sẵn phòng. DoD: unit test mới cho đếm, lọc, 400, 409 (mỗi thao tác ≥ 1 ca đúng + 2 ca lỗi/biên); độ phủ service ≥ 80%; sửa test và tài liệu có câu 409 cũ; kiểm Playwright các AC của US6.1–US6.4.
+- **B5' · U5:** `docs/du-lieu-mau.sql` 80 nhân viên, 8 phòng, chạy lại không nhân đôi, khối xóa an toàn; README mục quy ước tên; `docs/danh-sach-api.md` thêm `employeeCount`, `departmentId`, câu 409 mới. DoD: chạy file 2 lần vẫn 80/8; khối xóa chỉ xóa dữ liệu mẫu.
+- **Rủi ro:** Smart App Control chặn dll sau mỗi lần build (xử lý theo luật trong `27-10/CLAUDE.md`); chạy backend để demo bằng `dotnet run --project backend/EmployeeCrud.Api --no-build` (Hiệp chọn).
+- **Build and Test sau đó:** chạy lại toàn bộ; đo AC6.6.3 (API trung vị ≤ 1 giây với 80 nhân viên, Lighthouse Performance ≥ 90 trên bản build).
+
 ## Sau các Bolt
 
 Bước Build and Test (một lần cho toàn bộ) đo: độ phủ ≥ 80%, NFR5 (dưới 1 giây với 1.000 nhân viên), các mục tiêu G1–G6 (Lighthouse, W3C, WCAG), và kiểm tay cả luồng theo `docs/tim-hieu-technical-stack/07-kiem-thu-va-demo.md`.

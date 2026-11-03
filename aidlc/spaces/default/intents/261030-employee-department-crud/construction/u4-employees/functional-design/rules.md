@@ -364,3 +364,19 @@ rules:
 | BR4.7 | Xóa | Hộp xác nhận ghi họ tên và email, khóa nút, tải lại giữ chuỗi tìm |
 | BR4.8 | Khóa nút Lưu | Bấm đúp chỉ một request |
 | BR4.9 | Nhãn | Label gắn ô; `aria-label` đủ tên |
+| BR5.1 | Số nhân viên (CR FR8.1) | `employeeCount` ở mọi DepartmentDto, đếm bằng truy vấn con trong cùng câu SQL |
+| BR5.2 | 409 xóa phòng ban (CR FR8.4) | `Không thể xóa phòng ban "<tên>" vì còn N nhân viên.`, cả nhánh chen nhau (đếm lại, tối thiểu 1) |
+| BR5.3 | Lọc phòng ban (CR FR8.3) | `departmentId` chuỗi: rỗng → không lọc; không phải số nguyên dương trong phạm vi int → 400 "Phòng ban lọc không hợp lệ"; không có phòng → `[]`; AND với `search` |
+| BR6.1 | Cột số + tên liên kết (US6.1, US6.2) | Cột "Số nhân viên" căn phải; tên phòng là liên kết tới `/departments/:id` |
+| BR6.2 | Trang chi tiết (US6.2) | 2 API song song; tải / lỗi / 404 / rỗng / có dữ liệu; Sửa, Xóa, Thêm nhân viên chọn sẵn phòng; Lưu/Hủy quay về trang chi tiết |
+| BR6.3 | Ô lọc (US6.3) | Đổi là lọc ngay, `?departmentId=` giữ `search`; phòng không còn → bỏ lọc + câu báo; câu đếm và trạng thái rỗng theo mockups 8b-3 |
+| BR6.4 | Hộp xóa phòng ban (US6.4) | N > 0: hộp thông báo (Đóng + "Xem N nhân viên"); N = 0: hộp xác nhận cũ; 409 → khung lỗi + tải lại |
+
+## Change Request 03/11/2026 (FR8, US6.1–US6.4)
+
+Nguồn: `requirements.md` FR8, `stories.md` US6.1–US6.4, `mockups.md` §8b, `interaction-spec.md` F5–F7, ADR-006, ADR-007, hợp đồng C1/C2 (mục "Thay đổi của Change Request"). U4 làm vì cần bảng `employees` (story map).
+
+- **BR5.1 employeeCount.** `DepartmentService` trả `employeeCount` ở GET danh sách, GET một phòng, POST (0), PUT (đếm sau khi lưu). Đếm bằng phép chiếu `db.Employees.Count(e => e.DepartmentId == d.Id)` bên trong `Select`, EF dịch thành truy vấn con: danh sách 8 phòng vẫn là **1** câu SQL. Không lưu cột đếm (ADR-006).
+- **BR5.2 Câu 409.** Thay BR2.7 và BR2.5 (U3): `CountAsync` thay `AnyAsync`; N > 0 → 409 `Không thể xóa phòng ban "<tên>" vì còn N nhân viên.` (title "Không thể xóa phòng ban"). Nhánh chen nhau (23503/23001 với `fk_employees_department`) đếm lại rồi báo cùng mẫu; nếu đếm lại ra 0 (người đó vừa bị xóa tiếp) thì báo N = 1, vì lúc database chặn chắc chắn có ít nhất một người.
+- **BR5.3 Lọc.** `GET /api/employees?departmentId=`: controller nhận chuỗi, service kiểm (`int.TryParse` kiểu bất biến, > 0). Kiểm `departmentId` trước `search` (400 có thứ tự trước "search lạ → []"). Hợp lệ thì thêm `Where(e => e.DepartmentId == id)` vào cùng truy vấn, sắp như BR2.1.
+- **BR6.1–BR6.4** như bảng trên. Hộp thông báo dùng `ConfirmDialog` của U2 với chế độ thông báo mới (Hiệp chọn, tin nhắn e15b90f2): một nút "Đóng" nhận focus, thêm vùng hành động phụ (liên kết), id sinh bằng `useId` để hai hộp trên một trang không trùng id. Form thêm nhân viên đọc `?departmentId=` để chọn sẵn (chỉ khi phòng có trong danh sách tải về); `state.returnTo` chỉ nhận dạng `/departments/<số>`.

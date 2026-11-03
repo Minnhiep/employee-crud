@@ -165,3 +165,10 @@ Không có. Mọi test đã viết đều chạy và xanh. Theo `team.md`, khôn
 - U4 thêm bước kiểm "còn nhân viên" trước khi xóa phòng ban (C4). Build and Test kiểm thật bằng Postman: xóa phòng ban còn nhân viên → 409.
 - Test "sắp A-Z" của InMemory dùng tên ASCII; thứ tự có dấu đã kiểm trên PostgreSQL thật (trang Phòng ban).
 - Ghim chặt mọi phiên bản gói (hiện là `10.*`) là việc riêng nếu Hiệp muốn (rà soát Infrastructure Design, Minor 2).
+
+## 4e. Change Request 03/11/2026 (FR8): gợi ý quy ước tên (Step 12, BR4.8, US6.5)
+
+- `frontend/src/pages/departments/DepartmentFormPage.tsx`: gợi ý dưới ô tên thành "Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT. Tối đa 100 ký tự, không trùng với phòng ban khác." Không đổi luật kiểm, không tự đổi chữ.
+- Kiểm: `verify` xanh, 118/118. Playwright (dev 5173, backend 5081 chạy từ dll): form thêm và form sửa có `aria-describedby="name-goi-y"` trỏ tới gợi ý; nhập "kế TOÁN mới" → body POST đúng `{"name":"kế TOÁN mới"}` (request bị chặn, không lưu).
+- Ngoài kế hoạch: comment trong `backend/EmployeeCrud.Api.Tests/TestSupport/ThrowingAppDbContext.cs` (vượt Smart App Control ở checkpoint U1).
+- Rà soát U3 lượt 1 (Minor): gợi ý trong code gộp câu quy ước với câu cũ "Tối đa 100 ký tự…" (câu quy ước đúng nguyên văn AC6.5.2, giữ). Khi ô đang có lỗi, gợi ý bị ẩn khỏi mắt nhìn (`field__hint--hidden` của U2), trình đọc màn hình vẫn đọc; đã ghi ở BR4.8. Kiểm gợi ý là kiểm tay (team.md chỉ test service).

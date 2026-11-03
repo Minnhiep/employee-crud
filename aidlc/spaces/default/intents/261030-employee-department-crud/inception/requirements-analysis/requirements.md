@@ -26,6 +26,7 @@
   - Có đủ phần bàn giao: source + migration, sơ đồ DB, danh sách API kèm JSON, README.
 - **Phân loại:** dự án mới (greenfield), nhiều thành phần (frontend + backend + database), độ phức tạp vừa phải. Độ chi tiết tài liệu: Standard.
 - **Nguyên tắc phạm vi:** làm đúng và đủ theo `docs/ke-hoach.md`, không tự thêm hay bớt tính năng [PJ Mandated]. Mọi lựa chọn "ngoài đề" trong buổi hỏi đều đã bị loại (Q1–Q8 đều chọn phương án tối thiểu).
+- **Change Request 03/11/2026 (Hiệp yêu cầu, FR8):** `docs/ke-hoach.md` §1 đòi "demo CRUD hoàn chỉnh" và §3 "quản lý nhân viên và phòng ban". Hiệp đánh giá trang phòng ban chỉ là danh mục tên, chưa đủ nghiệp vụ, nên thêm FR8 để khai thác hết quan hệ phòng ban – nhân viên đang có. Không thêm trường dữ liệu mới, không thêm tính năng ngoài quan hệ này.
 
 ## 2. Dữ liệu
 
@@ -51,7 +52,7 @@ Quan hệ: một phòng ban có nhiều nhân viên; mỗi nhân viên thuộc �
 | FR1.3 | Người dùng sửa được tên của một phòng ban đang có. | [desc] |
 | FR1.4 | Người dùng xóa được phòng ban sau khi xác nhận trong hộp hỏi có ghi tên phòng ban. Phòng ban bị xóa hẳn khỏi database. | [desc] [Q6] |
 | FR1.5 | Hệ thống từ chối tên phòng ban trùng với một phòng ban khác (không phân biệt hoa thường) và trả lỗi 409. | [Q3] |
-| FR1.6 | Hệ thống từ chối xóa phòng ban còn nhân viên và trả lỗi 409 kèm thông báo tiếng Việt nói rõ lý do. | [PJ Decided] |
+| FR1.6 | Hệ thống từ chối xóa phòng ban còn nhân viên và trả lỗi 409 kèm thông báo tiếng Việt nói rõ lý do (từ 03/11: câu có số nhân viên, xem FR8.4). | [PJ Decided] [FR8.4] |
 | FR1.7 | Migration tạo sẵn một số phòng ban mẫu. Database mới tạo đã có phòng ban để chọn, chưa có nhân viên nào. | [PJ Decided] [Q7] |
 
 **Tiêu chí chấp nhận:**
@@ -232,7 +233,7 @@ Quan hệ: một phòng ban có nhiều nhân viên; mỗi nhân viên thuộc �
 
 | ID | Yêu cầu | Nguồn |
 |---|---|---|
-| FR6.1 | API REST trả JSON gồm: `GET/POST /api/departments`, `GET/PUT/DELETE /api/departments/{id}`, `GET/POST /api/employees` (`GET` nhận tham số `search` không bắt buộc), `GET/PUT/DELETE /api/employees/{id}`. | [desc] [KH mục 2] [TP] |
+| FR6.1 | API REST trả JSON gồm: `GET/POST /api/departments`, `GET/PUT/DELETE /api/departments/{id}`, `GET/POST /api/employees` (`GET` nhận tham số `search` và `departmentId` không bắt buộc, xem FR8.3), `GET/PUT/DELETE /api/employees/{id}`. Phòng ban trả thêm `employeeCount` (FR8.1). | [desc] [KH mục 2] [TP] [FR8] |
 | FR6.2 | Mã trạng thái: 200 khi đọc hoặc sửa thành công, 201 kèm header `Location` khi tạo, 204 khi xóa, 400/404/409 như FR4. JSON dùng tên trường camelCase. | [KH mục 2] [TP] |
 | FR6.3 | Danh sách nhân viên trả về có cả `departmentId` lẫn `departmentName`, để giao diện hiện tên phòng ban mà không phải gọi thêm. | [Q1] [assumption] |
 | FR6.4 | API có tài liệu OpenAPI xem được khi chạy ở môi trường Development, và kiểm thử được từng endpoint bằng Postman. | [PJ Decided] |
@@ -262,6 +263,67 @@ Quan hệ: một phòng ban có nhiều nhân viên; mỗi nhân viên thuộc �
   - When làm đúng từng bước README từ một bản clone sạch
   - Then ứng dụng chạy được và làm được đủ thêm/sửa/xóa/tìm.
   - Sơ đồ và danh sách API khớp với code.
+
+### FR8. Quan hệ phòng ban – nhân viên (Change Request 03/11/2026)
+
+| ID | Yêu cầu | Nguồn |
+|---|---|---|
+| FR8.1 | Danh sách phòng ban có cột "Số nhân viên". `GET /api/departments` và `GET /api/departments/{id}` trả thêm `employeeCount` (số nguyên ≥ 0). Kiểm được: lấy danh sách phòng ban chỉ gửi **1** truy vấn tới database, dù có bao nhiêu phòng. | [CR Hiệp 03/11] [KH §1, §3] |
+| FR8.2 | Bấm tên phòng ban mở trang chi tiết `/departments/{id}`: tên phòng, số nhân viên ("1 nhân viên", "3 nhân viên"), bảng nhân viên của phòng (họ tên, email; sắp theo họ tên như FR2.1; nút Sửa từng người mở form sửa nhân viên), nút Sửa và Xóa phòng ban, nút "Thêm nhân viên" mở form thêm đã chọn sẵn phòng này. Phòng 0 người hiện "Phòng ban chưa có nhân viên nào" kèm nút Thêm nhân viên. Xóa thành công từ trang chi tiết thì về danh sách phòng ban. Phòng ban không tồn tại hiện "Không tìm thấy phòng ban". | [CR Hiệp 03/11] |
+| FR8.3 | Trang Nhân viên có ô chọn phòng ban ("Tất cả phòng ban" + từng phòng), dùng chung được với ô tìm kiếm (thỏa cả hai điều kiện). Lựa chọn nằm trên địa chỉ (`?departmentId=`) để Back/F5 giữ đúng; chọn "Tất cả phòng ban" là bỏ lọc. API: `GET /api/employees?departmentId={id}` (kết hợp được với `search`). | [CR Hiệp 03/11] |
+| FR8.4 | Xóa phòng ban còn nhân viên: con số N lấy từ `employeeCount` của lần tải gần nhất; N > 0 thì hộp ghi "còn N nhân viên", không có nút xác nhận, có liên kết "Xem N nhân viên" tới danh sách đã lọc theo phòng; N = 0 thì giữ hộp xác nhận của FR1.4. API vẫn chặn (409 "Không thể xóa phòng ban vì còn N nhân viên", N đếm lúc xóa) cho trường hợp chen nhau. Câu báo của FR1.6 theo mục này. | [CR Hiệp 03/11] [FR1.6] |
+| FR8.5 | Quy ước tên phòng ban: viết hoa chữ cái đầu, các chữ sau viết thường trừ tên riêng và chữ viết tắt; tên không kèm chữ "Phòng" (ví dụ "Kế toán", "Nhân sự", "IT"). Tham khảo theo tương tự cách viết hoa tên cơ quan, tổ chức trong Nghị định 30/2020/NĐ-CP về công tác văn thư. Phòng ban tạo bằng migration (FR1.7) đã theo quy ước; tên sai trong database hiện có ("Nhân Sự") sửa bằng chức năng Sửa phòng ban. Ô nhập có dòng gợi ý quy ước; README ghi quy ước. Hệ thống **không** tự đổi chữ người dùng gõ (để giữ chữ viết tắt). | [CR Hiệp 03/11, form] |
+| FR8.6 | `docs/du-lieu-mau.sql` tạo 80 nhân viên giả (`@congty.example`, trong khoảng 50–100 Hiệp yêu cầu) chia vào 8 phòng ban: 4 phòng mẫu và 4 phòng thêm (lựa chọn của người viết để có phân bố đều, không phải yêu cầu của Hiệp). Chạy lại không nhân đôi (phòng ban hoặc email đã có thì bỏ qua); khối xóa riêng chỉ xóa nhân viên `@congty.example` và 4 phòng thêm khi không còn ai. Dùng để quan sát tốc độ khi có nhiều dữ liệu. | [CR Hiệp 03/11] |
+
+**Tiêu chí chấp nhận:**
+
+- **AC FR8.1**
+  - Given "Kế toán" có 3 nhân viên, "Kinh doanh" có 0
+  - When mở trang Phòng ban
+  - Then cột Số nhân viên hiện 3 và 0; API trả `employeeCount` 3 và 0.
+- **AC FR8.2**
+  - Given "Kế toán" có 3 nhân viên
+  - When bấm tên "Kế toán"
+  - Then mở `/departments/{id}`, thấy "3 nhân viên" và bảng đúng 3 người đó, sắp theo họ tên.
+  - Given "Kinh doanh" có 0 nhân viên
+  - When mở trang chi tiết
+  - Then thấy "Phòng ban chưa có nhân viên nào"; bấm "Thêm nhân viên" mở form đã chọn sẵn "Kinh doanh".
+  - Given id phòng ban không tồn tại
+  - When mở `/departments/{id}`
+  - Then thấy "Không tìm thấy phòng ban" và liên kết về danh sách.
+- **AC FR8.3**
+  - Given có nhân viên ở nhiều phòng
+  - When chọn "Kế toán" và tìm "an"
+  - Then chỉ hiện nhân viên phòng Kế toán có họ tên hoặc email chứa "an"; địa chỉ có `departmentId` và `search`; F5 vẫn giữ.
+  - Given `departmentId` không phải số nguyên dương
+  - When gọi API
+  - Then trả 400 ProblemDetails; số hợp lệ nhưng không có phòng đó trả 200 `[]`.
+  - Given địa chỉ có `?departmentId=` của phòng đã bị xóa
+  - When mở trang Nhân viên
+  - Then ô chọn về "Tất cả phòng ban", hiện câu "Phòng ban đã chọn không còn tồn tại" và đủ danh sách.
+- **AC FR8.4**
+  - Given "Kế toán" còn 3 nhân viên
+  - When bấm Xóa
+  - Then hộp ghi "Phòng ban Kế toán còn 3 nhân viên…", không có nút xác nhận xóa, có liên kết "Xem 3 nhân viên".
+  - Given nhân viên được thêm vào phòng ngay trước khi xóa (chen nhau)
+  - When xác nhận xóa
+  - Then API trả 409 "Không thể xóa phòng ban vì còn 1 nhân viên" (số đếm lúc xóa), phòng ban vẫn còn.
+  - Given "Kinh doanh" có 0 nhân viên
+  - When bấm Xóa
+  - Then hiện hộp xác nhận của FR1.4 và xóa được.
+- **AC FR8.5**
+  - Given database mới tạo bằng migration
+  - Then 4 phòng mẫu đều đúng quy ước ("Nhân sự", "Kế toán", "Kỹ thuật", "Kinh doanh").
+  - Given ô nhập tên phòng ban
+  - When nhập "kế TOÁN mới" và Lưu
+  - Then lưu đúng như gõ, không báo lỗi; dưới ô có dòng gợi ý quy ước; README có mục quy ước.
+- **AC FR8.6**
+  - Given database có 4 phòng mẫu
+  - When chạy `docs/du-lieu-mau.sql` hai lần
+  - Then có đúng 8 phòng và 80 nhân viên `@congty.example`.
+  - Given đã có 80 nhân viên mẫu, backend và bản build (`npm run build` + `npm run preview`) chạy trên máy này
+  - When gọi `GET /api/employees` 10 lần và chấm Lighthouse Desktop trang Nhân viên một lần
+  - Then trung vị thời gian ≤ 1 giây; Performance ≥ 90.
 
 ## 4. Yêu cầu phi chức năng
 
@@ -314,7 +376,7 @@ Quan hệ: một phòng ban có nhiều nhân viên; mỗi nhân viên thuộc �
 - Đăng nhập và phân quyền [PJ Forbidden].
 - Phân trang [Q5].
 - Xóa mềm [Q6].
-- Lọc nhân viên theo phòng ban [Q4].
+- ~~Lọc nhân viên theo phòng ban [Q4]~~: đưa vào phạm vi ở Change Request 03/11 (FR8.3).
 - Tìm kiếm không dấu.
 - Các trường ngoài đề: số điện thoại, chức vụ, ngày vào làm, lương [Q1]; mô tả và mã phòng ban [Q2].
 - Nhân viên mẫu [Q7].

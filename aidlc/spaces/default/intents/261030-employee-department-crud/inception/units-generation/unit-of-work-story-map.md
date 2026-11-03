@@ -1,6 +1,6 @@
 # Story nào thuộc unit nào
 
-> **Nguồn:** `user-stories/stories.md` (US1.1–US5.3), `unit-of-work.md`.
+> **Nguồn:** `user-stories/stories.md` (US1.1–US5.3, US6.1–US6.6 của Change Request 03/11), `unit-of-work.md`.
 >
 > Mỗi story là một dòng. Một unit có tên trên dòng nào thì phần Functional Design của unit đó phải lo **mọi tiêu chí chấp nhận** của story đó. Story trải trên nhiều unit thì các unit được ngăn bằng `;`.
 
@@ -25,6 +25,12 @@
 | US5.1 | U1; U5 | u1-backend-platform; u5-handover | U1: user-secrets, tool manifest. U5: README hoàn chỉnh |
 | US5.2 | U1; U5 | u1-backend-platform; u5-handover | U1: OpenAPI, ProblemDetails. U5: danh sách API kèm JSON và kiểm bằng Postman (các API do U3, U4 tự thêm vào danh sách) |
 | US5.3 | U5 | u5-handover | Sơ đồ DB. Ràng buộc DB thật do U3, U4 tạo bằng migration |
+| US6.1 | U4 | u4-employees | Change Request 03/11: đếm cần bảng `employees` (U4 sở hữu), nên U4 thêm `employeeCount` vào DepartmentService/DTO và cột "Số nhân viên" (tiền lệ: U4 đã viết test D1–D3 cho DepartmentService, U4-NFR4.2) |
+| US6.2 | U4 | u4-employees | Trang `/departments/:id` (cả AC6.2.5 xóa phòng 0 người), tên phòng thành liên kết, form thêm nhân viên chọn sẵn phòng |
+| US6.3 | U4 | u4-employees | `departmentId` ở EmployeeService/controller (400 tiếng Việt), ô lọc trên trang Nhân viên |
+| US6.4 | U4 | u4-employees | `CountAsync` + câu 409 có số N (cả nhánh chen nhau), hộp "Không thể xóa phòng ban" ở cả danh sách và trang chi tiết, liên kết `/employees?departmentId=` |
+| US6.5 | U3 | u3-departments | Gợi ý quy ước dưới ô tên phòng ban (không cần bảng nhân viên). README mục quy ước thuộc US6.6 của U5. Sửa "Nhân Sự" là Hiệp làm trên giao diện |
+| US6.6 | U5 | u5-handover | `docs/du-lieu-mau.sql` 80 nhân viên, 8 phòng; README mục quy ước tên (FR8.5); đo tốc độ ở Build and Test |
 
 ## Story trải trên nhiều unit
 
@@ -42,10 +48,11 @@ Theo team-practices, mục Testing Posture (test-after):
 
 ## Kiểm độ phủ
 
-- **Story → unit:** cả 19 story đều có ít nhất một unit.
+- **Story → unit:** cả 25 story (19 cũ + US6.1–US6.6) đều có ít nhất một unit.
 - **Unit → story:** mỗi unit đều có story của mình.
   - U1: US4.1, US5.1, US5.2
   - U2: US4.1–US4.6
-  - U3: US1.1–US1.5, US4.1, US4.2, US4.4–US4.6
-  - U4: US1.4, US2.1–US2.4, US3.1, US4.1, US4.2, US4.4–US4.6
-  - U5: US5.1–US5.3
+  - U3: US1.1–US1.5, US4.1, US4.2, US4.4–US4.6, US6.5
+  - U4: US1.4, US2.1–US2.4, US3.1, US4.1, US4.2, US4.4–US4.6, US6.1–US6.4
+  - U5: US5.1–US5.3, US6.6
+  - Change Request 03/11: U3: US6.5; U4: US6.1–US6.4; U5: US6.6. Thứ tự giữ U3 → U4 → U5, không có phụ thuộc ngược.

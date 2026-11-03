@@ -101,3 +101,4 @@ ALWAYS làm đúng và đủ theo yêu cầu trong docs/ke-hoach.md (dự án Hi
 
 <!-- Project-specific corrections from human feedback. -->
 <!-- Format: NEVER/ALWAYS [behavior] (learned [date]) -->
+- ALWAYS trình bày liên kết trong bảng (ví dụ tên mục dẫn sang trang chi tiết) theo kiểu phần mềm quản trị doanh nghiệp: chữ đậm màu chữ thường, không gạch dưới lúc thường, chỉ đổi sang màu chính và gạch dưới khi rê chuột, giữ viền focus khi dùng bàn phím (Hiệp chê gạch dưới "giống PowerPoint", 04/11/2026). (learned 2026-11-03) <!-- cid:261030-employee-department-crud:build-and-test:25622222dda065489b41c0dd3967210cdcc96c365e419ed32e7d2e736ffbe99b -->

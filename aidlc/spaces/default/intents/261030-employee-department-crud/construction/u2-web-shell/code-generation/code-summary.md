@@ -167,3 +167,7 @@ Mở **đúng** `http://localhost:5173` (không dùng `127.0.0.1`). Backend ph�
 - Thêm đường dẫn form vào `src/App.tsx`.
 - Kiểm tay ở U3: một POST thật từ `http://localhost:5173` không lỗi CORS; bấm đúp nút Lưu chỉ một request; xóa xong dòng biến mất không cần F5; tắt backend → "Không kết nối được máy chủ, vui lòng thử lại"; hạn 10 giây.
 - Đo lại Lighthouse khi U3, U4 xong (`npm run build` rồi `npm run preview`, cổng 5173).
+
+## 4g. Change Request 03/11/2026 (FR8): U2 không đổi
+
+- FR8 (số nhân viên, trang chi tiết phòng ban, lọc theo phòng, hộp xóa có số N) thuộc U3, U4, U5 theo story map; khung giao diện, client.ts, các component dùng chung giữ nguyên. Hiệp chọn Keep mọi bước thiết kế của U2 và duyệt lại plan cũ (tin nhắn b6a4d5cb). Không sửa file nào của U2.

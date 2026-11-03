@@ -151,3 +151,8 @@ erDiagram
 - **Database đã có dữ liệu:** hiện có 1 nhân viên "Đỗ Văn An" (id 1) và số tự tăng đã qua 2005; JSON mẫu sẽ mang id thật lúc gọi. Danh sách ghi rõ "id có thể khác trên máy bạn".
 - **Smart App Control chặn file vừa build:** U5 không build code mới nên ít gặp. Nếu `dotnet run` vẫn bị chặn thì dừng lại báo Hiệp; không thêm comment vào code để né (cách đó là sửa code, trái BR4.1).
 - **Thử ràng buộc làm bẩn dữ liệu:** mỗi thử nghiệm trả dữ liệu về như cũ (BR2.4, BR3.2).
+
+## Change Request 03/11/2026 (FR8): bàn giao
+
+- Dữ liệu mẫu 80 nhân viên / 8 phòng ban, chạy lại an toàn, khối xóa an toàn (BR-CR1, BR-CR2).
+- README: dữ liệu mẫu và quy ước tên phòng ban (BR-CR3). Danh sách API theo hợp đồng C1/C2 mới (BR-CR4).

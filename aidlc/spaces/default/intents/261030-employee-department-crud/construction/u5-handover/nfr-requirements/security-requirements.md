@@ -19,3 +19,7 @@
 - **Lộ khóa, token API:** dự án không có khóa hay token nào (không đăng nhập, không dịch vụ ngoài).
 - **Đẩy lên GitHub công khai:** Hiệp tự đẩy sau, từng bước (`project.md` Forbidden). NFR2.1 bảo đảm khi đó repo không chứa mật khẩu.
 - **Người cài dùng mật khẩu yếu cho PostgreSQL:** nằm ngoài phạm vi tài liệu này; README chỉ nhắc dùng mật khẩu đã đặt lúc cài PostgreSQL.
+
+## Change Request 03/11/2026 (FR8)
+
+Đã rà theo FR8. Thêm cho U5: (1) docs/du-lieu-mau.sql chạy lại nhiều lần vẫn đúng 8 phòng, 80 nhân viên (AC6.6.1); khối xóa chỉ xóa dữ liệu mẫu @congty.example và 4 phòng thêm khi rỗng, trong một transaction (AC6.6.2). (2) Dữ liệu mẫu là dữ liệu giả: email đuôi .example (RFC 2606), tên giả. (3) Dùng để đo AC6.6.3 ở Build and Test. (4) README ghi quy ước tên phòng ban (AC6.5.3); danh-sach-api.md đúng hợp đồng C1/C2 mới.

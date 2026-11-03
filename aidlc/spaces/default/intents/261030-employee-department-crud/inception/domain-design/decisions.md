@@ -15,6 +15,8 @@
 | ADR-003 | Nhân viên phụ thuộc một chiều vào Phòng ban | Accepted |
 | ADR-004 | Một DbContext dùng chung đặt ở Nền tảng chung | Accepted |
 | ADR-005 | Code React xếp theo tính năng | Accepted |
+| ADR-006 | Đếm nhân viên theo phòng ban ở khối Phòng ban (CR 03/11) | Accepted |
+| ADR-007 | Lọc theo phòng ban bằng tham số; trang chi tiết dùng lại API có sẵn (CR 03/11) | Accepted |
 
 ---
 
@@ -58,7 +60,7 @@
 - Dữ liệu nhân viên thuộc khối EmployeeManagement, mà EmployeeManagement đã phụ thuộc DepartmentManagement (ADR-003).
 - Nếu Phòng ban gọi ngược lại Nhân viên thì sinh vòng phụ thuộc.
 
-**Decision.** DepartmentManagement tự kiểm bằng một truy vấn **chỉ đọc** (`AnyAsync` trên bảng nhân viên với `department_id = id`) qua DbContext dùng chung, ngay trước khi xóa. Phòng còn nhân viên thì trả 409. Khóa ngoại `employees.department_id → departments.id` kiểu **RESTRICT** là chốt chặn thứ hai. Nếu hai thao tác chen nhau, database từ chối và Platform chuyển lỗi đó thành 409 (Q2-A).
+**Decision.** (Sửa bởi ADR-006 ngày 03/11: `AnyAsync` đổi thành `CountAsync` để câu báo có số N.) DepartmentManagement tự kiểm bằng một truy vấn **chỉ đọc** (`AnyAsync` trên bảng nhân viên với `department_id = id`) qua DbContext dùng chung, ngay trước khi xóa. Phòng còn nhân viên thì trả 409. Khóa ngoại `employees.department_id → departments.id` kiểu **RESTRICT** là chốt chặn thứ hai. Nếu hai thao tác chen nhau, database từ chối và Platform chuyển lỗi đó thành 409 (Q2-A).
 
 **Consequences.**
 - (+) Không có vòng phụ thuộc. Code ngắn, đọc là hiểu.
@@ -149,3 +151,56 @@
 - **Q4-B, theo loại file (`pages/`, `components/`, `services/`):** quen thuộc trong hướng dẫn trên mạng, nhưng code của một tính năng nằm rải ở ba thư mục, khó theo dõi khi trình bày.
 
 **Security.** Không có tác động. Module `src/api/` là nơi duy nhất ghép địa chỉ API, không chứa bí mật nào (frontend không giữ mật khẩu).
+
+---
+
+## ADR-006: Đếm nhân viên theo phòng ban ở khối Phòng ban (Change Request 03/11/2026)
+
+## Status: Accepted
+
+**Context.**
+- FR8.1 cần `employeeCount` cho mọi phòng ban trong danh sách và trang chi tiết; FR8.4 cần số N trong câu báo 409.
+- ADR-002 đã cho DepartmentManagement đọc chéo bảng nhân viên (chỉ đọc) để chặn xóa; ADR-003 giữ phụ thuộc một chiều Nhân viên → Phòng ban.
+
+**Decision.** DepartmentManagement đếm bằng phép chiếu EF Core trên DbContext dùng chung: mỗi phòng `Count` nhân viên có `department_id` bằng id, dịch thành **một** câu SQL có truy vấn con hoặc `GROUP BY` cho cả danh sách. Khi xóa, `CountAsync` thay cho `AnyAsync` để lời báo có số N. Không thêm cột lưu sẵn số đếm.
+
+**Consequences.**
+- (+) Không có vòng phụ thuộc; mở rộng đúng chỗ đọc chéo đã chấp nhận ở ADR-002.
+- (+) Số luôn đúng với dữ liệu hiện tại, không phải đồng bộ cột đếm.
+- (−) Mỗi lần lấy danh sách phải đếm; với ≤ 1.000 nhân viên và chỉ mục `ix_employees_department_id` (đã có trong migration `CreateEmployees`, khai báo tên tay ở `EmployeeConfiguration`, U4-NFR5.8) thì không đáng kể.
+- (·) Nhánh chen nhau: khóa ngoại RESTRICT chặn; DepartmentService đã tự bắt lỗi này theo tên `fk_employees_department` (không để Platform báo chung), nên nó đếm lại rồi báo "Không thể xóa phòng ban vì còn N nhân viên" với N đếm lúc đó.
+- (·) Số đếm và danh sách có thể lệch trong chốc lát nếu có người thêm/xóa giữa hai lần gọi; chấp nhận được với một người dùng, tải lại là đúng.
+- (·) Kiểm số câu SQL bằng log EF Core (U3-NFR6.3), unit test kiểm giá trị đếm.
+
+**Alternatives Rejected.**
+- **Khối Nhân viên cung cấp hàm đếm:** tạo vòng Phòng ban ↔ Nhân viên (cùng lý do Q2-B ở ADR-002).
+- **Cột `employee_count` lưu sẵn trong bảng phòng ban:** phải cập nhật mỗi lần thêm, sửa, xóa nhân viên, dễ lệch khi chen nhau.
+- **Frontend tự đếm từ danh sách nhân viên:** phải tải toàn bộ nhân viên chỉ để đếm, không đúng khi có lọc.
+
+**Security.** Truy vấn tham số hóa qua EF Core; chỉ trả số đếm, không lộ thêm dữ liệu.
+
+---
+
+## ADR-007: Lọc theo phòng ban bằng tham số và trang chi tiết dùng lại API có sẵn (Change Request 03/11/2026)
+
+## Status: Accepted
+
+**Context.**
+- FR8.3 cần lọc nhân viên theo phòng, kết hợp với `search`; FR8.2 cần trang chi tiết phòng ban liệt kê nhân viên của phòng.
+
+**Decision.**
+- `GET /api/employees` nhận thêm `departmentId` (không bắt buộc) do EmployeeManagement xử lý, ghép AND với `search` trong cùng một truy vấn.
+- Trang chi tiết gọi `GET /api/departments/{id}` (có `employeeCount`) và `GET /api/employees?departmentId={id}`; không thêm endpoint lồng `/api/departments/{id}/employees`.
+- `departmentId` sai kiểu hoặc ≤ 0 trả 400; số hợp lệ không có phòng trả `[]` (lọc là phép chọn, không phải tra cứu một bản ghi).
+- Controller nhận `departmentId` dạng chuỗi; EmployeeService tự đọc số và ném lỗi Validation tiếng Việt ("Phòng ban lọc không hợp lệ") gắn với trường `departmentId`, để không lọt câu tiếng Anh của model binding (ProblemDetails 400 qua Platform như mọi lỗi khác).
+
+**Consequences.**
+- (+) Một cách lấy danh sách nhân viên cho cả trang Nhân viên và trang chi tiết; ít endpoint, ít code.
+- (+) Giữ ranh giới: dữ liệu nhân viên chỉ ra từ khối Nhân viên.
+- (−) Trang chi tiết gọi 2 API; chạy song song nên không chậm thêm đáng kể.
+
+**Alternatives Rejected.**
+- **Endpoint lồng `/api/departments/{id}/employees`:** đúng kiểu REST lồng nhưng lặp logic danh sách nhân viên ở khối Phòng ban.
+- **Trả 404 khi phòng không tồn tại lúc lọc:** trộn nghĩa "không tìm thấy bản ghi" với "bộ lọc không ra kết quả".
+
+**Security.** `departmentId` được kiểm kiểu ở server; truy vấn tham số hóa.

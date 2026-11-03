@@ -165,3 +165,10 @@ erDiagram
 | Postman | Đủ 5 thao tác C2 + `?search=`; 400/404/409; xóa phòng ban còn nhân viên → 409 | BR2, AC2.x, AC1.4.3 |
 | pgAdmin | Bảng `employees`, cột snake_case, `ux_employees_email`, `fk_employees_department`, bảng trống sau migration | BR3, AC1.5.2 |
 | Trình duyệt | Danh sách, tìm (Enter, nút, Back, F5, xóa tìm), thêm, sửa, xóa, ô phòng ban (nạp, rỗng, lỗi), bấm đúp Lưu, tắt backend | BR4 |
+
+## Change Request 03/11/2026 (FR8): luồng mới
+
+- **W-CR1 Danh sách phòng ban có số người (US6.1):** cột "Số nhân viên", tên phòng là liên kết (BR5.1, BR6.1).
+- **W-CR2 Chi tiết phòng ban (US6.2):** `/departments/:id` → `GET /api/departments/:id` + `GET /api/employees?departmentId=:id` song song (BR6.2, interaction-spec F5).
+- **W-CR3 Lọc theo phòng (US6.3):** ô chọn trên trang Nhân viên, `?departmentId=` (BR5.3, BR6.3, F6).
+- **W-CR4 Xóa phòng còn người (US6.4):** hộp thông báo / 409 có số N (BR5.2, BR6.4, F7).

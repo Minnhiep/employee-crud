@@ -48,3 +48,7 @@ SELECT count(*) FROM employees WHERE email LIKE '%@perf.test';  -- phải ra 0
 - Form sửa: tải nhân viên và danh sách phòng ban **song song**, nên thời gian chờ bằng lời gọi lâu hơn chứ không phải tổng hai lời gọi.
 - Không thêm thư viện mới.
 - **Kiểm:** Lighthouse Performance ≥ 90 cho trang `/employees` trên `npm run preview` (cổng 5173).
+
+## Change Request 03/11/2026 (FR8)
+
+Đã rà theo FR8. Hiệu năng: đếm bằng truy vấn con dùng chỉ mục ix_employees_department_id; lọc thêm điều kiện department_id = @p cùng chỉ mục; không N+1. Bảo mật: int.TryParse(NumberStyles.None, CultureInfo.InvariantCulture) để không nhận dấu, khoảng trắng hay số kiểu khác; lỗi qua DomainError.Validation → ProblemDetails 400 của U1. Trợ năng: ConfirmDialog chế độ thông báo giữ showModal, focus vào nút Đóng, Esc đóng, trả focus; id bằng useId; ô lọc có label; vùng aria-live cho câu đếm và câu báo phòng không còn.

@@ -39,3 +39,7 @@
 | Database `employee_db`, user-secrets, CORS, phong bì lỗi C3 | U1 | U3 | U3 dùng như U1 đã định, không đổi cấu hình |
 | `dotnet-tools.json` | U1 (dotnet-ef) | U3 thêm reportgenerator; U4, Build and Test dùng lại | Chỉ tool cục bộ, có phiên bản ghim trong manifest |
 | `client.ts`, component chung | U2 | U3 (`departments.ts`, các trang) | U3 không sửa file của U2 |
+
+## Change Request 03/11/2026 (FR8)
+
+Đã rà theo FR8: không đổi hạ tầng (không bảng, cột, migration hay cấu hình mới cho U3). Bốn phòng mẫu trong migration CreateDepartments đã đúng quy ước tên FR8.5 (AC6.5.1), không cần migration sửa dữ liệu.

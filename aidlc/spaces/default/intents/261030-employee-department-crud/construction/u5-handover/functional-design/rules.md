@@ -260,3 +260,10 @@ rules:
 | BR4.2 | Viết tiếng Việt, giữ nguyên định danh | Cả ba | Code Style |
 | BR4.3 | Hiệp tự kiểm bản clone sạch | README | AC5.1.1, AC5.1.3, Q3 |
 | BR4.4 | Hiệp kiểm lại bằng Postman | API | AC5.2.2, AC5.2.3, Q4 |
+
+## Change Request 03/11/2026 (FR8.5, FR8.6; US6.5 phần README, US6.6)
+
+- **BR-CR1 Dữ liệu mẫu (FR8.6, AC6.6.1, AC6.6.2).** `docs/du-lieu-mau.sql` thêm 4 phòng (Hành chính, Truyền thông, Mua hàng, Chăm sóc khách hàng; lựa chọn của người viết để có phân bố đều) nếu chưa có phòng cùng tên (so không phân biệt hoa thường, cùng biểu thức với chỉ mục `ux_departments_name`), rồi thêm 80 nhân viên giả `@congty.example` (giữ nguyên 10 người cũ) theo tên phòng; email đã có thì bỏ qua (`ON CONFLICT DO NOTHING`). Chạy lại nhiều lần vẫn đúng 8 phòng, 80 người. Tên phòng theo quy ước FR8.5.
+- **BR-CR2 Khối xóa.** Xóa nhân viên `@congty.example`, rồi xóa 4 phòng thêm **chỉ khi không còn ai** (`NOT EXISTS`), không đụng 4 phòng mẫu của migration và dữ liệu khác. Chạy trong một transaction.
+- **BR-CR3 README.** Mục 12 ghi 80 người / 8 phòng và cách đo tốc độ; thêm mục quy ước tên phòng ban (FR8.5: viết hoa chữ cái đầu, không kèm chữ "Phòng", hệ thống không tự đổi chữ; sửa tên sai bằng nút Sửa).
+- **BR-CR4 Danh sách API.** `docs/danh-sach-api.md`: `employeeCount` ở mọi ví dụ phòng ban; tham số `departmentId` của `GET /api/employees` (400 ví dụ, `[]` khi không có phòng); câu 409 xóa phòng ban mới; trang chi tiết dùng hai API có sẵn.

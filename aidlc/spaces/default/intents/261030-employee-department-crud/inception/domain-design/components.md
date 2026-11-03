@@ -26,8 +26,11 @@ components:
       Trước khi xóa, đếm (chỉ đọc) xem phòng ban còn nhân viên không; còn thì từ chối với 409 và
       lời báo tiếng Việt; khóa ngoại RESTRICT trong database là chốt chặn thứ hai (ADR-002).
       Cung cấp ExistsAsync(id) cho khối Nhân viên dùng (ADR-003).
+      Danh sách và chi tiết phòng ban trả kèm employeeCount, đếm bằng truy vấn chỉ đọc trên bảng nhân viên
+      trong cùng một câu SQL (ADR-006); xóa phòng còn người báo 409 có số N (FR8.4).
     responsibilities:
       - Luật nghiệp vụ và kiểm dữ liệu của phòng ban (FR1.1-FR1.6)
+      - Số nhân viên theo phòng ban, câu báo xóa có số N (FR8.1, FR8.4)
       - API REST /api/departments (FR6.1)
       - Trả lời câu hỏi "phòng ban id X có tồn tại không" cho khối khác
     depends_on:
@@ -58,10 +61,12 @@ components:
       với nhân viên khác (không phân biệt hoa thường) - trùng thì 409; sửa giữ nguyên email của chính mình không bị coi là trùng.
       Phòng ban bắt buộc và phải tồn tại - hỏi DepartmentManagement.ExistsAsync, không có thì 400 gắn với trường departmentId.
       Không tìm thấy id thì 404. Xóa là xóa hẳn.
+      Lọc theo departmentId (số nguyên dương, sai kiểu hoặc <= 0 thì 400; không có phòng đó thì danh sách rỗng),
+      kết hợp AND với search, cùng một câu SQL (ADR-007).
     responsibilities:
       - Luật nghiệp vụ và kiểm dữ liệu của nhân viên (FR2.1-FR2.6)
       - Tìm kiếm theo họ tên hoặc email (FR3.1-FR3.2)
-      - API REST /api/employees, gồm tham số search (FR6.1, FR6.3)
+      - API REST /api/employees, gồm tham số search và departmentId (FR6.1, FR6.3, FR8.3)
     depends_on:
       - component: DepartmentManagement
         interaction: Kiểm phòng ban tồn tại khi thêm/sửa nhân viên
@@ -90,7 +95,7 @@ components:
     behaviour: >
       Một DbContext duy nhất (ADR-004) ánh xạ hai bảng theo kiểu snake_case khai báo tay (ToTable, HasColumnName),
       có chỉ mục không trùng cho email và tên phòng ban (không phân biệt hoa thường), khóa ngoại
-      employees.department_id -> departments.id kiểu RESTRICT. Migration tạo bảng và 4 phòng ban mẫu, không có nhân viên mẫu.
+      employees.department_id -> departments.id kiểu RESTRICT, chỉ mục ix_employees_department_id. Migration tạo bảng và 4 phòng ban mẫu (đúng quy ước tên FR8.5), không có nhân viên mẫu; docs/du-lieu-mau.sql (80 nhân viên, 8 phòng, chạy lại không nhân đôi, khối xóa riêng) là dữ liệu demo tùy chọn (FR8.6).
       Connection string đọc từ user-secrets, không nằm trong file commit. Bắt mọi lỗi chưa xử lý và lỗi nghiệp vụ
       (không tìm thấy, xung đột, dữ liệu sai) rồi trả ProblemDetails với mã 400/404/409, lời báo tiếng Việt;
       lỗi vi phạm ràng buộc database cũng được chuyển thành 409/400 chứ không để lộ 500.
@@ -116,6 +121,9 @@ components:
     behaviour: >
       Theo refined-mockups: hai trang Nhân viên và Phòng ban chuyển bằng React Router, form thêm/sửa là trang riêng.
       Kiểm dữ liệu ngay trên form theo đúng luật của API (FR4.1), giữ dữ liệu đã gõ khi có lỗi.
+      Change Request 03/11 (FR8, US6): cột số nhân viên; trang chi tiết /departments/{id} (gọi song song 2 API, ADR-007);
+      ô lọc phòng ban trên địa chỉ ?departmentId=, phòng không còn thì bỏ lọc kèm câu báo; hộp xóa theo employeeCount
+      (N > 0 không cho xóa, có liên kết danh sách đã lọc); gợi ý quy ước tên phòng ban.
       Ba trạng thái đang tải / lỗi kết nối / trống tách bạch (FR4.5). Khóa nút khi đang gửi (FR4.6).
       Mọi lời gọi API đi qua một module chung đọc ProblemDetails và hiện lời báo tiếng Việt.
       Không giữ dữ liệu nghiệp vụ lâu dài; chỉ hiển thị dữ liệu API trả về (không Redux).

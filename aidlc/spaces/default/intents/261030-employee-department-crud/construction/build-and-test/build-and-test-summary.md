@@ -4,16 +4,16 @@
 
 ## 1. Trạng thái chung
 
-Các lượt: lượt 1 (02/11) → Loop-back 1 về U1 (BT-01, BT-02) → lượt 2 dừng vì Change Request làm lại giao diện → lượt 3 (03/11 sáng) → Loop-back 2 về U1 (BT-03) → Change Request rà soát tổng thể (U1–U5) → **lượt 4 (03/11 chiều, lượt chốt)**.
+Các lượt: lượt 1 (02/11) → Loop-back 1 về U1 (BT-01, BT-02) → lượt 2 dừng vì Change Request làm lại giao diện → lượt 3 (03/11 sáng) → Loop-back 2 về U1 (BT-03) → Change Request rà soát tổng thể (U1–U5) → lượt 4 (03/11 chiều) → **Change Request FR8 quan hệ phòng ban – nhân viên (U3–U5) → Loop-back 3 (U4) → Change Request kiểu liên kết (U4) → lượt 5 (04/11, lượt chốt)**.
 
-| Hạng mục | Lượt 1 (2026-11-02T18:29Z) | Lượt 4 (2026-11-03T06:45Z) |
-|---|---|---|
-| Build backend + frontend | Đạt | Đạt (`verify` mã thoát 0) |
-| Unit test | 94/94 | **118/118** |
-| Độ phủ service (mức sàn 80%) | `DepartmentService` 100%, `EmployeeService` 100% | `DepartmentService` 100%, `EmployeeService` 100%, `TextInput` 100% (Microsoft Code Coverage, xem §3) |
-| Kiểm API thật | Đạt, trừ lỗi 400 lệch C3 | Đạt (lượt 3 §2, §2b–§2d; lượt 4 §3, §4) |
-| Kiểm giao diện | Chưa | Playwright 7 trang × 2 độ rộng, console sạch; Lighthouse Desktop 6 trang đều 100 |
-| **Kết luận** | Không đạt → Loop-back 1 | **Đạt**: 135 Met, 4 N/A có lý do, 0 Not Met, 0 Unverified |
+| Hạng mục | Lượt 1 (2026-11-02T18:29Z) | Lượt 4 (2026-11-03T06:45Z) | Lượt 5 (2026-11-04, FR8) |
+|---|---|---|---|
+| Build backend + frontend | Đạt | Đạt (`verify` mã thoát 0) | Đạt |
+| Unit test | 94/94 | 118/118 | **138/138** |
+| Độ phủ service (mức sàn 80%) | `DepartmentService` 100%, `EmployeeService` 100% | `DepartmentService` 100%, `EmployeeService` 100%, `TextInput` 100% (Microsoft Code Coverage, xem §3) | Cả ba vẫn 100% |
+| Kiểm API thật | Đạt, trừ lỗi 400 lệch C3 | Đạt (lượt 3 §2, §2b–§2d; lượt 4 §3, §4) | Đạt (83 nhân viên, trung vị 4,1 ms) |
+| Kiểm giao diện | Chưa | Playwright 7 trang × 2 độ rộng, console sạch; Lighthouse Desktop 6 trang đều 100 | Playwright 9 trang × 2 độ rộng; Lighthouse Desktop 7 trang đều 100 |
+| **Kết luận** | Không đạt → Loop-back 1 | Đạt: 135 Met, 4 N/A | **Đạt**: 146 Met, 4 N/A có lý do, 0 Not Met, 0 Unverified |
 
 Điều kiện có trước (lượt 4): .NET SDK 10.0.403, Node 24.15, PostgreSQL 18.6 đang chạy và **chỉ nghe localhost**, user-secrets `ConnectionStrings:Default` dùng tài khoản `employee_app` (U5, S-02), database `employee_db` có 2 migration, 4 phòng ban, 12 nhân viên.
 
@@ -57,7 +57,7 @@ Verdict: **Met** (Đạt), **Not Met** (Không đạt), **Unverified** (Chưa ki
 | KH-6 | `docs/ke-hoach.md` §5 | README cài đặt và chạy demo trên máy cá nhân | README 16 mục, clone sạch chạy được | U5 Step 11; T4, T5; §6b | build-and-test | Met |
 | C3-400 | Hợp đồng C3, FR4 | 400 trả `application/problem+json` có `type` | Đúng, có cả `traceId` (Loop-back 1) | Lượt 3 §2; `PipelineTests` | build-and-test | Met |
 | C3-404-409 | Hợp đồng C3 | 404, 409 trả `problem+json` có `type`, title tiếng Việt | Đúng | Lượt 1 §4 #4, #6 | build-and-test | Met |
-| TP-1 | `team.md` Testing Posture | `dotnet test` toàn bộ xanh | 118/118 | Lượt 4 §2 | build-and-test | Met |
+| TP-1 | `team.md` Testing Posture | `dotnet test` toàn bộ xanh | 138/138 | Lượt 5 §2 | build-and-test | Met |
 | TP-2 | `team.md`, NFR4.2 U3, NFR4.3 U4 | Mỗi lớp service ≥ 80% dòng | 100% / 100% (`TextInput` 100%) | Lượt 4 §2 | build-and-test | Met |
 | TP-3 | `org.md` (classic: chạy trên CI trước khi merge) | Chạy test trên CI | — | Kế hoạch không chạy CI Pipeline (`ci-pipeline` SKIP) | — | N/A: kế hoạch không có CI Pipeline |
 | TP-4 | `team.md` Code Style | Format và lint sạch trước commit | Sạch | `verify` lượt 4 | build-and-test | Met |
@@ -226,6 +226,24 @@ Mục tiêu tóm từ yêu cầu của Hiệp: giao diện "chuẩn nghiệp v�
 | S-01 | Nhóm 5 | PostgreSQL chỉ nghe localhost | Chỉ `127.0.0.1:5432`, `[::1]:5432` | Lượt 4 §1 | build-and-test | Met |
 | N-06, N-08, N-11, S-06, S-10 | Mục "Không làm" | — | Chỉ chuẩn bị câu trả lời khi demo | `ra-soat-tong-the.md` §2, §4 | — | N/A: ngoài phạm vi `ke-hoach.md` hoặc đã chốt |
 
+### Change Request FR8: quan hệ phòng ban – nhân viên (03–04/11, `requirements.md` FR8, US6.1–US6.6)
+
+| Target ID | Source | Expected | Actual | Evidence | Owning Stage | Verdict |
+|---|---|---|---|---|---|---|
+| FR8.1 | FR8.1, AC6.1.1–6.1.2 | Cột "Số nhân viên"; `employeeCount` 1 câu SQL | Đúng; log SQL thấy truy vấn con trong 1 câu | Test D4–D6; lượt 5 §3, §4 | build-and-test | Met |
+| FR8.2 | FR8.2, AC6.2.1–6.2.5 | Trang chi tiết phòng ban đủ trạng thái, thêm nhân viên chọn sẵn phòng, xóa phòng 0 người | Đạt | Lượt 5 §4; U4 code-summary §5e | build-and-test | Met |
+| FR8.3 | FR8.3, AC6.3.1–6.3.4 | Lọc theo phòng + tìm, 400 tiếng Việt, `[]`, phòng đã xóa | Đạt; "Tìm thấy 5 nhân viên ở phòng Kỹ thuật" | Test #42–#50; lượt 5 §3, §4 | build-and-test | Met |
+| FR8.4 | FR8.4, AC6.4.1–6.4.3 | Hộp "còn N nhân viên" + liên kết; 409 có N cả khi chen nhau | Đạt; "còn 14 nhân viên", 409 "còn 11 nhân viên" | Test D7–D9; lượt 5 §4; `danh-sach-api.md` | build-and-test | Met |
+| FR8.5 | FR8.5, AC6.5.1–6.5.3 | Quy ước tên: phòng mẫu đúng, gợi ý dưới ô, README | Đạt; "Nhân Sự", "Văn Phòng" là dữ liệu Hiệp tự nhập, sửa bằng nút Sửa | U3 code-summary §4e; README mục 12 | build-and-test | Met |
+| FR8.6 | FR8.6, AC6.6.1–6.6.2 | 80 nhân viên / 8 phòng, chạy lại không nhân đôi, khối gỡ an toàn | Hiệp chạy 2 lần: 80; khối gỡ trong transaction: 0/3/5, sau ROLLBACK: 80/83/9 | Lượt 5 §1, §5 | build-and-test | Met |
+| AC6.6.3-API | AC6.6.3 | `GET /api/employees` trung vị 10 lần ≤ 1 giây với nhiều dữ liệu | 4,1 ms với 83 người (lọc 2,6 ms, tìm 2,3 ms) | Lượt 5 §3 | build-and-test | Met |
+| AC6.6.3-LH | AC6.6.3, U2-NFR5.1 | Lighthouse Performance ≥ 90 trang Nhân viên, Phòng ban trên bản build | 100 / 100 (83 người, Hiệp xác nhận bảng có dữ liệu) | Lượt 5 §6 | build-and-test | Met |
+| FR8-A11y | U2-NFR8.3, accessibility-checklist mục US6 | Accessibility 100 ở trang mới `/departments/{id}` và các trang cũ | 100 cả 7 trang; Best Practices 100 | Lượt 5 §6 | build-and-test | Met |
+| LB-3 | Loop-back 3 (`test-results.md`) | "Thêm nhân viên" ở trạng thái rỗng giữ bộ lọc | Về `/employees?departmentId=21` sau Hủy | Lượt 5 §4; U4 code-summary §5f | build-and-test | Met |
+| UI-5 | Change Request kiểu liên kết (Hiệp, 04/11) | Tên phòng ban trong bảng kiểu phần mềm quản trị: chữ đậm màu thường, rê chuột xanh + gạch | Đúng (Playwright đọc kiểu chữ; ảnh chụp) | U4 code-summary §5g | build-and-test | Met |
+
+**Tổng lượt 5 (150 mục):** 146 Met, 4 N/A có lý do, 0 Not Met, 0 Unverified (139 mục của lượt 4 giữ nguyên kết quả, kiểm lại bằng `verify` và Playwright hồi quy; thêm 11 mục FR8).
+
 **Tổng lượt 4 (139 mục):** 135 Met, 4 N/A có lý do (TP-3, U1-NFR2.4b, U1-NFR5.4, mục "Không làm" của rà soát), 0 Not Met, 0 Unverified. So với lượt 1 (116 mục: 100 Met, 3 Not Met, 10 Unverified, 3 N/A): 3 Not Met đã sửa qua Loop-back 1; U1-NFR6.2 (Met ở lượt 1 nhờ đọc code, Not Met ở lượt 3 khi gây lỗi DB thật) đã sửa qua Loop-back 2; 10 Unverified đã kiểm; thêm 23 mục từ hai Change Request.
 
 ## 4. Đánh giá sẵn sàng
@@ -233,7 +251,7 @@ Mục tiêu tóm từ yêu cầu của Hiệp: giao diện "chuẩn nghiệp v�
 | Mức | Trạng thái |
 |---|---|
 | Build-ready | Có |
-| Test-ready | Có (118 test, lệnh `verify`, `coverage`) |
+| Test-ready | Có (138 test, lệnh `verify`; đo độ phủ bằng Microsoft Code Coverage) |
 | Deployment-ready (chạy trên máy theo README) | Có: migration, OpenAPI, Postman, giao diện đủ bốn điều kiện của `team.md` Deployment |
 
 ## 5. Giới hạn đã biết và việc còn mở
@@ -242,6 +260,9 @@ Mục tiêu tóm từ yêu cầu của Hiệp: giao diện "chuẩn nghiệp v�
 - **Đo độ phủ bằng coverlet bị Smart App Control chặn** trên máy này (dll do coverlet viết lại là file mới). Lượt 4 đo bằng Microsoft Code Coverage; lệnh `coverage` trong `frontend/package.json` và `team.md` vẫn ghi coverlet. Đổi hẳn công cụ là việc Hiệp quyết sau.
 - **Thay đổi sau review U1:** 2 comment giải thích ở `Platform/Errors/DbConstraintNames.cs` (không đổi code), thêm khi xử lý Smart App Control.
 - **Tài liệu tự học `07-kiem-thu-va-demo.md`** có vài kết quả mong đợi khác thiết kế đã duyệt (A02: 400, A07: 200, khóa `email`); chỗ lệch ghi trong `integration-test-instructions.md`.
-- **Commit:** thay đổi của đợt rà soát (code U1–U5, tài liệu, hồ sơ AI-DLC) chưa commit; Hiệp commit theo mục đích sau bước này.
+- **Commit:** thay đổi của Change Request FR8 (code U3, U4, file U2 dùng chung, tài liệu, dữ liệu mẫu, hồ sơ AI-DLC) chưa commit; Hiệp commit theo mục đích sau bước này.
+- **Đã dùng hết 3 loop-back** của intent này (Loop-back 3 ở U4). Sửa thêm do Hiệp yêu cầu đi theo Change Request, không tính vào giới hạn.
+- **Dữ liệu sai quy ước tên trên máy Hiệp:** "Nhân Sự", "Văn Phòng" (Hiệp tự nhập). Sửa bằng nút Sửa ở trang Phòng ban nếu muốn.
+- **Minor đã ghi nhận, không sửa:** frontend chỉ nhận `departmentId` tối đa 9 chữ số; câu báo "phòng ban không còn" hiện lại khi F5 đúng mục lịch sử đó; trên màn hình cảm ứng tên phòng ban chỉ phân biệt bằng chữ đậm.
 - **Đẩy lên GitHub và demo 15 phút**: việc của Hiệp sau khi xong bước này (`team.md`). Điền địa chỉ repo vào README mục 2 khi đã có.
 - **Thư mục `C:\Users\ASUS\thu-clone-employee-crud`**: Hiệp quyết sau.
