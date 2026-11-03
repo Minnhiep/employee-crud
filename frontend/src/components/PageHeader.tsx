@@ -42,7 +42,8 @@ export function PageHeader({
             {breadcrumbs.map((item, index) => {
               const isLast = index === breadcrumbs.length - 1;
               return (
-                <Fragment key={item.label}>
+                // Ghép vị trí vào key: đường dẫn có thể trùng chữ, ví dụ "Nhân sự > Phòng ban > Nhân sự" (FR8.2).
+                <Fragment key={`${index}-${item.label}`}>
                   <li className="breadcrumb__item">
                     {item.to && !isLast ? (
                       <Link to={item.to}>{item.label}</Link>

@@ -5,6 +5,8 @@ import type { RequestOptions } from "./client";
 export type Department = {
   id: number;
   name: string;
+  /** Số nhân viên lúc đọc (FR8.1); backend đếm, frontend không tự đếm. */
+  employeeCount: number;
 };
 
 /** Dữ liệu gửi lên khi thêm hoặc sửa phòng ban. */

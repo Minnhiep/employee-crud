@@ -8,7 +8,14 @@ import type { IconName } from "./Icon";
  */
 export type StatusAction =
   | { label: string; onClick: () => void; icon?: IconName; testId?: string }
-  | { label: string; to: string; icon?: IconName; testId?: string };
+  | {
+      label: string;
+      to: string;
+      /** Gửi kèm khi chuyển trang, ví dụ bộ lọc để form quay về đúng danh sách (Loop-back 3). */
+      state?: unknown;
+      icon?: IconName;
+      testId?: string;
+    };
 
 type StatusMessageProps = {
   kind: "loading" | "error" | "empty";
@@ -72,6 +79,7 @@ function StatusActionButton({
       <Link
         className="btn btn--primary"
         to={action.to}
+        state={action.state}
         data-testid={action.testId}
       >
         {action.icon && <Icon name={action.icon} />}

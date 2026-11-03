@@ -21,13 +21,23 @@ const BASE_PATH = "/api/employees";
 
 /**
  * Danh sách nhân viên, đã sắp theo họ tên ở backend.
- * Có chuỗi tìm thì thêm ?search=; chuỗi được mã hóa để dấu tiếng Việt, khoảng trắng, "%", "&" đi đúng nguyên văn.
+ * Có chuỗi tìm thì thêm ?search=; có phòng ban thì thêm ?departmentId= (FR8.3, hai điều kiện ghép AND).
+ * URLSearchParams mã hóa giá trị, nên dấu tiếng Việt, khoảng trắng, "%", "&" đi đúng nguyên văn.
  */
 export function getEmployees(
   search: string,
+  departmentId: number | null,
   options?: RequestOptions,
 ): Promise<Employee[]> {
-  const query = search ? `?search=${encodeURIComponent(search)}` : "";
+  const params = new URLSearchParams();
+  if (search) {
+    params.set("search", search);
+  }
+  if (departmentId !== null) {
+    params.set("departmentId", String(departmentId));
+  }
+  const queryString = params.toString();
+  const query = queryString ? `?${queryString}` : "";
   return apiGet<Employee[]>(BASE_PATH + query, options);
 }
 

@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ApiError, isAborted, messageOf } from "../../api/client";
-import { deleteDepartment, getDepartments } from "../../api/departments";
+import { getDepartments } from "../../api/departments";
 import type { Department } from "../../api/departments";
-import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Icon } from "../../components/Icon";
@@ -11,7 +10,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import { Toast } from "../../components/Toast";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { useSubmitGuard } from "../../hooks/useSubmitGuard";
+import { useDepartmentDelete } from "./useDepartmentDelete";
 
 const TITLE = "Phòng ban";
 
@@ -27,29 +26,40 @@ const columns: DataTableColumn<Department>[] = [
   {
     key: "name",
     header: "Tên phòng ban",
+    // Tên là liên kết tới trang chi tiết (US6.2): xem phòng này có những ai.
     render: (department) => (
-      <span className="table__strong">{department.name}</span>
+      <Link
+        className="table__strong table__link"
+        to={`/departments/${department.id}`}
+        aria-label={`Xem phòng ban ${department.name}`}
+        data-testid={`department-view-${department.id}`}
+      >
+        {department.name}
+      </Link>
     ),
+  },
+  {
+    key: "employeeCount",
+    header: "Số nhân viên",
+    align: "end",
+    render: (department) => department.employeeCount,
   },
 ];
 
 /**
- * Trang danh sách phòng ban (US1.1, US1.4): bốn trạng thái tải / lỗi / trống / có dữ liệu (BR4.1),
- * và xóa có xác nhận bằng hộp thoại ngay trên bảng (BR4.5).
+ * Trang danh sách phòng ban (US1.1, US1.4, US6.1): bốn trạng thái tải / lỗi / trống / có dữ liệu (BR4.1),
+ * cột số nhân viên, và xóa theo luật của useDepartmentDelete (BR6.4).
  */
 export function DepartmentsPage() {
   const headingRef = usePageTitle(TITLE);
   const navigate = useNavigate();
   const location = useLocation();
-  const { isSubmitting, run } = useSubmitGuard();
 
   // Tăng số này để tải lại (bấm "Thử lại", sau khi xóa). Cùng kiểu với trang nhân viên (rà soát tổng thể A-05).
   const [reloadKey, setReloadKey] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
   // Lỗi khi xóa (409, lỗi mạng...) hiện ở đầu thân trang; bảng vẫn giữ nguyên.
   const [actionError, setActionError] = useState("");
-  // Phòng ban đang chờ xác nhận xóa; khác null thì hộp xác nhận mở.
-  const [pendingDelete, setPendingDelete] = useState<Department | null>(null);
   // Tăng số này để đưa focus về tiêu đề SAU khi hộp xác nhận đã đóng (dòng vừa xóa không còn để nhận focus).
   const [headingFocusRequest, setHeadingFocusRequest] = useState(0);
 
@@ -90,39 +100,36 @@ export function DepartmentsPage() {
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
-  async function confirmDelete() {
-    const department = pendingDelete;
-    if (!department || isSubmitting) {
-      return;
-    }
-    setActionError("");
-    await run(async () => {
-      try {
-        await deleteDepartment(department.id);
-        setPendingDelete(null);
-        // Gọi lại hàm tải danh sách để dòng vừa xóa biến mất ngay, không cần F5 (rà soát U2).
+  const { requestDelete, isSubmitting, dialogs } = useDepartmentDelete({
+    onDeleted: (department) => {
+      // Gọi lại hàm tải danh sách để dòng vừa xóa biến mất ngay, không cần F5 (rà soát U2).
+      reload();
+      // navigate chỉ để mang lời báo cho Toast; việc tải danh sách không phụ thuộc vào nó.
+      void navigate(location.pathname + location.search, {
+        replace: true,
+        state: { message: `Đã xóa phòng ban "${department.name}"` },
+      });
+      setHeadingFocusRequest((request) => request + 1);
+    },
+    onError: (_department, error) => {
+      // 404 (đã bị xóa ở nơi khác) và 409 (có người vừa được thêm vào phòng, AC6.4.3) đều làm số trên bảng cũ:
+      // tải lại để bảng đúng với database.
+      if (
+        error instanceof ApiError &&
+        (error.status === 404 || error.status === 409)
+      ) {
         reload();
-        // navigate chỉ để mang lời báo cho Toast; việc tải danh sách không phụ thuộc vào nó.
-        void navigate(location.pathname + location.search, {
-          replace: true,
-          state: { message: `Đã xóa phòng ban "${department.name}"` },
-        });
-        setHeadingFocusRequest((request) => request + 1);
-      } catch (error) {
-        setPendingDelete(null);
-        if (error instanceof ApiError && error.status === 404) {
-          // Đã bị xóa ở nơi khác: tải lại để bảng đúng với database.
-          reload();
-          setActionError("Phòng ban này không còn, danh sách đã được tải lại.");
-          // Bảng tải lại nên nút Xóa không còn để nhận focus: đưa focus về tiêu đề như khi xóa thành công.
-          setHeadingFocusRequest((request) => request + 1);
-        } else {
-          // 409 (còn nhân viên) hoặc lỗi mạng: giữ dòng, báo lỗi; hộp đóng và focus về nút Xóa.
-          setActionError(messageOf(error));
-        }
       }
-    });
-  }
+      if (error instanceof ApiError && error.status === 404) {
+        setActionError("Phòng ban này không còn, danh sách đã được tải lại.");
+        // Bảng tải lại nên nút Xóa không còn để nhận focus: đưa focus về tiêu đề như khi xóa thành công.
+        setHeadingFocusRequest((request) => request + 1);
+      } else {
+        // 409 hoặc lỗi mạng: hiện lời API trả về ("…còn N nhân viên") hoặc câu chung.
+        setActionError(messageOf(error));
+      }
+    },
+  });
 
   return (
     <>
@@ -130,7 +137,7 @@ export function DepartmentsPage() {
         title={TITLE}
         headingRef={headingRef}
         breadcrumbs={[{ label: "Nhân sự" }, { label: TITLE }]}
-        description="Danh mục phòng ban dùng khi gán nhân viên."
+        description="Danh mục phòng ban và số nhân viên của từng phòng."
         actions={
           <Link
             className="btn btn--primary"
@@ -213,7 +220,7 @@ export function DepartmentsPage() {
                     disabled={isSubmitting}
                     onClick={() => {
                       setActionError("");
-                      setPendingDelete(department);
+                      requestDelete(department);
                     }}
                     aria-label={`Xóa phòng ban ${department.name}`}
                     data-testid={`department-delete-${department.id}`}
@@ -228,20 +235,7 @@ export function DepartmentsPage() {
         </section>
       </div>
 
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title="Xóa phòng ban?"
-        confirmLabel="Xóa phòng ban"
-        busy={isSubmitting}
-        onConfirm={() => void confirmDelete()}
-        onCancel={() => setPendingDelete(null)}
-        confirmTestId="department-delete-confirm"
-      >
-        <p>
-          Phòng ban <strong>{pendingDelete?.name}</strong> sẽ bị xóa vĩnh viễn.
-          Thao tác này không thể hoàn tác.
-        </p>
-      </ConfirmDialog>
+      {dialogs}
     </>
   );
 }

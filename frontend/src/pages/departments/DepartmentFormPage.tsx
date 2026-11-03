@@ -248,7 +248,7 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
                   id="name"
                   label="Tên phòng ban"
                   required
-                  hint="Tối đa 100 ký tự, không trùng với phòng ban khác."
+                  hint="Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT. Tối đa 100 ký tự, không trùng với phòng ban khác."
                   errors={fieldErrors.name}
                 >
                   {(controlProps) => (

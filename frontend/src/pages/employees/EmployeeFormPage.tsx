@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router";
 import {
   ApiError,
   GENERIC_MESSAGE,
@@ -47,21 +53,43 @@ type EmployeeFormPageProps = {
 };
 
 /**
- * Địa chỉ danh sách để quay về sau khi Lưu, Hủy (rà soát N-07): giữ chuỗi tìm mà trang danh sách gửi kèm khi bấm Sửa.
- * Đọc từ state của đường dẫn (không có khi gõ thẳng địa chỉ hay F5, khi đó về /employees như cũ) và dựng lại bằng
- * URLSearchParams, nên một giá trị lạ chỉ thành tham số tìm, không đổi được đường dẫn.
+ * Địa chỉ để quay về sau khi Lưu, Hủy, đọc từ state mà trang trước gửi kèm (không có khi gõ thẳng địa chỉ hay F5,
+ * khi đó về /employees như cũ):
+ * - `returnTo` từ trang chi tiết phòng ban (FR8.2): chỉ nhận đúng dạng /departments/<số>, để state lạ không đưa
+ *   người dùng tới một địa chỉ tùy ý;
+ * - `search`, `departmentId` từ trang danh sách đang tìm hoặc lọc (rà soát N-07, FR8.3): dựng lại bằng
+ *   URLSearchParams, nên giá trị lạ chỉ thành tham số, không đổi được đường dẫn.
  */
 function listPathFrom(state: unknown): string {
-  const search =
-    typeof state === "object" &&
-    state !== null &&
-    "search" in state &&
-    typeof state.search === "string"
-      ? state.search
-      : "";
-  return search
-    ? `/employees?${new URLSearchParams({ search }).toString()}`
-    : "/employees";
+  if (typeof state !== "object" || state === null) {
+    return "/employees";
+  }
+  if (
+    "returnTo" in state &&
+    typeof state.returnTo === "string" &&
+    /^\/departments\/[1-9][0-9]*$/.test(state.returnTo)
+  ) {
+    return state.returnTo;
+  }
+  const params = new URLSearchParams();
+  if ("search" in state && typeof state.search === "string" && state.search) {
+    params.set("search", state.search);
+  }
+  if (
+    "departmentId" in state &&
+    typeof state.departmentId === "number" &&
+    Number.isInteger(state.departmentId) &&
+    state.departmentId > 0
+  ) {
+    params.set("departmentId", String(state.departmentId));
+  }
+  const query = params.toString();
+  return query ? `/employees?${query}` : "/employees";
+}
+
+/** ?departmentId= của form thêm (đi từ trang chi tiết phòng ban hoặc từ danh sách đang lọc, AC6.2.3). */
+function presetDepartmentIdFrom(raw: string | null): number | null {
+  return raw !== null && /^[1-9][0-9]{0,8}$/.test(raw) ? Number(raw) : null;
 }
 
 /** Đặt (hoặc bỏ) lỗi của đúng một ô, giữ nguyên lỗi các ô khác. */
@@ -91,6 +119,11 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
   const navigate = useNavigate();
   const { isSubmitting, run } = useSubmitGuard();
   const listPath = listPathFrom(useLocation().state);
+  const [searchParams] = useSearchParams();
+  // Chỉ form thêm mới chọn sẵn phòng; form sửa luôn lấy phòng của nhân viên đang sửa.
+  const presetDepartmentId = isEdit
+    ? null
+    : presetDepartmentIdFrom(searchParams.get("departmentId"));
 
   const params = useParams();
   const id = Number(params.id);
@@ -168,6 +201,18 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
       (data) => {
         setDepartments(data);
         setDepartmentsStatus("ready");
+        // Chọn sẵn phòng từ địa chỉ, chỉ khi phòng đó có thật trong danh sách và người dùng chưa tự chọn.
+        // Sai hoặc không có thì để trống như thêm mới thường.
+        if (
+          presetDepartmentId !== null &&
+          data.some((department) => department.id === presetDepartmentId)
+        ) {
+          setValues((current) =>
+            current.departmentId === ""
+              ? { ...current, departmentId: String(presetDepartmentId) }
+              : current,
+          );
+        }
       },
       (error: unknown) => {
         if (isAborted(error)) {
@@ -177,7 +222,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
       },
     );
     return () => controller.abort();
-  }, [departmentsReloadKey]);
+  }, [departmentsReloadKey, presetDepartmentId]);
 
   function retryLoad() {
     setLoadStatus("loading");

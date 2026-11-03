@@ -6,6 +6,7 @@ import {
   useParams,
 } from "react-router";
 import { AppLayout } from "./components/AppLayout";
+import { DepartmentDetailPage } from "./pages/departments/DepartmentDetailPage";
 import { DepartmentFormPage } from "./pages/departments/DepartmentFormPage";
 import { DepartmentsPage } from "./pages/departments/DepartmentsPage";
 import { EmployeeFormPage } from "./pages/employees/EmployeeFormPage";
@@ -25,6 +26,12 @@ function EmployeeEditRoute() {
 function DepartmentEditRoute() {
   const { id } = useParams();
   return <DepartmentFormPage key={`edit-${id}`} mode="edit" />;
+}
+
+/** Trang chi tiết phòng ban (FR8.2) cũng tạo mới theo id, để không lẫn dữ liệu khi đi từ phòng này sang phòng khác. */
+function DepartmentDetailRoute() {
+  const { id } = useParams();
+  return <DepartmentDetailPage key={`detail-${id}`} />;
 }
 
 /**
@@ -49,6 +56,7 @@ export default function App() {
             path="departments/new"
             element={<DepartmentFormPage key="create" mode="create" />}
           />
+          <Route path="departments/:id" element={<DepartmentDetailRoute />} />
           <Route
             path="departments/:id/edit"
             element={<DepartmentEditRoute />}

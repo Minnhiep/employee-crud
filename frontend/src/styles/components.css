@@ -294,6 +294,20 @@
   padding-left: 2.25rem;
 }
 
+/* ---- Ô lọc theo phòng ban (FR8.3) ----
+   Dùng lại kiểu ô chọn của form (".field select") nhưng xếp nhãn và ô trên một hàng trong thanh công cụ. */
+
+.filter {
+  display: flex;
+  flex: 0 1 18rem;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.filter label {
+  white-space: nowrap;
+}
+
 /* ---- Bảng ---- */
 
 .table-wrap {
@@ -347,6 +361,29 @@
 .table .table__actions-cell {
   width: 1%;
   text-align: right;
+}
+
+/* Tên trong bảng là liên kết (ví dụ tên phòng ban → trang chi tiết), kiểu bảng của phần mềm quản trị
+   (Hiệp chọn 04/11): lúc thường chữ màu thường, đậm vừa, không gạch; rê chuột thì xanh và gạch dưới.
+   Liên kết đứng riêng một ô bảng, không nằm trong đoạn chữ, nên không cần gạch sẵn để phân biệt (WCAG 1.4.1).
+   Bàn phím vẫn thấy viền focus chung (:focus-visible trong base.css). */
+.table .table__link {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.table .table__link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+  /* Đẩy gạch dưới xuống một chút để không cắt dấu tiếng Việt (ví dụ "ọ", "ụ"). */
+  text-underline-offset: 0.2em;
+}
+
+/* Cột số (ví dụ "Số nhân viên"): căn phải, chữ số cùng bề rộng để các hàng thẳng cột. */
+.table .table__cell--end {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .table__actions {
@@ -660,6 +697,13 @@
   border-color: rgb(180 35 24 / 25%);
 }
 
+/* Thông báo thường (không phải lỗi), ví dụ "Phòng ban đã chọn không còn tồn tại". Chữ màu thường để đủ tương phản. */
+.alert--info {
+  color: var(--color-text);
+  background: var(--color-primary-subtle);
+  border-color: var(--color-border);
+}
+
 .alert__icon {
   display: inline-flex;
   padding-top: 0.0625rem;
@@ -844,6 +888,12 @@
   color: var(--color-danger);
   background: var(--color-danger-subtle);
   border-radius: var(--radius-pill);
+}
+
+/* Hộp chỉ thông báo (không có gì bị xóa): dùng màu chính thay cho màu đỏ của hộp xóa. */
+.dialog__icon--info {
+  color: var(--color-primary);
+  background: var(--color-primary-subtle);
 }
 
 .dialog__title {

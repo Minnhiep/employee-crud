@@ -5,6 +5,8 @@ export type DataTableColumn<Row> = {
   key: string;
   header: string;
   render: (row: Row) => ReactNode;
+  /** "end": căn phải cả tiêu đề lẫn ô, dùng cho cột số. */
+  align?: "end";
 };
 
 type DataTableProps<Row extends { id: number }> = {
@@ -38,7 +40,13 @@ export function DataTable<Row extends { id: number }>({
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column.key} scope="col">
+              <th
+                key={column.key}
+                scope="col"
+                className={
+                  column.align === "end" ? "table__cell--end" : undefined
+                }
+              >
                 {column.header}
               </th>
             ))}
@@ -53,7 +61,14 @@ export function DataTable<Row extends { id: number }>({
           {rows.map((row) => (
             <tr key={row.id}>
               {columns.map((column) => (
-                <td key={column.key}>{column.render(row)}</td>
+                <td
+                  key={column.key}
+                  className={
+                    column.align === "end" ? "table__cell--end" : undefined
+                  }
+                >
+                  {column.render(row)}
+                </td>
               ))}
               {renderActions && (
                 <td className="table__actions-cell">
