@@ -33,12 +33,17 @@ dotnet test backend/EmployeeCrud.Api.Tests/EmployeeCrud.Api.Tests.csproj --filte
 |---|---|---|
 | `ErrorMapperTests` | 12 | Từng nhánh đổi lỗi: 404, 400, 409 có/không field, 23505 theo tên ràng buộc, 23505 tên lạ → 500, 23503 dự phòng → 409, **23001 dự phòng → 409** (Loop-back 1), `BadHttpRequestException` 400/413, lỗi lạ → 500 không lộ thông điệp |
 | `PipelineTests` | 9 | CORS trên phản hồi 500 và 404, Origin lạ không có header, 400 camelCase, JSON hỏng, 405, 415, thiếu chuỗi kết nối thì khởi động ném lỗi, **400 từ controller gắn `[Produces("application/json")]` vẫn là `application/problem+json` có `type`, `traceId`** (Loop-back 1) |
+| `SecurityTests` | 5 | (Step 11) Host lạ `evil.example` → 400; phản hồi `/api` 200, 404, 500 đều có `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`, CSP `frame-ancestors 'none'`; phản hồi 400 giữ chữ Việt, mã hóa `<b>` thành `<b>` |
+| `LoggingTests` | 2 | (Step 11) lỗi 500 ghi đúng 1 dòng Error, `traceId` trong log trùng phản hồi; request bị hủy giữa chừng: máy chủ nhận việc hủy (chờ tối đa 5 giây), 0 dòng Error |
+
+Tổng phần nền U1: 28 test. Toàn dự án sau Step 11: 103 test.
 
 ## Giả lập (mock/stub)
 
 - **Lỗi database:** dựng `PostgresException` bằng constructor công khai của Npgsql (đặt `sqlState` và `constraintName`), bọc trong `DbUpdateException`. Không cần PostgreSQL thật.
 - **Ứng dụng trong bộ nhớ:** `PlatformWebAppFactory` dùng môi trường `Testing` để **không** nạp user-secrets thật của Hiệp. Chuỗi kết nối giả `Host=localhost;Database=employee_crud_test` (không có mật khẩu, không mở kết nối nào), đặt qua `UseSetting`.
 - **Endpoint chỉ có trong test:** `TestOnlyController` đăng ký bằng `AddApplicationPart`, không nằm trong code chạy thật.
+- **Log trong bộ nhớ:** `LogCapturingWebAppFactory` thêm một bộ ghi log giữ mọi dòng (nhóm log, mức, nội dung) để test đếm dòng Error.
 - Không dùng thư viện mock: U1 không có phụ thuộc nào cần thay thế.
 
 ## Dữ liệu test
@@ -54,3 +59,4 @@ dotnet test backend/EmployeeCrud.Api.Tests/EmployeeCrud.Api.Tests.csproj --filte
 | Đường dẫn lạ | `dotnet run --project backend/EmployeeCrud.Api`, Postman `GET /api/khong-ton-tai` | 404, `application/problem+json`, title "Không tìm thấy" |
 | OpenAPI | Mở `/swagger` ở Development | Trang hiện ra, đọc được `/openapi/v1.json` |
 | Thiếu chuỗi kết nối | `dotnet user-secrets remove "ConnectionStrings:Default" --project backend/EmployeeCrud.Api`, `dotnet run`, rồi đặt lại | Ứng dụng dừng, in hướng dẫn tiếng Việt, không in mật khẩu |
+| Một lỗi 500 = một dòng Error (NFR6.2, Loop-back 2) | Chạy backend phụ với `ConnectionStrings__Default` trỏ cổng database không ai nghe (ví dụ `Port=5999`) và `--urls http://localhost:5082`, gọi `GET /api/employees` một lần, đếm dòng bắt đầu bằng `fail:` | 500 `application/problem+json` câu chung; đúng **1** dòng `fail:` (của `ProblemDetailsExceptionHandler`); gọi 409 (trùng email, xóa phòng ban còn nhân viên, và 8 yêu cầu thêm cùng một email gửi cùng lúc) thì 0 dòng `fail:`. **Chạy lại ca này sau mỗi lần đổi `appsettings*.json` hoặc nâng bản EF Core/Npgsql** (không có test tự động cho log, dự án không có CI) |

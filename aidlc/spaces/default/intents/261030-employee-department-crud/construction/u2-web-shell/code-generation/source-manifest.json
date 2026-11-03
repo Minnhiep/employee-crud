@@ -18,6 +18,8 @@
     { "path": "frontend/src/pages/NotFoundPage.tsx" },
     { "path": "frontend/src/styles/base.css" },
     { "path": "frontend/src/styles/components.css" },
-    { "path": "frontend/src/styles/tokens.css" }
+    { "path": "frontend/src/styles/tokens.css" },
+    { "path": "frontend/src/api/client.ts" },
+    { "path": "frontend/.env.development" }
   ]
 }

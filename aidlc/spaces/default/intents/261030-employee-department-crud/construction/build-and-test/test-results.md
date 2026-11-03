@@ -77,6 +77,162 @@ Không tạo hay xóa dữ liệu nào ở lượt này (mọi lời gọi ghi �
 
 Luồng chính trên trình duyệt (F, V; Hiệp), Lighthouse 6 trang và Best Practices, W3C Validator, danh sách WCAG, hạn 10 giây (E1), tắt PostgreSQL giữa chừng (U1 NFR1.4), console sạch (E2).
 
+## Lượt chạy 2 — 2026-11-02T19:00Z (dừng giữa chừng)
+
+Sau Loop-back 1 (U1 sửa xong, Hiệp duyệt checkpoint), lượt 2 đã chạy phần kiểm của AI (độ phủ 100/100, 96/96 test, E1–E3, WCAG trên DOM 6 trang) thì Hiệp yêu cầu **làm lại giao diện** (Change Request ngày 03/11, ghi trong audit): quay lại Code Generation U2 → U3 → U4, chỉ đổi giao diện, không thêm tính năng. Kết quả giao diện của lượt 2 không còn đúng với code mới nên **không dùng**; mọi mục giao diện được kiểm lại ở lượt 3.
+
+## Lượt chạy 3 — 2026-11-03T02:30Z (sau khi làm lại giao diện)
+
+Code đã kiểm: commit `4c1ceb3` (sửa lỗi U1), `0c23b04` (giao diện U2–U4), cộng commit hồ sơ AI-DLC; cây làm việc sạch lúc bắt đầu.
+
+### 1. Build và unit test
+
+| Lệnh | Mã thoát | Kết quả |
+|---|---|---|
+| `npm --prefix frontend run verify` | 0 | typecheck, ESLint (0 cảnh báo), Prettier, Vite build (JS 293,06 KB, CSS 16,34 KB) đều sạch; `dotnet test`: **96/96 đạt** |
+| `npm --prefix frontend run coverage` (dừng backend nền trước, vì backend giữ file `.exe`, lỗi MSB3027 ở lần chạy đầu) | 0 | `DepartmentService` **100%**, `EmployeeService` **100%** dòng (mức sàn 80%). Toàn assembly 43,7% vì controller, migration không thuộc phạm vi đo theo `team.md` |
+
+### 2. Kiểm trên trình duyệt thật (Playwright điều khiển Chromium, backend + PostgreSQL thật, `npm run dev`)
+
+| Mục | Kết quả |
+|---|---|
+| 7 trang (`/employees`, `/employees/new`, `/employees/1/edit`, `/departments`, `/departments/new`, `/departments/2/edit`, trang không tồn tại) | Mỗi trang: `lang="vi"`, đúng 1 `h1`, 1 `main`, tiêu đề tab đúng; 0 id trùng, 0 ô thiếu nhãn, 0 nút/liên kết thiếu tên; bảng có `caption` |
+| Độ rộng 1920, 1366, 1024, 768, 360, 320px | Cả 7 trang không trang nào cuộn ngang ở bất kỳ độ rộng nào |
+| W3C Validator (`validator.w3.org/nu`, gửi HTML đã vẽ của 7 trang; Hiệp chọn AI gửi) | **0 lỗi** cả 7 trang. Cảnh báo duy nhất: `type` thừa ở thẻ `<style>` do Vite chèn khi chạy chế độ dev (bản build dùng `<link>`), không phải code dự án |
+| Console khi đi 7 trang (E2) | 0 lỗi, 0 cảnh báo |
+| Hạn chờ (E1, U2-NFR5.3): chặn `/api/employees` không trả lời | Sau **10,6 giây** (kể cả lúc tải trang) hiện "Không kết nối được máy chủ, vui lòng thử lại" + "Thử lại" |
+| 400 thật hiện trên form (BT-01): sửa body gửi đi thành `departmentId: "abc"` để vượt kiểm của form | API trả **400 `application/problem+json`** có `type` và `traceId`; form hiện khung tóm tắt "Phòng ban: Giá trị không đúng kiểu dữ liệu", khung nhận focus, địa chỉ không đổi, không tạo dữ liệu |
+| Luồng thêm/sửa/xóa, tìm, Back/Forward, focus, hộp xác nhận, 409, 404, tắt backend, dữ liệu dài | Đạt trong lúc làm U3, U4 Step 10 (chi tiết: `u3-departments/code-generation/code-summary.md` §4b, `u4-employees/code-generation/code-summary.md` §5b). Dữ liệu thử đã xóa: còn 4 phòng ban, 1 nhân viên |
+
+### 2b. Luồng chính F01–F14, kiểm dữ liệu V01–V07 (Hiệp nhờ AI kiểm, tin nhắn 21d0cfc4)
+
+Chạy trên **hai server Hiệp tự bật theo README** (`dotnet run --project backend/EmployeeCrud.Api`, `npm run dev`), Playwright điều khiển Chromium, 1366×768. Dữ liệu thử "Nhân Viên Demo" đã xóa; sau kiểm còn đúng 1 nhân viên.
+
+| ID | Kết quả | Đạt |
+|---|---|---|
+| F01 | "Đang tải dữ liệu…" rồi bảng: "ĐA Đỗ Văn An, do.an@congty.vn, Kỹ thuật" | Đạt |
+| F02 | (API giả lập trả `[]`) "Chưa có nhân viên nào" + "Thêm nhân viên đầu tiên và chọn phòng ban cho họ." + nút "Thêm nhân viên" | Đạt |
+| F03–F05 | `văn`, `AN`, `an`, `congty` đều ra Đỗ Văn An, "Tìm thấy 1 nhân viên", địa chỉ có `?search=` | Đạt |
+| F06 | `zzz` → "Không tìm thấy nhân viên phù hợp" + `Không có họ tên hoặc email nào chứa "zzz".` + "Xóa tìm kiếm"; bấm → `/employees`, đủ danh sách | Đạt |
+| F07 | "Đã thêm nhân viên "Nhân Viên Demo""; dòng mới có trong bảng (vòng "ND", Kế toán) | Đạt |
+| F08 | Ô chọn: "Chọn phòng ban", Kế toán, Kinh doanh, Kỹ thuật, Nhân sự (đủ 4 phòng từ API) | Đạt |
+| F09 | Đổi sang Kinh doanh → "Đã cập nhật nhân viên…", bảng đổi | Đạt |
+| F10 | Đang ở form sửa Nhân Viên Demo, đổi địa chỉ sang sửa Đỗ Văn An → form nạp "Đỗ Văn An" | Đạt |
+| F11 | Gõ tên mới rồi Hủy → về `/employees`, dữ liệu không đổi | Đạt |
+| F12 | Xóa → hộp xác nhận → "Xóa nhân viên" → dòng biến mất không F5, "Đã xóa nhân viên…", focus `h1` | Đạt |
+| F13 | Xóa → Hủy → dòng còn, focus về nút Xóa của dòng | Đạt |
+| F14 | Dữ liệu còn sau khi backend khởi động lại: Đỗ Văn An còn qua 3 lần tắt/bật backend hôm nay và khi Hiệp tự bật | Đạt |
+| V01 | Bỏ trống họ tên → "Vui lòng nhập họ tên", khung tóm tắt nhận focus, **0 request** ghi | Đạt |
+| V02 | `abc` → "Email không đúng định dạng" | Đạt |
+| V03 | Không chọn phòng ban → "Vui lòng chọn phòng ban" | Đạt |
+| V04, V05 | `do.an@congty.vn` và `DO.AN@CONGTY.VN` → 409, "Email đã được sử dụng" cạnh ô Email | Đạt |
+| V06 | Bấm đúp "Lưu nhân viên" → đúng **1 POST** | Đạt |
+| V07 | Tắt backend → "Không kết nối được máy chủ, vui lòng thử lại" + "Thử lại" | Đạt (kiểm khi làm U4 Step 10 cùng ngày, code không đổi từ đó) |
+
+Request ghi đã gửi: POST (409), POST (409), POST (201), PUT, DELETE. Ảnh: `.playwright-mcp/bt3-tim-AN.png`, `.playwright-mcp/bt3-tim-zzz.png`.
+
+### 2c. Database tắt giữa chừng (U1-NFR1.4) và số dòng log lỗi (U1-NFR6.2, NFR6.3)
+
+Hiệp tắt dịch vụ `postgresql-x64-18` từ terminal VS Code (`Start-Process powershell -Verb RunAs ... Stop-Service`, bấm Yes ở UAC vì dịch vụ chạy dưới `NT AUTHORITY\NetworkService`, terminal không có quyền Admin), trong lúc backend (5081) và frontend (5173) của Hiệp vẫn chạy.
+
+| Mục | Kết quả | Đạt |
+|---|---|---|
+| Trang khi DB tắt | Ảnh Hiệp: "Đang tải dữ liệu…" trong lúc backend thử kết nối; `curl /api/employees` → **500 `application/problem+json`**, chỉ "Lỗi máy chủ" / "Đã có lỗi xảy ra, vui lòng thử lại sau.", sau 4,1 giây | Đạt |
+| Backend không dừng | Ảnh Hiệp: terminal `dotnet` vẫn chạy, chỉ in log lỗi | Đạt |
+| Tự nối lại | Hiệp bật lại dịch vụ (`Running`), bấm Thử lại/F5 → bảng hiện Đỗ Văn An, không khởi động lại backend | Đạt → **U1-NFR1.4 Met** |
+| Số dòng `fail:` cho **một** lỗi 500 do DB (backend phụ cổng 5082, đọc log) | **3 dòng**: `Microsoft.EntityFrameworkCore.Database.Connection[20004]`, `Microsoft.EntityFrameworkCore.Query[10100]` (kèm stack trace), `ProblemDetailsExceptionHandler` ("Lỗi không xử lý: GET /api/employees"). Middleware `UseExceptionHandler` của .NET 10 không ghi thêm | **Không đạt U1-NFR6.2** ("mỗi lỗi 500 ghi đúng một dòng mức Error") — xem BT-03 |
+| 409 có ghi Error không (U1-NFR6.3) | `POST` trùng email (khác hoa thường) và `DELETE /api/departments/3` (còn nhân viên) → 409, log chỉ 2 dòng `info:` "409 POST …", "409 DELETE …" | Đạt |
+
+**BT-03 (Không đạt, U1-NFR6.2).** `appsettings.json` (U1) đặt `Microsoft.EntityFrameworkCore` ở mức `Warning` để ẩn câu SQL (NFR6.1), nhưng mức này vẫn cho các dòng Error của chính EF Core đi qua. Khi DB lỗi, EF Core tự ghi 2 dòng Error trước khi exception tới `ProblemDetailsExceptionHandler`, nên một lỗi 500 thành 3 dòng Error. Người dùng không bị ảnh hưởng (phản hồi vẫn đúng C3); chỉ log server bị lặp. Lượt 1 chấm U1-NFR6.2 "Met" bằng đọc code, chưa gây lỗi DB thật; lượt này gây thật nên thấy.
+
+### 2d. Sau Loop-back 2 (U1 Step 10 + R-07, Hiệp duyệt U1)
+
+`appsettings.json` thêm 4 nhóm EF Core ở `Critical` (`Database.Command`, `Database.Connection`, `Query`, `Update`); `appsettings.Development.json` đổi `Database.Command` từ `Warning` sang `Critical`. Kiểm bằng backend phụ cổng 5082 (không cần Admin, không tắt DB thật):
+
+| Ca | Trước sửa | Sau sửa | Đạt |
+|---|---|---|---|
+| Một lỗi 500 do DB không kết nối được (`Port=5999`) | 3 dòng `fail:` | **1** dòng `fail:` (`ProblemDetailsExceptionHandler`, có "Failed to connect" và stack trace) | Đạt (U1-NFR6.2) |
+| 8 yêu cầu thêm cùng email gửi cùng lúc (chỉ mục unique chặn 7 cái → 409) | 7 dòng `fail: ...Database.Command[20102]` (phát hiện ở rà soát U1, R-07) | **0** dòng `fail:`, 7 dòng `info: 409 POST` | Đạt (U1-NFR6.3) |
+| 409 thường (trùng email, xóa phòng ban còn nhân viên) | 0 dòng `fail:` | 0 dòng `fail:` | Đạt |
+| `npm --prefix frontend run verify` | — | 96/96, exit 0 | Đạt |
+
+Nhân viên thử của ca 8 yêu cầu đã xóa; còn đúng Đỗ Văn An.
+
+### 3. Truy vết liên Unit (Step 10)
+
+Lần đầu: 1 ID chưa phủ (`u3-departments: NFR4.3`, đường dẫn cũ trước khi U4 dời file test bằng `git mv`). Sửa đường dẫn trong `u3-departments/code-generation/traceability.json`, chạy lại: **đạt, 0 ID chưa phủ**. Xem `cross-unit-traceability.md`.
+
+### 4. Còn chờ Hiệp làm tay (Chrome thường)
+
+Luồng chính tập demo (KH-1, KH-2, DEP-4), xem dữ liệu trong pgAdmin, tắt dịch vụ PostgreSQL giữa chừng (U1-NFR1.4), Lighthouse Desktop (Accessibility, Best Practices) cho 6 trang (U2-NFR8.3, U2-NFR8.4).
+
+Kết quả: luồng chính đã kiểm ở §2b (trên server Hiệp tự bật), tắt PostgreSQL ở §2c; Lighthouse làm ở lượt 4 §5 vì giữa chừng có Change Request rà soát tổng thể.
+
+## Lượt chạy 4 — 2026-11-03T06:45Z (sau Change Request rà soát tổng thể)
+
+Hiệp duyệt kế hoạch lượt này (form fd428f8a). Code đã kiểm: cây làm việc sau khi Code Generation U1–U5 của đợt rà soát xong (nhóm 1–4 trong `ra-soat-tong-the.md`; review và checkpoint từng Unit đã qua). Thay đổi chưa commit lúc kiểm; Hiệp commit sau bước này.
+
+### 1. PostgreSQL chỉ nghe localhost (S-01, Hiệp duyệt form 7e2b0671)
+
+Hiệp làm trong PowerShell quyền Admin, AI chỉ từng bước; file nằm ngoài repo.
+
+| Bước | Kết quả |
+|---|---|
+| Sao lưu | `C:\Program Files\PostgreSQL\18\data\postgresql.conf.bak-20261103` (`Test-Path` → `True`) |
+| Trước khi sửa | dòng 60 `listen_addresses = '*'`; `postgresql.auto.conf` không có `listen_addresses` (không có gì đè lên) |
+| Sửa | đọc và ghi bằng Latin-1 (giữ nguyên từng byte), chỉ thay dòng bắt đầu bằng `listen_addresses = '*'` thành `listen_addresses = 'localhost'`; lệnh đã chạy thử trên file giả trước (chỉ đổi 1 dòng, giữ CRLF và byte ngoài ASCII) |
+| Khởi động lại | `Restart-Service postgresql-x64-18` → `Running` |
+| Kiểm (AI) | `netstat -ano`: chỉ còn `127.0.0.1:5432` và `[::1]:5432` LISTENING |
+
+### 2. Build, unit test, độ phủ
+
+| Lệnh | Mã thoát | Kết quả |
+|---|---|---|
+| `npm --prefix frontend run verify` (backend tắt) | 0 | typecheck, ESLint (0 cảnh báo), Prettier, Vite build (JS 293,23 KB, CSS 16,34 KB); `dotnet test`: **118/118 đạt** |
+| `npm --prefix frontend run coverage` (coverlet) | 1 | Smart App Control chặn `EmployeeCrud.Api.dll` (0x800711C7). Coverlet viết lại dll để gắn bộ đếm nên mỗi lần đo ra một file mới chưa có uy tín. Thêm 2 comment giải thích vào `Platform/Errors/DbConstraintNames.cs` (cách đã chốt trong `27-10/CLAUDE.md`, tối đa 2 lần) vẫn bị chặn |
+| Microsoft Code Coverage 17.14.1 (Hiệp chọn, form 751b59be): `dotnet test backend/EmployeeCrud.slnx --collect "Code Coverage;Format=cobertura" --results-directory backend/TestResults/coverage-ms`, rồi `dotnet tool run reportgenerator ... -assemblyfilters:+EmployeeCrud.Api` | 0 | 118/118. `DepartmentService` **100%**, `EmployeeService` **100%** (`ValidInput` 100%), `TextInput` **100%** dòng (mức sàn 80%); `ErrorMapper` 97,6%. Toàn assembly 47% vì migration, code OpenAPI sinh ra và controller (kiểm tay theo `team.md`) là 0%. Công cụ này đo trong bộ nhớ, không viết lại dll nên không bị chặn. Script `coverage` và `team.md` giữ coverlet |
+
+### 3. Backend với PostgreSQL localhost và tài khoản `employee_app`
+
+Hiệp bật backend theo README (`dotnet run --project backend/EmployeeCrud.Api`, user-secrets dùng `employee_app` từ U5). AI gọi: `GET /api/departments` 200 (4 dòng), `GET /api/employees` 200 (12 dòng: 2 nhân viên có từ trước và 10 người từ `docs/du-lieu-mau.sql`), `?search=nguyễn` 200 (2 dòng).
+
+### 4. Playwright hồi quy (bản build `npm run preview` của Hiệp, backend thật, chỉ đọc)
+
+| Mục | Kết quả |
+|---|---|
+| 7 trang × 2 độ rộng (1366, 320 px) | Tiêu đề tab, `h1`, `lang="vi"` đúng; không trang nào cuộn ngang |
+| Console và request | 0 lỗi, 0 cảnh báo, 0 request hỏng |
+| N-03: tên phòng ban 101 ký tự | Ô nhận đủ 101 ký tự, hiện "Tên phòng ban tối đa 100 ký tự", không gửi POST |
+| S-04 / N-09: tên phòng ban có U+200B, họ tên có U+202E | "Tên phòng ban chứa ký tự không hợp lệ", "Họ tên chứa ký tự không hợp lệ" |
+| S-04: `GET /api/employees?search=%00` | `200 []` (trước đợt sửa: 500) |
+| N-05: hộp xác nhận xóa | "Nhân viên Bùi Văn Nam (nam.bui@congty.example) sẽ bị xóa vĩnh viễn…"; bấm Hủy → hộp đóng, vẫn 12 nhân viên |
+| N-07: Sửa rồi Hủy từ kết quả tìm | Về `/employees?search=nguyễn`, ô tìm giữ "nguyễn" |
+
+Không ghi dữ liệu: form sai bị chặn ở trình duyệt, hộp xóa bấm Hủy.
+
+### 5. Lighthouse Desktop (Hiệp, Chrome ẩn danh, Navigation, `npm run preview`)
+
+| Trang | Performance | Accessibility | Best Practices |
+|---|---|---|---|
+| `/employees` | 100 | 100 | 100 |
+| `/employees/new` | không đo | 100 | 100 |
+| `/employees/2045/edit` | không đo | 100 | 100 |
+| `/departments` | 100 | 100 | 100 |
+| `/departments/new` | không đo | 100 | 100 |
+| `/departments/2/edit` | không đo | 100 | 100 |
+
+Mức cần: Performance ≥ 90 ở 2 trang danh sách, Accessibility = 100, Best Practices ≥ 90.
+
+### 6. W3C và truy vết liên Unit
+
+- **W3C:** không gửi lại. Phần giao diện của đợt rà soát chỉ thêm một thẻ `<strong>` (câu xác nhận xóa), là thẻ chữ hợp lệ ở mọi chỗ có chữ; kết quả 0 lỗi ở lượt 3 §2 vẫn dùng.
+- **Truy vết:** `aidlc engine sensor-traceability --stage build-and-test` → `pass: true`, 0 ID chưa phủ.
+
+### 7. Thay đổi ngoài công việc của Unit trong lượt này
+
+- `backend/EmployeeCrud.Api/Platform/Errors/DbConstraintNames.cs`: thêm 2 comment giải thích (không đổi code) khi xử lý Smart App Control; file thuộc U1, đổi sau review U1.
+- `postgresql.conf` trên máy (ngoài repo), có bản sao lưu.
+
 ## Loop-Back Log
 
 ### Loop-back 1 — 2026-11-02T18:29:13Z
@@ -85,3 +241,10 @@ Luồng chính trên trình duyệt (F, V; Hiệp), Lighthouse 6 trang và Best 
 - **Root-cause stage:** `code-generation`, Unit `u1-backend-platform` (`Platform/Errors/ValidationResponseFactory.cs`, `Platform/Errors/ErrorMapper.cs`). Không mở lại U3, U4: sửa ở tầng sở hữu phong bì lỗi C3.
 - **Planned fix:** (1) `ValidationResponseFactory` trả 400 bằng kết quả mà bộ lọc `[Produces]` không ghi đè được, `Content-Type: application/problem+json`, thêm `type` (RFC 9110 §15.5.1) và `traceId` như 404/409; giữ nguyên `title`, `status`, `errors` (khóa camelCase). (2) `ErrorMapper` coi 23001 như 23503 ở tầng dự phòng → 409 "Không thể thực hiện". (3) Test hồi quy: một controller chỉ có trong test gắn `[Produces("application/json")]` gửi body sai → 400 `application/problem+json` có `type`; `ErrorMapperTests` thêm ca 23001 → 409. Hiệp duyệt lại kế hoạch sửa của U1 trước khi sửa (Hiệp chọn hai việc này ở đầu Build and Test).
 - **Estimated impact:** công sức nhỏ (2 file code, 2–3 test, chạy lại bộ test và rà soát; khoảng 1 giờ kể cả duyệt); chi phí tiền 0; rủi ro thấp: chỉ đổi đường 400 do kiểm DTO và một nhánh dự phòng, 94 test hiện có canh giữ, hình dạng JSON chỉ thêm trường (`type`, `traceId`), `client.ts` không cần sửa.
+
+### Loop-back 2 — 2026-11-03T02:51:46Z
+
+- **Diagnosis:** BT-03 (U1-NFR6.2 Không đạt): khi database lỗi, một lỗi 500 sinh 3 dòng Error (`Microsoft.EntityFrameworkCore.Database.Connection[20004]`, `Microsoft.EntityFrameworkCore.Query[10100]`, rồi `ProblemDetailsExceptionHandler`). `appsettings.json` đặt `Microsoft.EntityFrameworkCore` ở `Warning`, mức này vẫn cho Error của EF Core đi qua. Thấy khi Hiệp tắt PostgreSQL thật (lượt 3 §2c).
+- **Root-cause stage:** `code-generation`, Unit `u1-backend-platform` (`backend/EmployeeCrud.Api/appsettings.json`, cấu hình log do U1 sinh). Không mở lại U2–U5. Hiệp chọn sửa (form ba368783).
+- **Planned fix:** thêm vào `Logging:LogLevel` ba nhóm của EF Core ở mức `Critical`: `Microsoft.EntityFrameworkCore.Database.Connection`, `Microsoft.EntityFrameworkCore.Query`, `Microsoft.EntityFrameworkCore.Update`, để lỗi chỉ được ghi một lần bởi `ProblemDetailsExceptionHandler` (đã có phương thức, đường dẫn, loại lỗi, thông điệp và stack trace của exception, kể cả exception bên trong của Npgsql). Kiểm: chạy một backend phụ ở cổng khác với chuỗi kết nối trỏ tới cổng database không có ai nghe (biến môi trường, không cần mật khẩu, không cần Admin, không tắt DB thật), gọi `/api/employees` một lần, đếm đúng 1 dòng `fail:`; gọi 2 ca 409 vẫn 0 dòng `fail:`; `verify` xanh. Hiệp duyệt lại kế hoạch U1 trước khi sửa.
+- **Estimated impact:** công sức rất nhỏ (1 file cấu hình, 3 dòng; không đổi code C#, không thêm test tự động vì log là cấu hình); khoảng 20–30 phút kể cả duyệt và rà soát; chi phí tiền 0; rủi ro thấp: chỉ ẩn bản ghi lỗi trùng của EF Core, mọi lỗi 500 vẫn được ghi đủ một lần, phản hồi API không đổi.

@@ -83,6 +83,19 @@ npm --prefix frontend run coverage
 | 30 | Delete | Id không có | NotFound | BR2.3 |
 | 31 | Delete | `SaveChangesAsync` ném `DbUpdateConcurrencyException` | NotFound | BR2.6 |
 | 32 | Create | `SaveChangesAsync` ném 23503 với tên ràng buộc khác | Ném lại nguyên `DbUpdateException` (để U1 xử lý) | NFR2.4 |
+| 33 | Create | Họ tên có tab, U+00A0, nhiều dấu cách và chữ gõ kiểu tổ hợp (NFD) | Lưu "Nguyễn Văn An" đã gộp khoảng trắng, dạng NFC | BR1.1 |
+| 34 | Create | Họ tên chứa U+0000, U+200B, U+202E, nửa cặp surrogate (một test chạy lần lượt 4 ca) | Validation `fullName` "Họ tên chứa ký tự không hợp lệ"; không lưu | BR1.1 |
+| 35 | Create | Email chứa U+200B hoặc U+0000 | Validation `email` "Email chứa ký tự không hợp lệ"; không lưu (trước Step 11, U+200B lọt qua) | BR1.1 |
+| 36 | Create | Email gõ kiểu tổ hợp trùng email dựng sẵn đã có | Conflict `email` | BR1.1, BR1.7 |
+| 37 | GetAll | Chuỗi tìm có U+0000 hoặc U+200B, service dùng ngữ cảnh database **đã đóng** | Mảng rỗng, không lỗi: chứng minh không gửi truy vấn xuống database | BR2.2 |
+| 38 | GetAll | Tìm "nguyễn&nbsp;&nbsp;văn" (2 dấu cách) và bản gõ kiểu tổ hợp | Ra "Nguyễn Văn An" | BR2.2 |
+| 39 | Create | `SaveChangesAsync` ném `DbUpdateConcurrencyException` khi thêm mới | Ném lại nguyên lỗi, không báo "không tìm thấy mã 0" | BR2.6 (A-08) |
+| 40 | Update | Họ tên mới chứa U+0000 | Validation `fullName`; dữ liệu cũ giữ nguyên | BR1.1 |
+| 41 | Update | Email mới chứa U+200B | Validation `email` "Email chứa ký tự không hợp lệ"; email cũ giữ nguyên (rà soát R-08) | BR1.1 |
+
+Chuỗi tìm rỗng hoặc toàn khoảng trắng thì trả đủ danh sách: ca #7 (Theory) đã kiểm, vẫn đúng sau Step 11 vì chuẩn hóa ra chuỗi rỗng (rà soát R-08 hỏi ca này).
+
+Ca #33–#40 thêm ở Step 11 (rà soát tổng thể N-04, S-04, A-08). Trong file test, chữ có dấu và ký tự vô hình viết bằng mã `\u` để người đọc thấy rõ từng ký tự. Bộ ca đối chiếu hai bản chuẩn hóa (C# và TypeScript) dùng chung với U3: `construction/u3-departments/code-generation/unit-test-instructions.md` mục 7; U4 dùng lại đúng hàm đó nên không thêm ca.
 
 ### 5.2 `DepartmentServiceTests.cs` (thêm)
 
@@ -124,3 +137,11 @@ Xóa phòng ban không còn nhân viên vẫn dùng test có sẵn của U3. M�
 14. Form: tấm "Thông tin nhân viên", hai cột trên màn rộng (Họ tên | Email, rồi Phòng ban), một cột dưới 960px; chân tấm [Hủy] [Lưu nhân viên]. Ô Phòng ban lỗi nạp: chữ lỗi và nút "Thử lại" thẳng hàng. Chưa chọn phòng ban: chữ "Chọn phòng ban" mờ như chữ mẫu; chọn rồi thì đậm. Trang sửa ghi "Cập nhật thông tin của <họ tên>."; form phòng ban: ô tên rộng bằng một cột như ô "Họ tên", trang sửa ghi "Cập nhật tên phòng ban <tên>.".
 15. Họ tên 100 ký tự và email dài: bảng tự xuống dòng, nút Sửa/Xóa vẫn trong màn hình ở 1024px trở lên; ở 320px bảng cuộn ngang trong tấm, trang không cuộn ngang.
 16. Kéo hẹp/rộng cửa sổ Chrome thường (taskbar ở cạnh nào cũng vậy): trang co theo chỗ còn lại, không bị che bên phải.
+
+**Chuẩn hóa và các mục rà soát (Step 11):**
+
+17. API: `GET /api/employees?search=%00` và `?search=%E2%80%8B` → 200 `[]` (trước Step 11, `%00` ra 500). Tìm "nguyễn&nbsp;&nbsp;thử" (2 dấu cách) vẫn ra kết quả. POST họ tên hoặc email chứa U+0000, U+200B → 400 đúng ô. Email gõ kiểu tổ hợp trùng email đã có → 409. Thân request có ký tự đặc biệt nên ghi vào file rồi gửi bằng `curl --data-binary @file`.
+18. Form thêm: dán 120 ký tự vào Họ tên và hơn 254 ký tự vào Email → ô giữ nguyên, hai lời báo "tối đa…" hiện cạnh ô, không có request. Dán chữ có ký tự vô hình → "Họ tên / Email chứa ký tự không hợp lệ", không có request.
+19. Tìm "&nbsp;&nbsp;Đỗ&nbsp;&nbsp;&nbsp;Văn&nbsp;" → địa chỉ `?search=Đỗ+Văn`, ô tìm hiện "Đỗ Văn". Đang tìm "Đỗ Văn" mà gõ lại "Đỗ&nbsp;&nbsp;Văn" (2 dấu cách) rồi Enter → ô tìm vẫn về "Đỗ Văn", focus ở ô (rà soát R-07).
+20. Từ kết quả tìm bấm Sửa, rồi Hủy → về `/employees?search=…` đúng chuỗi đang tìm; bấm Sửa rồi Lưu → cũng về đó, có thông báo "Đã cập nhật…". Mở thẳng địa chỉ sửa (gõ tay hoặc F5) rồi Hủy → về `/employees` (N-07).
+21. Hộp xóa ghi họ tên in đậm kèm email trong ngoặc, ví dụ "Nhân viên **Đỗ Văn An** (`do.an@congty.vn`) sẽ bị xóa vĩnh viễn…" (N-05).

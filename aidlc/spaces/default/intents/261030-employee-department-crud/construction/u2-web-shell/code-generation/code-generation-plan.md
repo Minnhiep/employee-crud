@@ -133,12 +133,37 @@
 
 - [x] `npm --prefix frontend run verify` (typecheck, lint 0 cảnh báo, Prettier, build, 96 test backend); `npm --prefix frontend audit --omit=dev`; `package.json` vẫn chỉ 3 gói chạy.
 - [x] Playwright (Chromium) trên `npm run dev`: K1–K8 làm lại theo bố cục mới, K10 (320px: thanh bên thành thanh trên, không cuộn ngang), kiểm DOM 6 trang như Build and Test (lang, `h1`, tiêu đề tab, landmark, nhãn, `caption`/`scope`, không trùng id); chụp ảnh trước/sau để Hiệp xem.
-- [ ] K9 (hộp xác nhận: Tab ở trong hộp, Esc đóng, focus về nút Xóa ban đầu, nút giữ focus khi đang xóa): **chưa kiểm ở U2** vì chưa trang nào dùng `ConfirmDialog`; kiểm ở U3, trang đầu tiên dùng hộp này (rà soát U2, R-06).
+- [x] K9 (hộp xác nhận: Tab ở trong hộp, Esc đóng, focus về nút Xóa ban đầu, nút giữ focus khi đang xóa): **chưa kiểm ở U2** vì chưa trang nào dùng `ConfirmDialog`; kiểm ở U3, trang đầu tiên dùng hộp này (rà soát U2, R-06).
 - [x] Cập nhật `unit-test-instructions.md` (K1–K10), `code-summary.md` (mục Step 9), `source-manifest.json`, `traceability.json`.
 
 **Ảnh hưởng tới U3, U4 (làm ở Code Generation của từng Unit sau U2):** trang danh sách và form dùng `PageHeader`, `panel`, `toolbar`, `ConfirmDialog`, `avatar`, `badge`; câu chữ trang viết lại; `data-testid` giữ nguyên.
 
 **Không đổi:** API, `client.ts` (cách gọi API, hạn 10 giây), router và đường dẫn, luật kiểm dữ liệu, backend, test backend.
+
+### Step 10: Sửa theo rà soát tổng thể (Change Request, 03/11/2026)
+
+> **Vì sao có bước này:** Hiệp yêu cầu rà toàn bộ "chuẩn như công ty thật" trước khi chốt; danh sách gộp ở `build-and-test/ra-soat-tong-the.md`, Hiệp chọn sửa cả 4 nhóm (form 34027473). Phần thuộc U2 (`src/api/client.ts` và cấu hình) ở dưới. Không thêm tính năng.
+
+Implement:
+
+- [x] **(N-02, A-09) Câu báo đúng nguyên nhân:** trong `client.ts`, câu "Không kết nối được máy chủ, vui lòng thử lại" chỉ dùng cho lỗi mạng thật (không gọi được, CORS chặn) và quá 10 giây. Máy chủ trả 5xx mà không có lời báo, hoặc trả dữ liệu hỏng không đọc được, hoặc lỗi lập trình ngoài dự kiến thì dùng câu chung "Đã có lỗi xảy ra, vui lòng thử lại sau." (máy chủ vẫn kết nối được, chỉ là nó lỗi). Lỗi 5xx có lời báo của API thì vẫn hiện lời báo đó như cũ.
+- [x] **(A-06) Một chỗ duy nhất cho câu lỗi chung và hàm phụ:** `client.ts` xuất `GENERIC_MESSAGE`, `isAborted(error)` (trang tự hủy lời gọi) và `messageOf(error)` (lời báo của API, không có thì câu chung). Bốn trang của U3, U4 sẽ dùng chung ba thứ này thay vì mỗi trang chép một bản (sửa ở bước của U3, U4).
+- [x] **(A-10) `.env.development`:** comment còn ghi `src/api/client.js`, sửa thành `client.ts`.
+- [x] Không đổi hạn 10 giây (U2 NFR5.3). Ghi rõ giới hạn đã biết (A-09) trong `code-summary.md`: lưu/xóa quá 10 giây thì giao diện báo lỗi mạng dù máy chủ có thể đã lưu xong; người dùng tải lại danh sách để xem.
+
+Kiểm (không có test tự động React theo `team.md`):
+
+- [x] `npm --prefix frontend run verify` xanh (typecheck, lint, Prettier, build, test backend).
+- [x] Playwright (Chromium) trên backend phụ: chặn API trả 500 không body → giao diện hiện "Đã có lỗi xảy ra…"; trả 200 với body hỏng → câu chung; tắt hẳn API → "Không kết nối được máy chủ…"; 500 có lời báo của API → hiện đúng lời báo đó.
+- [x] Cập nhật `code-summary.md` (mục Step 10), `unit-test-instructions.md`, `source-manifest.json`.
+
+Sửa sau review (Hiệp duyệt checkpoint U2, gõ 1, yêu cầu sửa R-10, R-11; 03/11/2026):
+
+- [x] **(R-10)** `functional-design/rules.md` BR2.3 và bảng tóm tắt, `functional-spec.md` sơ đồ luồng W3 và text fallback: viết theo hành vi thật của Step 10 (5xx không có lời báo và body hỏng → câu chung), ghi rõ là đổi có chủ đích; đổi `client.js` → `client.ts` trong hai file này.
+- [x] **(R-11)** `client.ts`: tính `JSON.stringify(body)` trước khối `try` của `fetch`; lỗi ở bước này đi vào nhánh "lỗi ngoài dự kiến" (`unexpectedError`: câu chung + `console.error`), nhánh `TypeError` chỉ còn lỗi mạng.
+- [x] Kiểm: chạy thử bằng `fetch` giả (3 ca đạt), `npm --prefix frontend run verify` xanh (103/103); ghi `code-summary.md` mục 4e, 4f.
+
+Không đổi: giao diện, CSS, component dùng chung, hạn 10 giây.
 
 ## Không làm trong U2
 

@@ -126,6 +126,29 @@ Hiệp yêu cầu ở Build and Test (giao diện "như con nít, như AI làm")
 
 R-04 (địa chỉ API ở hai nơi) giữ nguyên như rà soát chấp nhận. Console trong lúc kiểm: 0 lỗi, 0 cảnh báo.
 
+## 4e. Step 10: sửa theo rà soát tổng thể (Change Request, 03/11/2026)
+
+Nguồn: `build-and-test/ra-soat-tong-the.md`; Hiệp chọn sửa cả 4 nhóm (form 34027473).
+
+| Mã | Trước | Sau | File |
+|---|---|---|---|
+| N-02, A-09 | 5xx không có lời báo, body 200 hỏng, lỗi lập trình ngoài dự kiến đều hiện "Không kết nối được máy chủ" (sai nguyên nhân) | Hiện "Đã có lỗi xảy ra, vui lòng thử lại sau."; câu "Không kết nối được máy chủ" chỉ còn cho lỗi mạng thật và quá 10 giây; 5xx có lời báo của API vẫn hiện lời báo đó | `src/api/client.ts` |
+| A-06 | Câu lỗi chung và 2 hàm phụ chép ở 5 nơi | `client.ts` xuất `GENERIC_MESSAGE`, `isAborted`, `messageOf`; trang U3, U4 chuyển sang dùng ở bước của U3, U4 | `src/api/client.ts` |
+| A-10 | Comment ghi `client.js` | `client.ts` | `.env.development` |
+
+**Giới hạn đã biết (A-09, giữ hạn 10 giây theo NFR5.3):** lưu hoặc xóa chạy quá 10 giây thì giao diện báo "Không kết nối được máy chủ" dù máy chủ có thể đã lưu xong; người dùng tải lại danh sách để xem kết quả. Đo thật các thao tác chỉ mất vài chục mili giây.
+
+**Đã kiểm:** `npm --prefix frontend run verify` xanh (103/103, lint 0 cảnh báo). Playwright (Chromium, bản build `npm run preview` của Hiệp, chặn `/api/employees`): 500 không body → "Đã có lỗi xảy ra…"; 200 body hỏng → "Đã có lỗi xảy ra…"; mất kết nối → "Không kết nối được máy chủ…"; 503 có lời báo riêng của API → hiện đúng "Hệ thống đang bảo trì (lời báo riêng của API)".
+
+**Thay đổi có chủ đích so với thiết kế đã duyệt:** Step 10 đổi luật BR2.3 ở hai nhánh: 5xx không có lời báo, và 200/201 có body hỏng. Bản thiết kế cũ báo "Không kết nối được máy chủ" cho hai nhánh này; nay báo câu chung, vì máy chủ vẫn trả lời được. Yêu cầu gốc AC4.2.2 chỉ nói trường hợp "backend đang tắt", nên không mâu thuẫn. `functional-design/rules.md` và `functional-spec.md` đã sửa cho khớp (R-10, mục 4f).
+
+## 4f. Sửa sau review Step 10 (Hiệp duyệt checkpoint U2, gõ 1, yêu cầu sửa R-10, R-11; 03/11/2026)
+
+| Điểm | Sửa | Kiểm lại |
+|---|---|---|
+| R-10 | `functional-design/rules.md`: BR2.3 viết lại theo hành vi thật (lỗi mạng/quá hạn → câu lỗi mạng; 5xx có ProblemDetails → detail, không có thì title; 5xx không có ProblemDetails hoặc 200/201 body hỏng → câu chung), ghi rõ đổi có chủ đích ở Step 10; bảng tóm tắt dòng BR2.3 sửa theo. `functional-spec.md`: sơ đồ luồng W3 tách nhánh 5xx (có/không problem+json) và thêm nhánh body hỏng về "Lỗi chung"; text fallback sửa theo. Cả hai file đổi `client.js` → `client.ts` (rules.md 7 chỗ, functional-spec.md 5 chỗ); `frontend-components.md` giữ nguyên vì đã có ghi chú ".js là .ts" ở đầu file | Đọc lại, đối chiếu từng nhánh với `toHttpError`, `readSuccess`, `toApiError` trong `client.ts` |
+| R-11 | `client.ts`: `JSON.stringify(body)` chạy **trước** khối `try` của `fetch` và trước khi đặt hẹn giờ; lỗi ở bước này đi qua hàm mới `unexpectedError` (ghi `console.error`, trả câu chung). `toApiError` dùng chung hàm đó ở nhánh cuối. Nhánh `TypeError` giờ chỉ còn lỗi từ `fetch` (không gọi được, CORS chặn, địa chỉ sai) | Chạy thử bằng Node với `fetch` giả: body có vòng tham chiếu → `ApiError` loại `server`, câu chung, 1 lần `console.error`, **không gọi** `fetch`; `fetch` ném `TypeError` → loại `network`, "Không kết nối được máy chủ, vui lòng thử lại"; body thường → gửi chuỗi JSON kèm `Content-Type: application/json`. `npm --prefix frontend run verify` xanh (103/103, lint 0 cảnh báo) |
+
 ## 5. Cài đặt frontend (nháp cho README của U5)
 
 ```

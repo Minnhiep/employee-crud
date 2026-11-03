@@ -2,10 +2,11 @@
 
 ## Summary
 
+- Step 11 (Change Request rà soát tổng thể, 03/11/2026): chuẩn hóa tên phòng ban ở API và form (gộp khoảng trắng, NFC, chặn ký tự điều khiển và ký tự vô hình theo RFC 8264/8266, W3C: hết lỗi 500 với U+0000, hết lách luật không trùng); bỏ `maxLength`; form sửa có `key` theo id; trang danh sách tải cùng kiểu trang nhân viên; dùng hàm lỗi chung của `client.ts`; +6 unit test
 - Redesign (Step 10, Hiệp yêu cầu 03/11/2026): siết lại hệ thiết kế chung theo mật độ phần mềm quản trị doanh nghiệp (chữ 14px, nút/ô nhập 36px, dải đầu trang trắng, tấm có phần đầu/thân/chân) và làm lại trang danh sách + form phòng ban (đường dẫn trang, thanh công cụ, bảng gọn, nút dòng nhỏ có icon, hộp xác nhận xóa, form trong tấm, Hủy rồi Lưu); không đổi API, luật, test backend
 - Builds: quản lý phòng ban đủ 4 tầng: bảng `departments` + chỉ mục + 4 dòng mẫu (migration), `DepartmentService` (luật BR1, BR2), `DepartmentsController` (5 API), trang danh sách và form thêm/sửa/xóa bằng React TypeScript
-- Touches: `backend/EmployeeCrud.Api/Departments/`, `backend/EmployeeCrud.Api/Migrations/`, `Program.cs` (1 dòng), `backend/EmployeeCrud.Api.Tests/Departments/`, `frontend/src/api/departments.ts`, `frontend/src/pages/departments/`, `App.tsx`, `dotnet-tools.json`, `frontend/package.json` (script `coverage`)
-- Tests: khoảng 20 unit test xUnit cho `DepartmentService` (InMemory + ngữ cảnh ném lỗi giả), độ phủ dòng ≥ 80%; controller, migration, giao diện kiểm tay bằng curl/Postman, pgAdmin, trình duyệt
+- Touches: `backend/EmployeeCrud.Api/Departments/`, `backend/EmployeeCrud.Api/Migrations/`, `Program.cs` (1 dòng), `backend/EmployeeCrud.Api.Tests/Departments/`, `frontend/src/api/departments.ts`, `frontend/src/pages/departments/`, `App.tsx`, `dotnet-tools.json`, `frontend/package.json` (script `coverage`); Step 11 thêm hai file dùng chung `backend/EmployeeCrud.Api/Platform/Text/TextInput.cs` và `frontend/src/utils/normalizeText.ts`
+- Tests: 27 ca unit test xUnit cho `DepartmentService` (#1–#27, gồm 6 ca chuẩn hóa tên của Step 11; InMemory + ngữ cảnh ném lỗi giả), độ phủ dòng ≥ 80% (đo được 100%); controller, migration, giao diện kiểm tay bằng curl/Postman, pgAdmin, trình duyệt
 
 > **Nguồn:** `functional-design/` (functional-spec W1–W5, rules BR1.1–BR4.7, entities, frontend-components), `nfr-requirements/`, `nfr-design/` (Q1 = A), `infrastructure-design/` của U3 và các ghi chú rà soát; `contract-summary.md` (C1, C3, C4, C5); `unit-of-work.md` (U3); `requirements.md`; `team.md`, `project.md`.
 
@@ -179,6 +180,59 @@
 - [x] Cập nhật `unit-test-instructions.md` (mục giao diện), `code-summary.md` (mục Step 10), `source-manifest.json`, `traceability.json`.
 
 **Không đổi:** API, `client.ts`, `api/departments.ts`, luật kiểm `validateDepartment.ts`, backend, test backend, đường dẫn trang.
+
+### Step 11: Sửa theo rà soát tổng thể (Change Request, 03/11/2026)
+
+> **Vì sao có bước này:** Hiệp yêu cầu rà toàn bộ "chuẩn như công ty thật" trước khi chốt; danh sách ở `build-and-test/ra-soat-tong-the.md`, Hiệp chọn sửa cả 4 nhóm (form 34027473). Phần thuộc U3 ở dưới. Không thêm tính năng: chỉ siết kiểm dữ liệu và dọn code cho dễ giải thích.
+>
+> **Sửa sau khi duyệt (Hiệp chọn, form 58339e3f, sau tin nhắn 87ea0d27 "chuẩn như các công ty lớn… giải quyết triệt để"):** chặn thêm ký tự định dạng vô hình (Unicode Cf) và tra chuẩn quốc tế để ghi căn cứ (RFC 8264, RFC 8266, W3C Character Model; chi tiết ở `code-summary.md` mục 4c và `functional-design/rules.md` BR1.1).
+
+**Luật chuẩn hóa tên (N-04, S-04/N-09):** áp ở API (nơi quyết định) và ở form (để báo sớm), cùng thứ tự:
+
+| Bước | Làm gì | Vì sao |
+|---|---|---|
+| 1 | Mọi chuỗi khoảng trắng (dấu cách, tab, xuống dòng, khoảng trắng Unicode; cùng tập với `char.IsWhiteSpace` của .NET) gộp thành một dấu cách; bỏ khoảng trắng hai đầu | "Kế&nbsp;&nbsp;toán" (2 dấu cách) và "Kế toán" là một tên, nhưng trước đây lách được luật không trùng |
+| 2 | Còn ký tự điều khiển (Unicode Cc, ví dụ U+0000, ESC), ký tự định dạng vô hình (Unicode Cf, ví dụ U+200B, U+202E, U+FEFF) hoặc nửa cặp surrogate đứng một mình → 400 trường `name` "Tên phòng ban chứa ký tự không hợp lệ" | U+0000 bị PostgreSQL từ chối nên API trả 500; U+200B làm hai tên trông giống hệt mà máy coi là khác; U+202E làm chữ hiện ra khác chữ thật (CVE-2021-42574) |
+| 3 | Đưa chữ có dấu về dạng dựng sẵn (NFC) | "ế" gõ kiểu tổ hợp (e + dấu mũ + dấu sắc, NFD) trông y hệt "ế" dựng sẵn nhưng là chuỗi khác |
+| 4 | Kiểm rỗng, kiểm tối đa 100 ký tự, kiểm trùng trên tên **đã chuẩn hóa**; lưu tên đã chuẩn hóa | Độ dài và trùng tên được tính trên đúng thứ sẽ lưu |
+
+Implement:
+
+- [x] Backend, file mới dùng chung `backend/EmployeeCrud.Api/Platform/Text/TextInput.cs`: hàm `TryNormalize(string? raw, out string normalized)` làm bước 1–3, trả `false` khi gặp ký tự không hợp lệ. Đặt ở `Platform` vì U4 (họ tên, email) dùng lại đúng hàm này; không sửa file nào có sẵn của U1.
+- [x] `DepartmentService.NormalizeName`: dùng `TextInput.TryNormalize`, thêm hằng `NameInvalidMessage`. Thứ tự lời báo: ký tự không hợp lệ → rỗng → quá 100 ký tự.
+- [x] Frontend, file mới dùng chung `frontend/src/utils/normalizeText.ts`: cùng bước 1–3 (`normalize("NFC")`), trả `null` khi gặp ký tự Cc, Cf hoặc nửa cặp surrogate (biểu thức Unicode property Cc, Cf, Cs của JavaScript). `validateDepartment.ts` dùng hàm này, thêm lời báo "Tên phòng ban chứa ký tự không hợp lệ", tính độ dài trên tên đã chuẩn hóa. Form gửi tên đã chuẩn hóa (thay cho `name.trim()`).
+- [x] (N-03) `DepartmentFormPage.tsx`: bỏ `maxLength` ở ô tên. Dán 120 ký tự thì giữ nguyên và hiện "Tên phòng ban tối đa 100 ký tự", không cắt bớt mà không báo.
+- [x] (A-13) `App.tsx`: thêm `DepartmentEditRoute` giống `EmployeeEditRoute` (`key` theo id): đang sửa phòng ban A mà mở địa chỉ sửa phòng ban B thì form được tạo mới và nạp đúng B.
+- [x] (A-05) `DepartmentsPage.tsx`: tải danh sách cùng kiểu với `EmployeesPage`: một `useEffect` theo `reloadKey`; "Thử lại" và sau khi xóa chỉ tăng `reloadKey`; bỏ `reloadControllerRef`, `showDepartments`, `showLoadError`. Hành vi không đổi.
+- [x] (A-06) `DepartmentsPage.tsx`, `DepartmentFormPage.tsx`: dùng `GENERIC_MESSAGE`, `isAborted`, `messageOf` từ `api/client.ts`, bỏ bản chép trong từng trang.
+- [x] Tài liệu thiết kế U3: `functional-design/rules.md` BR1.1–BR1.3 và bảng tóm tắt ghi luật chuẩn hóa mới kèm căn cứ chuẩn, đánh dấu đổi có chủ đích theo rà soát (N-04, S-04), để tài liệu không lệch code (bài học R-10 của U2).
+
+Unit test (viết và chạy ngay sau service, trong `DepartmentServiceTests`; số #21 đã có nên bắt đầu từ #22):
+
+- [x] #22 Khoảng trắng ở giữa và hai đầu (nhiều dấu cách, tab, U+00A0) được gộp thành một dấu cách khi lưu.
+- [x] #23 "Kế&nbsp;&nbsp;toán" (2 dấu cách) khi đã có "Kế toán" → 409 trường `name`.
+- [x] #24 "Kế toán" gõ kiểu tổ hợp (NFD) → lưu dạng NFC; tạo tiếp bản dựng sẵn → 409.
+- [x] #25 Tên chứa U+0000, ESC, U+200B, U+202E, U+FEFF, nửa cao, nửa thấp (7 ca trong một test) → 400 "Tên phòng ban chứa ký tự không hợp lệ", không lưu gì.
+- [x] #26 Emoji đủ hai nửa surrogate → lưu nguyên.
+- [x] #27 Sửa với ký tự không hợp lệ → 400, giữ tên cũ.
+
+Kiểm (sau khi code):
+
+- [x] `npm --prefix frontend run verify` xanh (109 test); độ phủ dòng `DepartmentService` 100%, `TextInput` 100% (`npm --prefix frontend run coverage`).
+- [x] Bản JavaScript `normalizeText` cho cùng kết quả với bản C# trên 14 ca.
+- [x] API thật (PostgreSQL): POST tên chứa U+0000, U+200B, U+202E → 400 (trước: U+0000 ra 500); "Kế&nbsp;&nbsp;toán" → 409; NFD → 409; tên hợp lệ có khoảng trắng thừa → 201 đã gộp; PUT ký tự lạ → 400, tên cũ giữ nguyên; danh sách đang có không tên nào bị ảnh hưởng. Dữ liệu thử đã xóa.
+- [x] Playwright (Chromium; frontend dev cổng 5174, backend 5081 cho phép thêm origin 5174 bằng biến môi trường vì cổng 5173 đang có preview của Hiệp; tắt khi xong): dán 120 ký tự → ô giữ đủ 120, lời báo cạnh ô, không gửi request; ký tự vô hình → lời báo, không request; "&nbsp;&nbsp;Kế&nbsp;&nbsp;&nbsp;toán&nbsp;" → gửi tên đã chuẩn hóa, 409 cạnh ô; đang sửa A chuyển sang sửa B → form nạp B; chặn API → "Thử lại" → có dữ liệu; xóa → tải lại; K9, K14 của U2 đạt; console 0 lỗi của ứng dụng.
+- [x] Cập nhật `code-summary.md` (mục 4c), `unit-test-instructions.md` (ca #22–#27, kiểm tay 9–12), `source-manifest.json` (thêm file của Step 11).
+
+Sửa sau review (Hiệp duyệt checkpoint U3, gõ 1, yêu cầu sửa R-05 đến R-09; 03/11/2026; chỉ tài liệu):
+
+- [x] **(R-05)** `unit-test-instructions.md` mục 7: bộ 14 ca đối chiếu hai bản chuẩn hóa, dùng chung cho U3, U4.
+- [x] **(R-06, R-08)** `code-summary.md` mục 4c: ghi giới hạn ZWJ/ZWNJ và câu về phiên bản Unicode.
+- [x] **(R-07)** `functional-design/rules.md` BR1.3: độ dài đếm theo đơn vị UTF-16.
+- [x] **(R-09)** Phần đầu plan: số test và hai file dùng chung.
+- [x] Ghi `code-summary.md` mục 4d.
+
+**Không đổi:** API (đường dẫn, mã lỗi, dạng JSON), giao diện (CSS, bố cục), migration và dữ liệu đang có trong database.
 
 ## Không làm trong U3
 

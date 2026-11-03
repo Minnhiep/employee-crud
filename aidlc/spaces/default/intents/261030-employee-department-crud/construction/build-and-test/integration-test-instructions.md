@@ -63,17 +63,17 @@ D01–D03 đã làm thật ở U5 Step 4 (03/11/2026); chỉ làm lại nếu mi
 
 | ID | Thao tác | Kỳ vọng | Khác với 07 |
 |---|---|---|---|
-| F01 | Mở `/employees` | "Đang tải..." rồi bảng kèm tên phòng ban | — |
-| F02 | Chưa có nhân viên | "Chưa có nhân viên nào." + nút "Thêm nhân viên" | 07 ghi "Chưa có nhân viên." |
+| F01 | Mở `/employees` | "Đang tải dữ liệu…" rồi bảng kèm tên phòng ban | — |
+| F02 | Chưa có nhân viên | "Chưa có nhân viên nào" + nút "Thêm nhân viên" (chữ sau khi làm lại giao diện 03/11) | 07 ghi "Chưa có nhân viên." |
 | F03–F05 | Tìm một phần họ tên; "AN" và "an"; một phần email | Đúng người; không phân biệt hoa thường; địa chỉ có `?search=` | — |
-| F06 | Tìm "zzz" | "Không tìm thấy nhân viên phù hợp với "zzz"." + "Xóa tìm kiếm" | 07 ghi "Chưa có nhân viên." |
+| F06 | Tìm "zzz" | "Không tìm thấy nhân viên phù hợp" + `Không có họ tên hoặc email nào chứa "zzz".` + "Xóa tìm kiếm" (chữ sau khi làm lại giao diện 03/11) | 07 ghi "Chưa có nhân viên." |
 | F07 | Thêm hợp lệ | "Đã thêm nhân viên ..."; có trong danh sách; pgAdmin thấy dòng mới | — |
 | F08 | Ô Phòng ban | Đủ phòng ban từ API | — |
 | F09 | Sửa, lưu | "Đã cập nhật ..."; danh sách và DB đổi | — |
 | F10 | Đang ở form sửa người A, đổi địa chỉ sang sửa người B | Form nạp đúng người B | 07 tả form chung một trang; thiết kế dùng trang form riêng |
 | F11 | Ở form, bấm Hủy | Về danh sách, không đổi dữ liệu | 07 ghi "về chế độ thêm mới" |
-| F12 | Xóa, xác nhận OK | Dòng biến mất không cần F5, có lời báo, focus về tiêu đề | — |
-| F13 | Xóa, chọn Hủy | Không xóa | — |
+| F12 | Xóa, bấm "Xóa nhân viên" trong hộp xác nhận | Dòng biến mất không cần F5, có lời báo góc dưới phải, focus về tiêu đề | — |
+| F13 | Xóa, chọn Hủy (hoặc Esc) | Không xóa, focus về nút Xóa | — |
 | F14 | Tắt backend, chạy lại, tải lại | Dữ liệu vẫn còn | — |
 
 ### 5.4 Kiểm dữ liệu và báo lỗi (Hiệp, trình duyệt)

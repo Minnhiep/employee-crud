@@ -98,6 +98,57 @@ Trong lúc sửa R-04, kiểm `client.ts` thấy lệch 400 có ảnh hưởng t
 
 Chạy lại T1–T6: T1 10; T2 4 mục lỗi, 5 dòng `application/problem+json`; T3 3; T4 12 mục; T5 4; T6 3 dòng chỉ có `$p` và `***`. Hiệp commit `README.md`, `docs/danh-sach-api.md` ở `0478fd9`.
 
+## 6b. Phần H: sửa theo rà soát tổng thể (Change Request, 03/11/2026)
+
+Nguồn: `build-and-test/ra-soat-tong-the.md`; Hiệp chọn sửa cả 4 nhóm (form 34027473), dặn "chuẩn như các công ty lớn… giải quyết triệt để" (87ea0d27), duyệt plan Phần H (gõ 1). Không sửa code, migration hay cấu hình.
+
+| Mã | Sửa | File |
+|---|---|---|
+| N-01 | File dữ liệu mẫu 10 nhân viên tên giả, email `@congty.example` (RFC 2606), chèn theo tên phòng ban không phân biệt hoa thường, `ON CONFLICT DO NOTHING`, câu đếm, khối gỡ ở dạng ghi chú | `docs/du-lieu-mau.sql` (mới), README mục 12 |
+| S-02, A-15 | Tài khoản database riêng `employee_app` (CONNECT, USAGE schema, SELECT/INSERT/UPDATE/DELETE 2 bảng, USAGE/SELECT sequence); mật khẩu đặt bằng hộp thoại pgAdmin; user-secrets đổi sang `employee_app`; migration bằng `postgres` qua biến môi trường `ConnectionStrings__Default` sống trong một cửa sổ | README mục 13 |
+| S-11 | Lấy mật khẩu bằng `SecureStringToBSTR` + `PtrToStringBSTR` trong `try`/`finally` có `ZeroFreeBSTR` | README mục 3, 13 |
+| S-07 | `npm install` → `npm ci` | README mục 7 |
+| N-12 | Chỉ mở `localhost`, không `127.0.0.1`; ghi chú `<địa-chỉ-repo>` điền khi lên GitHub | README mục 2, 8, 11 |
+| A-03, A-04 | "100%" là độ phủ dòng C# của service, luật nằm ở PostgreSQL kiểm tay; vì sao lệnh đo nằm trong `frontend/package.json` | README mục 10 |
+| A-14 | Vì sao 4 nhóm log EF Core đặt `Critical`, đừng xóa, cách xem SQL khi học | README mục 14 |
+| (Hiệp chọn) | Hướng phát triển: xóa mềm, nhật ký thay đổi | README mục 15 |
+| A-11, U3/U4 | Quy ước chuẩn hóa chữ; mã 405, 415, 500; ví dụ thật 400 "chứa ký tự không hợp lệ", 405, 415, 500; tìm có ký tự lạ → `[]` | `docs/danh-sach-api.md` |
+
+**Đã kiểm (AI):**
+- `docs/du-lieu-mau.sql`: 10 dòng, chữ NFC, không ký tự lạ, email hợp lệ theo luật API, không trùng.
+- Ví dụ JSON mới là kết quả gọi thật: 405 (`PATCH`), 415 (`text/plain`), 400 (U+200B) trên backend + PostgreSQL thật; 500 trên backend phụ cổng 5082 trỏ cổng 5999 không có database (log đúng 1 dòng `fail:`); `?search=%00` → 200 `[]`.
+- Hai khối PowerShell (mục 3, mục 13): phân tích cú pháp 0 lỗi; chạy thử với mật khẩu giả: chuỗi kết nối đúng, biến `p`, `s`, `b` và biến môi trường bị xóa sau khi chạy.
+- `dotnet ef` ưu tiên biến môi trường hơn user-secrets: chạy với biến trỏ cổng 5999 → "Failed to connect to 127.0.0.1:5999" (không dùng user-secrets).
+- `npm --prefix frontend ls --depth=0` sạch (khóa khớp, `npm ci` dùng được); T1–T6 đạt (T2 thêm ví dụ 400 ký tự lạ; T4 có thêm mục 12–15; T6 chỉ có `$p`, `***`, đoạn lấy mật khẩu lúc chạy); liên kết README tới `docs/` đều có file; quét ký tự ẩn sạch (đã sửa một U+200B thật trong ví dụ JSON do công cụ ghi file đổi).
+
+**Đã kiểm (Hiệp làm tay, AI kiểm kết quả):**
+
+| Bước | Hiệp làm | Kết quả |
+|---|---|---|
+| 1 | Chạy `docs/du-lieu-mau.sql` trong pgAdmin | Câu đếm `10`; API: 12 nhân viên (2 cũ + 10 mẫu), đúng phân bố phòng ban (phòng "Nhân Sự" chữ S hoa vẫn ghép đúng), tìm "nguyễn" 2, "văn" 4, "đ" 4, "nguyễn&nbsp;&nbsp;thị" 1 |
+| 1b | Chạy riêng dòng `DELETE` cuối file, không lưu file | `DELETE 10`; API: về đúng 2 nhân viên cũ; file trên đĩa giữ dòng ghi chú |
+| 1c | Chạy lại cả file 2 lần | Cả 2 lần ra `10`, không lỗi; API: 12 nhân viên, 0 email trùng (dữ liệu mẫu giữ lại để demo) |
+| 2.1 | 5 câu `CREATE ROLE`/`GRANT` | `GRANT`, không lỗi |
+| 2.2 | Đặt mật khẩu `employee_app` bằng Properties → Definition | Đã Save (mật khẩu không vào SQL, không gửi cho AI) |
+| 2.3 | Khối README mục 3 với `Username=employee_app` | `Successfully saved…`; kiểm: `Username=employee_app;Password=***`. AI chạy backend: GET 200, POST 201, PUT 200, DELETE 204 (nhân viên và phòng ban tạm), 0 dòng `fail:` |
+| 2.4 | Khối migration bằng `postgres` (README mục 13 bước 4) | `Build succeeded.`, `Done.` Dòng "No migrations were applied…" không hiện vì log EF Core để mức `Warning` (mục 14), không phải lỗi. Chạy được tức là dùng `postgres` (vì `employee_app` không có quyền đọc bảng lịch sử migration) |
+| 2.5 | `SET ROLE employee_app; CREATE TABLE thu_quyen (id int);` rồi `RESET ROLE;` | `ERROR: permission denied for schema public` (42501); `RESET` thành công |
+
+**Trạng thái máy sau Phần H:** ứng dụng chạy bằng `employee_app`; database có 10 nhân viên mẫu (`@congty.example`) để demo, gỡ bằng dòng cuối `docs/du-lieu-mau.sql`.
+
+## 6c. Sửa sau review Phần H (Hiệp duyệt checkpoint U5, gõ 1, yêu cầu sửa R-07 đến R-10; 03/11/2026)
+
+Reviewer kết luận READY; 4 góp ý Minor, chỉ sửa câu chữ.
+
+| Điểm | Sửa | File |
+|---|---|---|
+| R-07 | Lý do lệnh đo độ phủ nằm ở `frontend`: để mọi lệnh kiểm chung một chỗ; `verify` (kiểu, lint, định dạng, build, test) **không** đo độ phủ, `coverage` là lệnh riêng | README mục 10 |
+| R-08 | Lưu ý: mật khẩu không dùng `;` hay `"` (cắt chuỗi kết nối, hỏng tham số PowerShell), áp dụng cả mục 13 | README mục 3 |
+| R-09 | Ứng dụng không tự migrate nên `employee_app` không cần quyền với `__EFMigrationsHistory`; giao dịch lỗi thì `ROLLBACK;` trước `RESET ROLE;` | README mục 13 |
+| R-10 | Ghi chú dòng gỡ: xóa cả người tự thêm bằng email `@congty.example` | `docs/du-lieu-mau.sql` |
+
+**Kiểm lại:** quét ký tự ẩn sạch; file SQL vẫn 10 dòng chuẩn, dòng `DELETE` vẫn ở dạng ghi chú; T6 không có mật khẩu thật.
+
 ## 7. Khác với kế hoạch
 
 - Step 5 chạy hai lần do lỗi in kết quả ở lần đầu (không ảnh hưởng dữ liệu).

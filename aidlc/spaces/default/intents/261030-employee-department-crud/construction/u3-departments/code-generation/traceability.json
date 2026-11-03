@@ -62,7 +62,7 @@
     { "id": "NFR1.3", "status": "OK", "target": "backend/EmployeeCrud.Api/Migrations/20261101183552_CreateDepartments.cs" },
     { "id": "NFR4.1", "status": "OK", "target": "backend/EmployeeCrud.Api.Tests/Departments/DepartmentServiceTests.cs" },
     { "id": "NFR4.2", "status": "OK", "target": "frontend/package.json" },
-    { "id": "NFR4.3", "status": "OK", "target": "backend/EmployeeCrud.Api.Tests/Departments/ThrowingAppDbContext.cs" },
+    { "id": "NFR4.3", "status": "OK", "target": "backend/EmployeeCrud.Api.Tests/TestSupport/ThrowingAppDbContext.cs" },
     { "id": "BR1.1", "status": "OK", "target": "backend/EmployeeCrud.Api/Departments/DepartmentService.cs" },
     { "id": "BR1.2", "status": "OK", "target": "backend/EmployeeCrud.Api/Departments/DepartmentService.cs" },
     { "id": "BR1.3", "status": "OK", "target": "backend/EmployeeCrud.Api/Departments/DepartmentService.cs" },

@@ -16,7 +16,7 @@
   - Khung trang chung: liên kết bỏ qua, header "Quản lý nhân sự", menu, vùng nội dung, vùng thông báo.
   - Router: `/` → `/employees`, hai trang chỉ có tiêu đề, trang 404.
   - Component dùng chung: `StatusMessage`, `Toast`, `DataTable`, `ErrorSummary`, `FormField`.
-  - Module gọi API `src/api/client.js` (đọc ProblemDetails, hạn 10 giây, nhận biết lỗi mạng).
+  - Module gọi API `src/api/client.ts` (đọc ProblemDetails, hạn 10 giây, nhận biết lỗi mạng).
   - CSS chung: `tokens.css`, `base.css`, `components.css`.
   - ESLint (cấu hình Vite tạo), Prettier, `lang="vi"`.
 - **Không làm:** chưa có màn hình nghiệp vụ, chưa gọi API thật nào (U3, U4). Không Redux, không thư viện CSS.
@@ -24,8 +24,8 @@
 
   | Story | Phần U2 làm | Phần do unit khác làm |
   |---|---|---|
-  | US4.1 | Cách hiện lỗi dùng chung: `ErrorSummary`, `FormField`, `client.js` giữ lời báo API | Luật kiểm từng form (U3, U4); ProblemDetails (U1) |
-  | US4.2 | `StatusMessage` (tải / lỗi / rỗng), lỗi mạng trong `client.js` | Dùng ở từng trang (U3, U4) |
+  | US4.1 | Cách hiện lỗi dùng chung: `ErrorSummary`, `FormField`, `client.ts` giữ lời báo API | Luật kiểm từng form (U3, U4); ProblemDetails (U1) |
+  | US4.2 | `StatusMessage` (tải / lỗi / rỗng), lỗi mạng trong `client.ts` | Dùng ở từng trang (U3, U4) |
   | US4.3 | Menu, router, chữ tiếng Việt của khung trang | Đường dẫn form và chữ trang nghiệp vụ (U3, U4) |
   | US4.4 | Kiểu nút khóa `btn[disabled]`, cách khóa nút | Khóa nút ở từng form và nút xóa (U3, U4) |
   | US4.5 | `Toast` | Lời báo "Đã ..." và nút Hủy của từng form (U3, U4) |
@@ -58,7 +58,7 @@ flowchart LR
 - Nút quay lại / tiến tới của trình duyệt đi đúng luồng này.
 - Menu "Nhân viên" vẫn được đánh dấu khi ở trang con `/employees/...` (form của U4); tương tự "Phòng ban" (BR1.4).
 
-## 4. Luồng W3: một lời gọi API qua `client.js`
+## 4. Luồng W3: một lời gọi API qua `client.ts`
 
 ```mermaid
 flowchart TD
@@ -70,10 +70,13 @@ flowchart TD
     T -->|"4xx"| P{"Body là problem+json?"}
     P -->|"Có"| C4["Lỗi giữ status, title, detail, errors của API"]
     P -->|"Không"| G["Lỗi chung: Đã có lỗi xảy ra, vui lòng thử lại sau."]
-    T -->|"5xx"| C5["Lỗi server: detail của API nếu có, ngược lại câu lỗi mạng"]
+    T -->|"5xx"| P5{"Body là problem+json?"}
+    P5 -->|"Có"| C5["Lỗi server: detail của API, không có thì title"]
+    P5 -->|"Không"| G
+    J -->|"Body không phải JSON hợp lệ"| G
 ```
 
-<!-- Text fallback: Trang gọi client; client gọi fetch với hạn 10 giây. Bị từ chối hoặc quá hạn thì báo lỗi mạng. 200/201 trả JSON, 204 trả rỗng. 4xx có ProblemDetails thì giữ nguyên title, detail, errors; không có thì báo lỗi chung. 5xx thì dùng detail của API nếu có, ngược lại câu lỗi mạng. -->
+<!-- Text fallback: Trang gọi client; client gọi fetch với hạn 10 giây. Bị từ chối hoặc quá hạn thì báo lỗi mạng. 200/201 trả JSON, 204 trả rỗng. 4xx có ProblemDetails thì giữ nguyên title, detail, errors; không có thì báo lỗi chung. 5xx có ProblemDetails thì dùng detail của API (không có thì title); không có ProblemDetails thì báo lỗi chung. 200/201 mà body không phải JSON hợp lệ cũng báo lỗi chung. Máy chủ vẫn trả lời được nên hai trường hợp này không báo lỗi mạng (đổi có chủ đích ở Code Generation Step 10, review R-10). -->
 
 - Không có lần gọi lại tự động nào (BR2.2). Trang hiện lỗi và nút "Thử lại"; người dùng bấm mới gọi lại.
 - Trang phân biệt các loại lỗi bằng `kind` (`network`, `server`, `client`) và `status` mà client trả về, không đọc chuỗi lời báo.
@@ -155,5 +158,5 @@ U2 dựng nền để đạt các mục tiêu này; Build and Test đo trên b�
 | Liên kết bỏ qua | Nhấn Tab lần đầu: thấy liên kết; Enter: focus vào nội dung chính | BR1.3 |
 | Đổi trang | Bấm "Phòng ban": địa chỉ đổi, tab Network không tải lại HTML, tiêu đề tab đổi, mục menu đậm + gạch dưới | BR1.2, BR1.4, G4 |
 | Trang 404 | Mở `/abc`: thấy "Không tìm thấy trang" và liên kết về Nhân viên | BR1.1 |
-| `client.js` | Unit test cho client không bắt buộc (team.md chỉ test service backend); kiểm bằng tay ở U3 khi có API thật: tắt backend → "Không kết nối được máy chủ, vui lòng thử lại" | BR2.x |
+| `client.ts` | Unit test cho client không bắt buộc (team.md chỉ test service backend); kiểm bằng tay ở U3 khi có API thật: tắt backend → "Không kết nối được máy chủ, vui lòng thử lại" | BR2.x |
 | Component dùng chung | Kiểm bằng tay khi U3 dùng tới | BR3.x, BR4.x |

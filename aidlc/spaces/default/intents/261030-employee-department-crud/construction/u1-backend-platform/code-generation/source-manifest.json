@@ -8,6 +8,19 @@
     { "path": "backend/EmployeeCrud.Api.Tests/Platform/ErrorMapperTests.cs" },
     { "path": "backend/EmployeeCrud.Api.Tests/Platform/PipelineTests.cs" },
     { "path": "backend/EmployeeCrud.Api.Tests/Platform/TestOnlyController.cs" },
-    { "path": "docs/danh-sach-api.md" }
+    { "path": "docs/danh-sach-api.md" },
+    { "path": "backend/EmployeeCrud.Api/appsettings.json" },
+    { "path": "backend/EmployeeCrud.Api/appsettings.Development.json" },
+    { "path": "backend/EmployeeCrud.Api/Platform/Security/SecurityHeaders.cs" },
+    { "path": "backend/EmployeeCrud.Api/Program.cs" },
+    { "path": "backend/EmployeeCrud.Api/Platform/Errors/ProblemDetailsExceptionHandler.cs" },
+    { "path": "backend/EmployeeCrud.Api/Platform/Errors/StatusCodeProblemWriter.cs" },
+    { "path": "backend/EmployeeCrud.Api/EmployeeCrud.Api.csproj" },
+    { "path": "backend/EmployeeCrud.Api/EmployeeCrud.Api.http" },
+    { "path": "backend/EmployeeCrud.Api.Tests/EmployeeCrud.Api.Tests.csproj" },
+    { "path": "backend/EmployeeCrud.Api.Tests/Platform/SecurityTests.cs" },
+    { "path": "backend/EmployeeCrud.Api.Tests/Platform/LoggingTests.cs" },
+    { "path": "backend/EmployeeCrud.Api.Tests/Platform/LogCapturingWebAppFactory.cs" },
+    { "path": ".gitignore" }
   ]
 }

@@ -120,6 +120,55 @@ Build and Test lượt 1 (`construction/build-and-test/test-results.md`, BT-01, 
 
 Không có test viết mà chưa chạy.
 
+## 5c. Loop-back 2 từ Build and Test (03/11/2026, Step 10)
+
+**Lỗi tìm thấy (BT-03, NFR6.2):** Build and Test lượt 3, Hiệp tắt PostgreSQL thật. Một lỗi 500 ghi **3 dòng `fail:`**: 2 dòng EF Core tự ghi (`Database.Connection[20004]`, `Query[10100]` kèm stack trace) rồi mới tới dòng của `ProblemDetailsExceptionHandler`. Gốc: `Microsoft.EntityFrameworkCore` để mức `Warning` (ẩn câu SQL theo NFR6.1) vẫn cho dòng Error của EF đi qua. Lượt 1 chấm NFR6.2 bằng đọc code nên không thấy.
+
+**Sửa (chỉ cấu hình):** `backend/EmployeeCrud.Api/appsettings.json` thêm 3 dòng trong `Logging:LogLevel`: `Microsoft.EntityFrameworkCore.Database.Connection`, `...Query`, `...Update` = `Critical`. `appsettings.Development.json` không ghi đè 3 nhóm này nên không sửa.
+
+**Vì sao không mất thông tin (để anh giải thích được):** mọi lỗi không xử lý vẫn tới `ProblemDetailsExceptionHandler`. Dòng Error của nó có phương thức, đường dẫn, loại lỗi, thông điệp và stack trace, kể cả exception bên trong của Npgsql (ví dụ "Failed to connect to 127.0.0.1:5999 … actively refused it"). Lỗi ràng buộc mà service đã xử lý thành 409 thì đúng ra không được ghi Error (NFR6.3); nhóm `Update` là nơi EF ghi khi `SaveChanges` lỗi lúc chen nhau.
+
+**Đã kiểm (không cần Admin, không tắt database thật):**
+
+| Ca | Cách làm | Kết quả |
+|---|---|---|
+| Lỗi 500 do DB | Backend phụ cổng 5082, `ConnectionStrings__Default` (biến môi trường, chỉ cho tiến trình đó, không mật khẩu) trỏ `Port=5999` không ai nghe; `GET /api/employees` một lần | 500 `application/problem+json` câu chung; log **đúng 1 dòng `fail:`** (trước sửa: 3) |
+| Chạy bình thường | Backend phụ với chuỗi kết nối thật (user-secrets): `GET /api/employees` | 200 |
+| 409 không ghi Error | `POST` trùng email `DO.AN@congty.vn`, `DELETE /api/departments/3` | 409, 409; log chỉ 2 dòng `info:`, **0 dòng `fail:`** |
+| Bộ test | `npm --prefix frontend run verify` | Xanh, 96/96 |
+
+Không đổi: code C#, test tự động, controller, service, frontend.
+
+**Sửa thêm theo rà soát (Hiệp duyệt U1 và chọn sửa R-07, R-08, R-09):**
+
+- **R-07:** nhóm thứ tư `Microsoft.EntityFrameworkCore.Database.Command` cũng ghi Error ("Failed executing DbCommand", mã 20102) khi một câu SQL lỗi. Chạy thật: gửi 8 yêu cầu thêm cùng email `dongthoi@congty.vn` cùng lúc vào backend phụ (DB thật) → 1×201, 7×409 (chỉ mục unique chặn), log có **7 dòng `fail: ...Database.Command[20102]`**, trái NFR6.3. Sửa: thêm `"Microsoft.EntityFrameworkCore.Database.Command": "Critical"` vào `appsettings.json`, và đổi dòng cùng tên trong `appsettings.Development.json` từ `Warning` sang `Critical` (file Development ghi đè file chung theo từng khóa, nên phải sửa cả hai). Chạy lại cùng ca: 7×409, **0 dòng `fail:`**; ca DB không kết nối được vẫn đúng 1 dòng `fail:`. Nhân viên thử đã xóa.
+- **R-08 (vì sao có các dòng `Critical`):** NFR6.1 viết "riêng EF Core để Warning" là để ẩn câu SQL. Bốn nhóm con `Database.Command`, `Database.Connection`, `Query`, `Update` được đặt `Critical` để mọi lỗi chỉ còn **một** dòng Error do `ProblemDetailsExceptionHandler` ghi (NFR6.2), và lỗi đã xử lý thành 409 không sinh dòng Error (NFR6.3). **Đừng xóa bốn dòng này.** Muốn xem câu SQL khi học: đổi tạm `Database.Command` trong `appsettings.Development.json` sang `Information`, xem xong đổi lại `Critical`. Nếu thêm nhóm EF Core mới vào cấu hình log thì chạy lại ca kiểm tay "một lỗi = một dòng Error".
+- **R-09:** ca kiểm tay trong `unit-test-instructions.md` ghi rõ phải chạy lại sau mỗi lần đổi `appsettings*.json` hoặc nâng bản EF Core/Npgsql (dự án không có CI, không có test tự động cho log).
+
+## 5d. Step 11: sửa theo rà soát tổng thể (Change Request, 03/11/2026)
+
+Nguồn: `build-and-test/ra-soat-tong-the.md` (3 chuyên gia AI-DLC rà độc lập; Hiệp chọn sửa cả 4 nhóm, form 34027473).
+
+| Mã | Trước | Sau | File |
+|---|---|---|---|
+| S-03 | `AllowedHosts: "*"` | `"localhost;127.0.0.1;[::1]"`: request mang tên miền lạ bị 400 (chặn DNS rebinding) | `appsettings.json` |
+| S-05 | Không có header bảo mật; có `Server: Kestrel` | Mọi phản hồi `X-Content-Type-Options: nosniff`; `/api/*` thêm `Cache-Control: no-store`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`; gắn bằng `Response.OnStarting` nên phản hồi lỗi cũng có; `/swagger` không bị CSP; bỏ header `Server` | `Platform/Security/SecurityHeaders.cs` (mới), `Program.cs` |
+| S-09 | `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` | `JavaScriptEncoder.Create(UnicodeRanges.All)`: giữ chữ Việt, vẫn mã thoát `< > & ' "` | `Platform/Errors/ValidationResponseFactory.cs` |
+| A-02 | Log lỗi không có `traceId` | Ba dòng log (Error 500, Information 4xx, Information 404/405/415) có `(traceId …)`; 404/405/415 do framework sinh nay cũng có `traceId` trong body như các lỗi khác | `ProblemDetailsExceptionHandler.cs`, `StatusCodeProblemWriter.cs` |
+| A-01 | Nghi request bị hủy ghi Error 500 giả | **Không cần sửa:** test chứng minh máy chủ nhận được việc hủy và không ghi dòng Error nào (.NET 10 tự xử lý: ExceptionHandler bỏ qua `OperationCanceledException` khi `RequestAborted`) | (chỉ test) |
+| A-07 | Tự gõ `"23505"`, `"23503"`, `"23001"` | `PostgresErrorCodes.*` của Npgsql; comment nói tên trường `name`/`email` phải khớp service (giữ ở tầng nền để không phụ thuộc ngược) | `Platform/Errors/ErrorMapper.cs` |
+| S-07 | `10.*` (4 gói API, 2 gói test) | Ghim `10.0.14` (EF Core, Design, Relational, Mvc.Testing, InMemory), `10.0.3` (Npgsql) | 2 file `.csproj` |
+| S-08 | `.gitignore` chưa chặn file bí mật hay gặp | Thêm `.env.*` (trừ `frontend/.env.development`), `*.pfx`, `*.p12`, `*.pem`, `*.key`, `secrets.json` | `.gitignore` |
+| A-12 | `.http` chỉ có 1 request | Đủ 10 thao tác + 1 ca 404; biến `@baseUrl` (VS Code REST Client hiểu nhầm tên có dấu chấm như `EmployeeCrud.Api_HostAddress`) | `EmployeeCrud.Api.http` |
+
+**Test mới (7):** `SecurityTests` (Host lạ → 400; header bảo mật trên 200, 404, 500; phản hồi 400 giữ chữ Việt nhưng mã hóa `<b>` thành `<b>`), `LoggingTests` (lỗi 500 ghi đúng 1 dòng Error và `traceId` trong log trùng phản hồi; request bị hủy: máy chủ nhận được việc hủy, 0 dòng Error). Hạ tầng test: `LogCapturingWebAppFactory` (giữ log trong bộ nhớ), `TestOnlyController` thêm `ok`, `slow`, `validate-html`.
+
+**Phạm vi header bảo mật:** mọi phản hồi của ứng dụng, **trừ** phản hồi 400 do Host lạ: bộ lọc `AllowedHosts` do ASP.NET Core thêm sẵn chạy trước `UseSecurityHeaders` (body 400 đó rỗng, rủi ro rất thấp; rà soát R-12).
+
+**Sửa sau rà soát U1 (Hiệp duyệt, chọn sửa R-10..R-13):** lần đầu em bỏ qua test mã hóa `<` vì phản hồi 400 thật không chứa chữ người dùng gõ; rà soát chỉ ra không có test thì sau này đổi lại bộ mã hóa lỏng sẽ không ai biết (R-10), nên đã thêm test với lời báo chứa `<b>` (endpoint chỉ có trong test). Tên file test trong kế hoạch sửa cho đúng (R-11); comment phạm vi header (R-12); test hủy request chờ có hạn tối đa 5 giây (R-13). Sau sửa: `npm --prefix frontend run verify` **103/103**, `dotnet format --verify-no-changes` sạch.
+
+**Đã kiểm:** `dotnet test` (build ra `backend/TestResults/artifacts` vì backend của Hiệp đang chạy giữ file `.dll`) **102/102**; `dotnet format --verify-no-changes` sạch. Backend phụ cổng 5082 (bản vừa build, database thật): `/api/employees` 200 và `/api/khong-ton-tai` 404 đều có `nosniff`, `no-store`, CSP, không có `Server`; `Host: evil.example` → 400; `/swagger/index.html` 200, không có CSP; `traceId` trong body 404 trùng dòng log `404 GET /api/khong-ton-tai (traceId 00-9f33…)`.
+
 ## 6. Chuyển cho các unit sau
 
 - **U2:** Vite đặt `server.strictPort: true` (nếu cổng 5173 bận thì báo lỗi, không tự nhảy sang 5174 làm CORS chặn). Địa chỉ API: `http://localhost:5081`.

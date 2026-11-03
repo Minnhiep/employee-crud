@@ -130,6 +130,48 @@ Hiệp duyệt kế hoạch và dặn "làm giống như phòng ban". Bước n�
 
 **Vì sao ảnh Hiệp chụp bị che bên phải:** đó là cửa sổ Chrome do Playwright điều khiển (có dòng báo `--disable-blink-features=AutomationControlled`), khung trang bị đặt cứng 1440px nên không co theo khi taskbar bên phải chiếm chỗ. Trang thật co giãn theo cửa sổ (đo ở 6 độ rộng ở trên). Cửa sổ kiểm thử đã đóng.
 
+## 5c. Step 11: sửa theo rà soát tổng thể (Change Request, 03/11/2026)
+
+Nguồn: `build-and-test/ra-soat-tong-the.md`; Hiệp chọn sửa cả 4 nhóm (form 34027473), dặn "chuẩn như các công ty lớn… giải quyết triệt để" (tin nhắn 87ea0d27), chọn chuỗi tìm có ký tự lạ thì trả danh sách rỗng (form c6e6889f), duyệt plan Step 11 (gõ 1). Dùng lại hàm chuẩn hóa chung của U3 (`Platform/Text/TextInput.cs`, `utils/normalizeText.ts`), cùng căn cứ chuẩn (RFC 8264 §4.3.3, RFC 8266 §2.1, W3C Character Model §2.2.1; chi tiết ở code-summary U3 mục 4c).
+
+| Mã | Trước | Sau | File |
+|---|---|---|---|
+| S-04, N-09 | `GET /api/employees?search=%00` → PostgreSQL từ chối → **500** | Chuỗi tìm qua `TextInput.TryNormalize`; có ký tự lạ → **200 `[]`** ngay, không gửi xuống database | `EmployeeService.GetAllAsync` |
+| N-04 (tìm) | Chỉ bỏ khoảng trắng hai đầu chuỗi tìm | Gộp khoảng trắng, NFC: "nguyễn&nbsp;&nbsp;văn" hay bản gõ kiểu tổ hợp vẫn tìm ra; ô tìm và địa chỉ trang ghi chuỗi đã chuẩn hóa | `EmployeeService.GetAllAsync`, `EmployeesPage.tsx` |
+| N-04 (họ tên, email) | Chỉ bỏ khoảng trắng hai đầu; U+200B lọt qua luật định dạng email, "a(U+200B)@x.vn" lách được luật không trùng | Chuẩn hóa như tên phòng ban; ký tự lạ → 400 "Họ tên / Email chứa ký tự không hợp lệ"; so trùng email trên giá trị đã chuẩn hóa | `EmployeeService.Normalize`, `validateEmployee.ts`, `EmployeeFormPage.tsx` (gửi giá trị đã chuẩn hóa) |
+| N-03 | `maxLength` cắt bớt phần dán thừa ở ô họ tên, email | Bỏ `maxLength`; lời báo "tối đa…" hiện cạnh ô | `EmployeeFormPage.tsx` |
+| N-05 | Hộp xóa chỉ ghi họ tên | Ghi thêm email trong ngoặc | `EmployeesPage.tsx` |
+| N-07 | Sửa từ kết quả tìm, Lưu/Hủy về `/employees` (mất chuỗi tìm) | Nút Sửa gửi chuỗi tìm qua `state`; form dựng lại địa chỉ bằng `URLSearchParams` (hàm `listPathFrom`) | `EmployeesPage.tsx`, `EmployeeFormPage.tsx` |
+| A-08 | `SaveAsync(employee.Id)` khi thêm mới truyền id 0 | `SaveAsync(int? id)`, thêm mới truyền `null`; lỗi tranh chấp khi thêm mới được ném nguyên | `EmployeeService` |
+| N-10 | Comment ghi "trả 200 thay vì 404" | Sửa: kết quả là 404 do bước đọc lại `GetByIdAsync` | `EmployeeService.UpdateAsync` |
+| A-06 | Câu lỗi chung, `isAborted`, `messageOf` chép trong từng trang | Dùng bản xuất từ `api/client.ts` | `EmployeesPage.tsx`, `EmployeeFormPage.tsx` |
+
+**Khác kế hoạch (nhỏ, cùng mục đích; hoặc Hiệp đã chọn):**
+
+1. **A-05 phần U4 không làm** (đã ghi trong plan): giữ `search` trong danh sách phụ thuộc của `useEffect` ở `EmployeesPage`, vì hàm có dùng `search` bên trong nên quy tắc `react-hooks/exhaustive-deps` của ESLint bắt buộc khai báo; bỏ đi thì `npm run lint` báo lỗi. Khai báo thừa không làm sai gì: `requestKey` đã chứa `search` nên hai giá trị luôn đổi cùng lúc.
+2. Địa chỉ quay về có chuỗi tìm (`listPath`) dùng cho cả liên kết "Nhân viên" ở đường dẫn trang và nút "Về danh sách nhân viên" khi không tìm thấy, không chỉ Lưu/Hủy, để mọi đường quay về từ form sửa đều nhất quán.
+3. Smart App Control chặn file `.dll` mới build 3 lần (`EmployeeCrud.Api.Tests.dll` một lần, `EmployeeCrud.Api.dll` hai lần, gồm một lần khi đo độ phủ). Lần đầu Hiệp chọn "làm như U3, từ nay tự làm" (form bb8c0c8f, đã ghi vào `27-10/CLAUDE.md`). Em thêm 3 comment có ích (`CreateServiceThatFailsOnSave`, `FindTrackedAsync`, `GetByIdAsync`), mỗi lần một comment, và chạy lại được. Không đổi cài đặt máy.
+4. Hộp xóa trong tài liệu ghi ví dụ cụ thể thay cho `<email>`, vì Markdown hiểu nhầm `<email>` là thẻ HTML và ẩn chữ đó đi.
+
+**Đã kiểm:**
+- Unit test: 117/117 (109 cũ + 8 mới #33–#40). Độ phủ dòng: `EmployeeService` 100%, `DepartmentService` 100%, `TextInput` 100%. Test #37 dùng ngữ cảnh database đã đóng, nên chứng minh được chuỗi tìm có ký tự lạ không bao giờ xuống tới database.
+- API thật (PostgreSQL): `?search=%00`, `?search=%E2%80%8B`, `?search=minh%00` → 200 `[]` (trước: 500); POST họ tên chứa U+0000 hoặc U+200B → 400 `fullName`; email chứa U+200B → 400 `email`; POST "&nbsp;&nbsp;Nguyễn&nbsp;&nbsp;&nbsp;Thử(U+00A0) Nghiệm&nbsp;" → 201 "Nguyễn Thử Nghiệm"; email gõ kiểu tổ hợp trùng → 409; tìm "nguyễn&nbsp;&nbsp;thử" → ra kết quả. 2 nhân viên đang có đều đã ở dạng chuẩn. Bản ghi thử đã xóa, còn đúng 2 nhân viên.
+- Playwright (Chromium; frontend dev cổng 5174 + backend 5081 cho phép thêm origin 5174, vì cổng 5173 đang có preview của Hiệp; tắt khi xong): dán 120 ký tự họ tên, 310 ký tự email → ô giữ nguyên, 2 lời báo, 0 POST; ký tự vô hình → 2 lời báo, 0 POST; tìm "&nbsp;&nbsp;Đỗ&nbsp;&nbsp;&nbsp;Văn&nbsp;" → `?search=Đỗ+Văn`, ô tìm "Đỗ Văn", "Tìm thấy 1 nhân viên"; Sửa → Hủy và Sửa → Lưu đều về `/employees?search=Đỗ+Văn` (Lưu có thông báo); hộp xóa "Nhân viên Đỗ Văn Tạm (do.tam@congty.vn) sẽ bị xóa vĩnh viễn…", focus "Hủy"; xóa xong giữ `?search=`, focus `h1`; mở thẳng địa chỉ sửa rồi Hủy → `/employees`. Console 0 lỗi, 0 cảnh báo.
+- `npm --prefix frontend run verify` xanh (typecheck, lint 0 cảnh báo, Prettier, build, 117/117).
+
+**Chuyển cho U5:** `docs/danh-sach-api.md` cần thêm hai lời báo 400 "Họ tên chứa ký tự không hợp lệ", "Email chứa ký tự không hợp lệ" (và "Tên phòng ban chứa ký tự không hợp lệ" của U3), và ghi chú "chuỗi tìm có ký tự lạ → 200 `[]`".
+
+## 5d. Sửa sau review Step 11 (Hiệp duyệt checkpoint U4, gõ 1, yêu cầu sửa R-07, R-08; 03/11/2026)
+
+Reviewer kết luận READY; 2 góp ý Minor.
+
+| Điểm | Sửa | Kiểm lại |
+|---|---|---|
+| R-07 | Đang tìm "a b" mà gõ lại "a&nbsp;&nbsp;b" rồi Tìm: địa chỉ không đổi nên `SearchBox` không đồng bộ lại, ô vẫn hiện "a&nbsp;&nbsp;b". Sửa: `onSearch` trả lại chuỗi thật sự được tìm (`handleSearch` trả `term`), `SearchBox` gán ô bằng chuỗi đó | Playwright: đang `?search=Đỗ Văn`, gõ "Đỗ&nbsp;&nbsp;Văn" + Enter → ô "Đỗ Văn", focus ở ô, "Tìm thấy 1 nhân viên"; "&nbsp;&nbsp;Huỳnh&nbsp;&nbsp;&nbsp;Thị&nbsp;" + nút Tìm → `?search=Huỳnh+Thị`, ô "Huỳnh Thị"; console sạch |
+| R-08 | (a) Thêm test #41: sửa với email chứa U+200B → 400 `email`, email cũ giữ nguyên. (b) Ca "chuỗi tìm toàn khoảng trắng trả đủ danh sách" đã có ở test #7 (Theory), ghi rõ trong `unit-test-instructions.md` | `npm --prefix frontend run verify` xanh, 118/118 |
+
+File: `frontend/src/components/SearchBox.tsx`, `frontend/src/pages/employees/EmployeesPage.tsx`, `backend/EmployeeCrud.Api.Tests/Employees/EmployeeServiceTests.cs` (đều đã có trong `source-manifest.json`).
+
 ## 6. Nháp cho README (U5)
 
 - Tạo bảng: `dotnet ef database update --project backend/EmployeeCrud.Api` (chạy cả 2 migration).

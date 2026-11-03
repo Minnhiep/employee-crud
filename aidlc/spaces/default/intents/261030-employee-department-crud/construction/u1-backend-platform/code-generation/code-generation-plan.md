@@ -29,29 +29,29 @@
 
 ### Step 1: Cấu trúc repo và cấu hình chạy thật
 
-- [ ] Thêm vào **cuối** `.gitignore` (sau khối AI-DLC) một khối mới: `bin/`, `obj/`, `*.user`, `.vs/`, `.env`, `node_modules/`, `dist/`, `TestResults/`, `coverage*/`.
-- [ ] `dotnet new editorconfig` ở thư mục gốc (quy ước C# chuẩn, `team.md` Code Style).
-- [ ] `dotnet new tool-manifest`, rồi `dotnet tool install dotnet-ef --version 10.*` (cục bộ, tạo `.config/dotnet-tools.json`).
-- [ ] `dotnet new sln -n EmployeeCrud -o backend`. .NET 10 tạo file `backend/EmployeeCrud.slnx`; mọi lệnh sau dùng đúng tên file sinh ra.
-- [ ] `dotnet new webapi --use-controllers -n EmployeeCrud.Api -o backend/EmployeeCrud.Api`, rồi thêm vào solution. Bỏ `WeatherForecast` và controller mẫu của template.
-- [ ] `dotnet user-secrets init --project backend/EmployeeCrud.Api` để `.csproj` có `UserSecretsId` (NFR2.1).
-- [ ] Thêm gói: `Npgsql.EntityFrameworkCore.PostgreSQL` 10.*, `Microsoft.EntityFrameworkCore.Design` 10.*, `Swashbuckle.AspNetCore.SwaggerUI`. Giữ `Microsoft.AspNetCore.OpenApi` của template.
-- [ ] `appsettings.json`: mức log theo `observability-design.md`, `Cors:AllowedOrigins: ["http://localhost:5173"]`. **Không có** khóa `ConnectionStrings`. `launchSettings.json`: `ASPNETCORE_ENVIRONMENT=Development`.
+- [x] Thêm vào **cuối** `.gitignore` (sau khối AI-DLC) một khối mới: `bin/`, `obj/`, `*.user`, `.vs/`, `.env`, `node_modules/`, `dist/`, `TestResults/`, `coverage*/`.
+- [x] `dotnet new editorconfig` ở thư mục gốc (quy ước C# chuẩn, `team.md` Code Style).
+- [x] `dotnet new tool-manifest`, rồi `dotnet tool install dotnet-ef --version 10.*` (cục bộ, tạo `.config/dotnet-tools.json`).
+- [x] `dotnet new sln -n EmployeeCrud -o backend`. .NET 10 tạo file `backend/EmployeeCrud.slnx`; mọi lệnh sau dùng đúng tên file sinh ra.
+- [x] `dotnet new webapi --use-controllers -n EmployeeCrud.Api -o backend/EmployeeCrud.Api`, rồi thêm vào solution. Bỏ `WeatherForecast` và controller mẫu của template.
+- [x] `dotnet user-secrets init --project backend/EmployeeCrud.Api` để `.csproj` có `UserSecretsId` (NFR2.1).
+- [x] Thêm gói: `Npgsql.EntityFrameworkCore.PostgreSQL` 10.*, `Microsoft.EntityFrameworkCore.Design` 10.*, `Swashbuckle.AspNetCore.SwaggerUI`. Giữ `Microsoft.AspNetCore.OpenApi` của template.
+- [x] `appsettings.json`: mức log theo `observability-design.md`, `Cors:AllowedOrigins: ["http://localhost:5173"]`. **Không có** khóa `ConnectionStrings`. `launchSettings.json`: `ASPNETCORE_ENVIRONMENT=Development`.
 
 ### Step 2: Dựng project test và lệnh chạy test của U1
 
-- [ ] `dotnet new xunit -n EmployeeCrud.Api.Tests -o backend/EmployeeCrud.Api.Tests`, thêm vào solution, tham chiếu `EmployeeCrud.Api`. Bỏ `UnitTest1.cs` mẫu.
-- [ ] Thêm gói `Microsoft.AspNetCore.Mvc.Testing` 10.*; giữ `coverlet.collector` của template.
-- [ ] Tạo thư mục `Platform/` trong project test; mọi test của U1 nằm trong namespace `EmployeeCrud.Api.Tests.Platform`.
-- [ ] Chạy `dotnet build backend/EmployeeCrud.Api.Tests/EmployeeCrud.Api.Tests.csproj` để chắc lệnh test của U1 (ghi trong `unit-test-instructions.md`) chạy được trước khi viết test đầu tiên.
+- [x] `dotnet new xunit -n EmployeeCrud.Api.Tests -o backend/EmployeeCrud.Api.Tests`, thêm vào solution, tham chiếu `EmployeeCrud.Api`. Bỏ `UnitTest1.cs` mẫu.
+- [x] Thêm gói `Microsoft.AspNetCore.Mvc.Testing` 10.*; giữ `coverlet.collector` của template.
+- [x] Tạo thư mục `Platform/` trong project test; mọi test của U1 nằm trong namespace `EmployeeCrud.Api.Tests.Platform`.
+- [x] Chạy `dotnet build backend/EmployeeCrud.Api.Tests/EmployeeCrud.Api.Tests.csproj` để chắc lệnh test của U1 (ghi trong `unit-test-instructions.md`) chạy được trước khi viết test đầu tiên.
 
 ### Step 3: Tầng logic: kiểu lỗi và bộ đổi lỗi (implement)
 
 Thư mục `backend/EmployeeCrud.Api/Platform/Errors/`:
 
-- [ ] `DomainError` (kế thừa `Exception`): `Kind` (NotFound, Validation, Conflict), `Field` (camelCase, có thể rỗng), `Title` (ghi đè, có thể rỗng), `Message`. Hàm tạo nhanh `DomainError.NotFound(...)`, `Validation(field, ...)`, `Conflict(..., field?, title?)` (entities.md, C5).
-- [ ] `DbConstraintNames`: ba hằng `ux_departments_name`, `ux_employees_email`, `fk_employees_department`.
-- [ ] `ErrorMapper.Map(Exception)`: hàm thuần, không đụng HTTP, trả về `ProblemDetails` (hoặc `ValidationProblemDetails` khi có `errors`). Tách riêng để test dễ và để anh giải thích được từng nhánh:
+- [x] `DomainError` (kế thừa `Exception`): `Kind` (NotFound, Validation, Conflict), `Field` (camelCase, có thể rỗng), `Title` (ghi đè, có thể rỗng), `Message`. Hàm tạo nhanh `DomainError.NotFound(...)`, `Validation(field, ...)`, `Conflict(..., field?, title?)` (entities.md, C5).
+- [x] `DbConstraintNames`: ba hằng `ux_departments_name`, `ux_employees_email`, `fk_employees_department`.
+- [x] `ErrorMapper.Map(Exception)`: hàm thuần, không đụng HTTP, trả về `ProblemDetails` (hoặc `ValidationProblemDetails` khi có `errors`). Tách riêng để test dễ và để anh giải thích được từng nhánh:
   - `DomainError` NotFound → 404 "Không tìm thấy" (BR1.1).
   - `DomainError` Validation → 400 "Dữ liệu không hợp lệ" + `errors` (BR1.2).
   - `DomainError` Conflict có field → 409 "Dữ liệu bị trùng" + `errors`; không field → 409, title của lỗi hoặc "Không thể thực hiện", kèm `detail` (BR1.3).
@@ -63,28 +63,28 @@ Thư mục `backend/EmployeeCrud.Api/Platform/Errors/`:
 
 ### Step 4: Tầng logic: viết và chạy test (sau khi code)
 
-- [ ] `backend/EmployeeCrud.Api.Tests/Platform/ErrorMapperTests.cs`, 11 test: NotFound → 404; Validation → 400 có `errors`; Conflict có field → 409 `errors`; Conflict không field với title riêng → 409 `detail`; 23505 `ux_departments_name` → 409 `errors.name`; 23505 `ux_employees_email` → 409 `errors.email`; 23505 tên lạ → 500; 23503 → 409 dự phòng; `BadHttpRequestException` 400 → 400 `errors.body`; `BadHttpRequestException` 413 giữ 413; lỗi lạ → 500 và `detail` không chứa thông điệp gốc.
-- [ ] `PostgresException` giả được dựng bằng constructor công khai của Npgsql, bọc trong `DbUpdateException`.
-- [ ] Chạy lệnh test của U1 (bước 2). Tất cả phải xanh trước khi sang bước 5.
+- [x] `backend/EmployeeCrud.Api.Tests/Platform/ErrorMapperTests.cs`, 11 test: NotFound → 404; Validation → 400 có `errors`; Conflict có field → 409 `errors`; Conflict không field với title riêng → 409 `detail`; 23505 `ux_departments_name` → 409 `errors.name`; 23505 `ux_employees_email` → 409 `errors.email`; 23505 tên lạ → 500; 23503 → 409 dự phòng; `BadHttpRequestException` 400 → 400 `errors.body`; `BadHttpRequestException` 413 giữ 413; lỗi lạ → 500 và `detail` không chứa thông điệp gốc.
+- [x] `PostgresException` giả được dựng bằng constructor công khai của Npgsql, bọc trong `DbUpdateException`.
+- [x] Chạy lệnh test của U1 (bước 2). Tất cả phải xanh trước khi sang bước 5.
 
 ### Step 5: Tầng API: chuỗi xử lý request (implement)
 
 Thư mục `backend/EmployeeCrud.Api/Platform/`:
 
-- [ ] `ProblemDetailsExceptionHandler : IExceptionHandler`: gọi `ErrorMapper`; ghi log Error `"Lỗi không xử lý: {Method} {Path}"` kèm lỗi cho 5xx, Information `"{Status} {Method} {Path}"` cho 4xx (không thêm middleware log riêng); **áp lại CORS** bằng `ICorsService` + `ICorsPolicyProvider` sau khi bộ bắt lỗi đã xóa header (điểm rà soát NFR Design); viết phản hồi qua `IProblemDetailsService`, kiểu `application/problem+json` (BR1.8).
-- [ ] Bộ đổi lỗi kiểm dữ liệu (`InvalidModelStateResponseFactory`): 400 "Dữ liệu không hợp lệ", đổi khóa sang camelCase (`Name` → `name`, `$.departmentId` → `departmentId`); lỗi đọc JSON không xác định được trường → `body: ["Dữ liệu gửi lên không đúng định dạng JSON"]` (BR1.2, BR1.7).
-- [ ] Trang mã trạng thái (`UseStatusCodePages`): 404 "Không tìm thấy" + detail "Không có đường dẫn API này.", 405 "Phương thức không được hỗ trợ", 415 "Kiểu dữ liệu không được hỗ trợ" + detail "Hãy gửi JSON (Content-Type: application/json)." Ghi log Information cho các mã này (BR1.7).
-- [ ] CORS: chính sách đọc `Cors:AllowedOrigins`, cho GET, POST, PUT, DELETE và header `Content-Type`, không credential, không `*` (BR2.3, NFR7.1).
-- [ ] `AppDbContext` (`Platform/Data/`): khung trống, gọi `ApplyConfigurationsFromAssembly` để U3, U4 tự thêm cấu hình thực thể (C5). Đăng ký `AddDbContext` vòng đời theo request, chuỗi kết nối đọc lúc tạo ngữ cảnh (BR3.1, NFR5.2). Không retry (NFR1.4).
-- [ ] `Program.cs`: thứ tự `UseCors` → `UseExceptionHandler` → `UseStatusCodePages` → định tuyến → controller (`security-design.md` §2). Development: `MapOpenApi()` và trang `/swagger` đọc `/openapi/v1.json` (BR2.4). JSON camelCase, bỏ qua trường lạ (mặc định, BR2.5). Không chạy migration lúc khởi động (NFR5.3).
-- [ ] Kiểm chuỗi kết nối **sau** `builder.Build()`: rỗng thì log Critical lời hướng dẫn tiếng Việt (không in giá trị nào), rồi **ném ngoại lệ** (không `Environment.Exit`). Nhờ vậy `dotnet ef` vẫn chạy được, vì công cụ này dừng chương trình ngay sau khi build (BR2.1, NFR1.1).
-- [ ] Cuối `Program.cs` thêm `public partial class Program { }` để project test dựng được ứng dụng.
+- [x] `ProblemDetailsExceptionHandler : IExceptionHandler`: gọi `ErrorMapper`; ghi log Error `"Lỗi không xử lý: {Method} {Path}"` kèm lỗi cho 5xx, Information `"{Status} {Method} {Path}"` cho 4xx (không thêm middleware log riêng); **áp lại CORS** bằng `ICorsService` + `ICorsPolicyProvider` sau khi bộ bắt lỗi đã xóa header (điểm rà soát NFR Design); viết phản hồi qua `IProblemDetailsService`, kiểu `application/problem+json` (BR1.8).
+- [x] Bộ đổi lỗi kiểm dữ liệu (`InvalidModelStateResponseFactory`): 400 "Dữ liệu không hợp lệ", đổi khóa sang camelCase (`Name` → `name`, `$.departmentId` → `departmentId`); lỗi đọc JSON không xác định được trường → `body: ["Dữ liệu gửi lên không đúng định dạng JSON"]` (BR1.2, BR1.7).
+- [x] Trang mã trạng thái (`UseStatusCodePages`): 404 "Không tìm thấy" + detail "Không có đường dẫn API này.", 405 "Phương thức không được hỗ trợ", 415 "Kiểu dữ liệu không được hỗ trợ" + detail "Hãy gửi JSON (Content-Type: application/json)." Ghi log Information cho các mã này (BR1.7).
+- [x] CORS: chính sách đọc `Cors:AllowedOrigins`, cho GET, POST, PUT, DELETE và header `Content-Type`, không credential, không `*` (BR2.3, NFR7.1).
+- [x] `AppDbContext` (`Platform/Data/`): khung trống, gọi `ApplyConfigurationsFromAssembly` để U3, U4 tự thêm cấu hình thực thể (C5). Đăng ký `AddDbContext` vòng đời theo request, chuỗi kết nối đọc lúc tạo ngữ cảnh (BR3.1, NFR5.2). Không retry (NFR1.4).
+- [x] `Program.cs`: thứ tự `UseCors` → `UseExceptionHandler` → `UseStatusCodePages` → định tuyến → controller (`security-design.md` §2). Development: `MapOpenApi()` và trang `/swagger` đọc `/openapi/v1.json` (BR2.4). JSON camelCase, bỏ qua trường lạ (mặc định, BR2.5). Không chạy migration lúc khởi động (NFR5.3).
+- [x] Kiểm chuỗi kết nối **sau** `builder.Build()`: rỗng thì log Critical lời hướng dẫn tiếng Việt (không in giá trị nào), rồi **ném ngoại lệ** (không `Environment.Exit`). Nhờ vậy `dotnet ef` vẫn chạy được, vì công cụ này dừng chương trình ngay sau khi build (BR2.1, NFR1.1).
+- [x] Cuối `Program.cs` thêm `public partial class Program { }` để project test dựng được ứng dụng.
 
 ### Step 6: Tầng API: viết và chạy test (sau khi code)
 
-- [ ] `Platform/PlatformWebAppFactory.cs`: `WebApplicationFactory<Program>` với môi trường `Testing` (không nạp user-secrets thật của anh), chuỗi kết nối giả **không có mật khẩu** (`Host=localhost;Database=employee_crud_test`), và controller chỉ có trong test, đăng ký qua `AddApplicationPart`. Không test nào mở kết nối database.
-- [ ] `Platform/TestOnlyController.cs`: một endpoint ném lỗi lạ, một ném `DomainError.Conflict`, một nhận DTO có luật `[Required]`.
-- [ ] `Platform/PipelineTests.cs`, 8 test:
+- [x] `Platform/PlatformWebAppFactory.cs`: `WebApplicationFactory<Program>` với môi trường `Testing` (không nạp user-secrets thật của anh), chuỗi kết nối giả **không có mật khẩu** (`Host=localhost;Database=employee_crud_test`), và controller chỉ có trong test, đăng ký qua `AddApplicationPart`. Không test nào mở kết nối database.
+- [x] `Platform/TestOnlyController.cs`: một endpoint ném lỗi lạ, một ném `DomainError.Conflict`, một nhận DTO có luật `[Required]`.
+- [x] `Platform/PipelineTests.cs`, 8 test:
   1. Lỗi lạ, Origin `http://localhost:5173` → 500 problem+json **và** có `Access-Control-Allow-Origin`.
   2. Đường dẫn lạ, cùng Origin → 404 problem+json, có header CORS.
   3. Origin `http://evil.example` → không có `Access-Control-Allow-Origin`.
@@ -93,25 +93,25 @@ Thư mục `backend/EmployeeCrud.Api/Platform/`:
   6. Sai phương thức → 405 problem+json.
   7. Sai Content-Type → 415 problem+json.
   8. Thiếu chuỗi kết nối → khởi động ném lỗi.
-- [ ] Chạy lệnh test của U1; tất cả xanh. Nếu test 1 hỏng thì sửa cơ chế áp lại CORS trong bộ bắt lỗi, **không bỏ test**.
+- [x] Chạy lệnh test của U1; tất cả xanh. Nếu test 1 hỏng thì sửa cơ chế áp lại CORS trong bộ bắt lỗi, **không bỏ test**.
 
 ### Step 7: Cấu hình môi trường và build
 
-- [ ] `dotnet build backend/EmployeeCrud.slnx`: 0 lỗi.
-- [ ] `dotnet format backend/EmployeeCrud.slnx --verify-no-changes`; nếu báo khác thì chạy `dotnet format` rồi kiểm lại.
-- [ ] Quét bí mật: `git grep --untracked -i -n -E "(password|pwd)\s*=" -- backend` phải ra 0 dòng. Có `--untracked` vì ở commit đầu mọi file còn chưa được Git theo dõi (điểm rà soát Infrastructure Design).
+- [x] `dotnet build backend/EmployeeCrud.slnx`: 0 lỗi.
+- [x] `dotnet format backend/EmployeeCrud.slnx --verify-no-changes`; nếu báo khác thì chạy `dotnet format` rồi kiểm lại.
+- [x] Quét bí mật: `git grep --untracked -i -n -E "(password|pwd)\s*=" -- backend` phải ra 0 dòng. Có `--untracked` vì ở commit đầu mọi file còn chưa được Git theo dõi (điểm rà soát Infrastructure Design).
 
 ### Step 8: Tài liệu và truy vết
 
-- [ ] Viết `code-summary.md`: file đã tạo, quyết định chính, kết quả test, và **hướng dẫn W4 để anh tự kết nối database**:
+- [x] Viết `code-summary.md`: file đã tạo, quyết định chính, kết quả test, và **hướng dẫn W4 để anh tự kết nối database**:
   1. Kiểm dịch vụ `postgresql-x64-18` đang chạy.
   2. (Tùy chọn) tạo `employee_db` trong pgAdmin. Nếu chưa tạo, `database update` tự tạo khi tài khoản có quyền.
   3. `dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=employee_db;Username=<tài khoản>;Password=<mật khẩu>" --project backend/EmployeeCrud.Api`.
   4. `dotnet tool restore`, rồi `dotnet ef database update --project backend/EmployeeCrud.Api`. Không đọc được user-secrets thì thêm `-- --environment Development`.
   5. Đạt khi pgAdmin thấy bảng `__EFMigrationsHistory` trong `employee_db`. Nếu EF Core 10 không tạo bảng khi chưa có migration, dùng `dotnet ef migrations list`: lệnh này phải kết nối được và không báo lỗi.
   6. `dotnet run --project backend/EmployeeCrud.Api`, mở `/swagger` và gọi `GET /api/khong-ton-tai` bằng Postman: 404 tiếng Việt.
-- [ ] Ghi `source-manifest.json` và `traceability.json` (BR, NFR, AC của U1 → file code hoặc test).
-- [ ] Các điểm rà soát chuyển cho unit sau, ghi vào `code-summary.md`: U2 đặt Vite `server.strictPort: true`; trước U3 chọn cách đọc độ phủ 80% (`dotnet-reportgenerator-globaltool` cục bộ hoặc ngưỡng của coverlet); README (U5) ghi `update 0` và thứ tự lùi database trước rồi mới `git revert`.
+- [x] Ghi `source-manifest.json` và `traceability.json` (BR, NFR, AC của U1 → file code hoặc test).
+- [x] Các điểm rà soát chuyển cho unit sau, ghi vào `code-summary.md`: U2 đặt Vite `server.strictPort: true`; trước U3 chọn cách đọc độ phủ 80% (`dotnet-reportgenerator-globaltool` cục bộ hoặc ngưỡng của coverlet); README (U5) ghi `update 0` và thứ tự lùi database trước rồi mới `git revert`.
 
 ### Step 9: Sửa lỗi Build and Test (Loop-back 1, 03/11/2026)
 
@@ -139,6 +139,56 @@ Kiểm và tài liệu:
 - [x] Cập nhật `code-summary.md` (thêm mục Loop-back 1), `unit-test-instructions.md` (số test 12 + 9), `source-manifest.json`, `traceability.json`.
 
 Không đổi: controller của U3, U4 (giữ `[Produces]` cho tài liệu OpenAPI), `frontend/src/api/client.ts`, service của U3, U4.
+
+### Step 10: Mỗi lỗi 500 chỉ ghi một dòng Error (Loop-back 2, 03/11/2026)
+
+> **Vì sao có bước này:** Build and Test lượt 3, Hiệp tắt PostgreSQL thật (U1-NFR1.4 đạt). Đọc log thấy **một** lỗi 500 sinh **3 dòng `fail:`**: 2 dòng EF Core tự ghi (`Microsoft.EntityFrameworkCore.Database.Connection[20004]`, `Microsoft.EntityFrameworkCore.Query[10100]` kèm stack trace) rồi mới tới dòng của `ProblemDetailsExceptionHandler`. Trái NFR6.2 ("mỗi lỗi 500 ghi đúng một dòng mức Error"). Gốc: `appsettings.json` đặt `Microsoft.EntityFrameworkCore` ở `Warning` (để ẩn câu SQL, NFR6.1), nhưng mức `Warning` vẫn cho dòng Error của EF Core đi qua. Hiệp chọn sửa qua U1 (form ba368783). Chi tiết: `build-and-test/test-results.md` BT-03, Loop-back 2.
+
+Implement (chỉ cấu hình, không đổi code C#):
+
+- [x] `backend/EmployeeCrud.Api/appsettings.json`, mục `Logging:LogLevel`, thêm 3 dòng: `"Microsoft.EntityFrameworkCore.Database.Connection": "Critical"`, `"Microsoft.EntityFrameworkCore.Query": "Critical"`, `"Microsoft.EntityFrameworkCore.Update": "Critical"`. Vì sao không mất thông tin: lỗi nào không được xử lý vẫn tới `ProblemDetailsExceptionHandler`, dòng Error của nó đã có phương thức, đường dẫn, loại lỗi, thông điệp và cả stack trace của exception (kể cả exception bên trong của Npgsql). Còn lỗi ràng buộc đã được service xử lý thành 409 thì không nên ghi Error (NFR6.3). `Update` là nhóm EF ghi khi `SaveChanges` lỗi (chen nhau gây 23505/23503/23001).
+- [x] Đọc `appsettings.Development.json` xem có ghi đè nhóm EF Core nào làm mất tác dụng không; nếu có thì báo Hiệp trước khi sửa.
+
+Kiểm (không cần Admin, không tắt database thật):
+
+- [x] Chạy một backend phụ cổng 5082, chuỗi kết nối trỏ tới cổng database không có ai nghe (đặt bằng biến môi trường `ConnectionStrings__Default` chỉ cho tiến trình đó, không có mật khẩu), gọi `GET /api/employees` một lần → 500 `application/problem+json` câu chung, log có **đúng 1 dòng `fail:`** (của `ProblemDetailsExceptionHandler`).
+- [x] Backend phụ với chuỗi kết nối thật (user-secrets): `POST /api/employees` trùng email và `DELETE /api/departments/3` → 409, **0 dòng `fail:`**; `GET /api/employees` 200 (EF vẫn chạy bình thường).
+- [x] `npm --prefix frontend run verify` xanh (96/96).
+- [x] Cập nhật `code-summary.md` (mục Loop-back 2), `source-manifest.json`, `unit-test-instructions.md` (thêm ca kiểm tay log), `traceability.json` nếu cần.
+
+Không đổi: code C#, test tự động, controller, service, frontend.
+
+Sửa sau rà soát (Hiệp duyệt U1, chọn sửa R-07, R-08, R-09):
+
+- [x] R-07: thêm `Microsoft.EntityFrameworkCore.Database.Command` = `Critical` vào `appsettings.json`; đổi dòng cùng tên trong `appsettings.Development.json` từ `Warning` sang `Critical`. Kiểm 8 yêu cầu thêm cùng email cùng lúc: 0 dòng `fail:`; ca DB không kết nối được vẫn 1 dòng.
+- [x] R-08: ghi lý do bốn dòng `Critical` vào `code-summary.md` §5c.
+- [x] R-09: ghi "chạy lại sau mỗi lần đổi cấu hình log hoặc nâng EF Core" vào ca kiểm tay của `unit-test-instructions.md`.
+
+### Step 11: Sửa theo rà soát tổng thể (Change Request, 03/11/2026)
+
+> **Vì sao có bước này:** trước khi chốt Build and Test, Hiệp yêu cầu rà toàn bộ "chuẩn như công ty thật, mọi góc". Ba chuyên gia AI-DLC rà độc lập (nghiệp vụ, bảo mật, kiến trúc); danh sách gộp ở `build-and-test/ra-soat-tong-the.md`. Hiệp chọn sửa cả 4 nhóm (form 34027473). Phần thuộc U1 (nền backend) ở dưới; mã trong ngoặc là mã trong file rà soát. Không thêm tính năng ngoài `docs/ke-hoach.md`.
+
+Implement:
+
+- [x] **(S-03) Chặn tên miền lạ:** `appsettings.json` đổi `"AllowedHosts": "*"` thành `"localhost;127.0.0.1;[::1]"`. Vì sao: chặn kiểu tấn công "DNS rebinding" (một trang web lạ trỏ tên miền của nó về máy anh để gọi API). Frontend gọi `http://localhost:5081` nên không bị ảnh hưởng.
+- [x] **(S-05) Header bảo mật:** thêm `Platform/Security/SecurityHeaders.cs` (một hàm `UseSecurityHeaders()`, đặt đầu chuỗi xử lý) dùng `Response.OnStarting` để gắn cả vào phản hồi lỗi: mọi phản hồi có `X-Content-Type-Options: nosniff`; riêng `/api/*` thêm `Cache-Control: no-store` (không lưu họ tên, email vào bộ nhớ đệm) và `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`. Không áp CSP cho `/swagger` (sẽ làm vỡ trang). `Program.cs` tắt header `Server: Kestrel` (`AddServerHeader = false`).
+- [x] **(S-09) Bỏ bộ mã hóa "Unsafe":** `ValidationResponseFactory` đổi `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` thành `JavaScriptEncoder.Create(UnicodeRanges.All)`: chữ Việt vẫn giữ nguyên, ký tự HTML (`<`, `>`, `&`, `'`, `"`) vẫn được mã hóa.
+- [x] **(A-02) `traceId` trong log:** hai dòng log của `ProblemDetailsExceptionHandler` và dòng log của `StatusCodeProblemWriter` thêm `{TraceId}` (cùng giá trị `traceId` trong phản hồi: `Activity.Current?.Id ?? HttpContext.TraceIdentifier`), để dò được "lỗi lúc 10:03 là lỗi nào" như `docs/danh-sach-api.md` đã viết.
+- [x] **(A-01) Request bị hủy không phải lỗi 500:** kiểm thật trước (backend phụ, tìm kiếm liên tiếp để giao diện hủy request cũ, đọc log). Nếu thấy dòng `fail:` thì sửa trong `ProblemDetailsExceptionHandler`: `OperationCanceledException` khi `RequestAborted` đã bị hủy thì chỉ ghi Information "Trình duyệt đã hủy request", không ghi Error, không ghi body. Nếu không thấy thì ghi kết quả kiểm, không sửa.
+- [x] **(A-07) Dùng hằng có sẵn:** `ErrorMapper` dùng `PostgresErrorCodes.UniqueViolation`, `ForeignKeyViolation`, `RestrictViolation` của Npgsql thay vì tự gõ `"23505"`, `"23503"`, `"23001"`. Tên trường `name`/`email` giữ trong `ErrorMapper` (tầng nền không phụ thuộc ngược vào tầng nghiệp vụ), thêm comment nói rõ phải khớp với service.
+- [x] **(S-07) Ghim phiên bản thư viện:** đổi `10.*` thành bản đang dùng thật: `Microsoft.EntityFrameworkCore`, `.Design`, `.Relational` = `10.0.14`; `Npgsql.EntityFrameworkCore.PostgreSQL` = `10.0.3`; project test: `Microsoft.AspNetCore.Mvc.Testing`, `Microsoft.EntityFrameworkCore.InMemory` = `10.0.14`. Vì sao: build hôm nay và tháng sau ra cùng một bản.
+- [x] **(S-08) `.gitignore`:** thêm vào khối của dự án các mẫu file bí mật hay gặp: `*.pfx`, `*.p12`, `*.pem`, `*.key`, `secrets.json`, `.env.*` kèm ngoại lệ `!frontend/.env.development`.
+- [x] **(A-12) `EmployeeCrud.Api.http`:** thay request 404 duy nhất bằng đủ 10 thao tác mẫu (gọi thử ngay trong VS Code), dữ liệu mẫu giả.
+
+Test (viết sau khi code, chạy ngay):
+
+- [x] `SecurityTests` (file mới; kế hoạch ban đầu ghi `PipelineTests`, sửa theo rà soát R-11): (1) Host lạ (`Host: evil.example`) → 400; (2) phản hồi 200 và phản hồi lỗi (404, 500) của `/api/...` đều có `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`, CSP; (3) phản hồi 400 vẫn giữ chữ Việt và mã hóa `<` (thêm sau rà soát R-10). `LoggingTests` (file mới): `traceId` trong log trùng phản hồi; request bị hủy không ra Error (A-01, chờ có hạn theo R-13).
+- [x] Sửa theo rà soát (Hiệp duyệt U1, chọn sửa R-10..R-13): R-10 test mã hóa `<`; R-11 sửa tên file test trong tài liệu; R-12 comment `SecurityHeaders` ghi rõ phản hồi 400 do Host lạ không có header (bộ lọc chạy trước); R-13 test hủy request chờ có hạn thay vì cố định 1 giây.
+- [x] `npm --prefix frontend run verify` xanh; `dotnet format backend/EmployeeCrud.slnx --verify-no-changes` sạch.
+- [x] Kiểm thật bằng backend phụ cổng 5082: `curl` với Host lạ → 400; header bảo mật có trên `/api/employees` (200) và trên lỗi 404; `/swagger` vẫn mở được; log lỗi có `TraceId` trùng `traceId` trong phản hồi.
+- [x] Cập nhật `code-summary.md` (mục Step 11), `unit-test-instructions.md`, `source-manifest.json`.
+
+Không đổi: luật nghiệp vụ, controller, service, frontend.
 
 ## Không làm trong U1
 

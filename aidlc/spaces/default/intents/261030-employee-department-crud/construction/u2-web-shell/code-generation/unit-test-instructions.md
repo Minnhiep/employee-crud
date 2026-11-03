@@ -50,6 +50,7 @@ npm --prefix frontend run build
 | K12 | (Kiểm ở U3) Đang tải danh sách thì bấm sang trang khác | Lời gọi bị hủy, trang mới không hiện lỗi nào (lỗi `aborted` được bỏ qua) | NFR5.3, rà soát U2 R-01 |
 | K13 | (Kiểm ở U3, U4) Bấm Lưu khi form trống, rồi bấm một dòng trong khung tóm tắt lỗi | Focus nhảy vào đúng ô bị lỗi, địa chỉ trang không đổi, focus không bị kéo về tiêu đề | AC4.1.1, WCAG 3.3.1, rà soát U2 R-02 |
 | K14 | (Kiểm ở U3, U4) Xóa một mục, chờ Toast tự ẩn hoặc bấm "Đóng thông báo" | Sau khi xóa, focus về tiêu đề trang đúng một lần; Toast ẩn đi không kéo focus đi đâu khác | WCAG 2.4.3, rà soát U2 R-02 |
+| K15 | (Step 10) Giả lập lỗi ở trang Nhân viên (DevTools hoặc Playwright chặn `/api/employees`): 500 không body; 200 body hỏng; tắt hẳn backend; 5xx có lời báo của API | Hai ca đầu hiện "Đã có lỗi xảy ra, vui lòng thử lại sau."; tắt backend hiện "Không kết nối được máy chủ, vui lòng thử lại"; ca cuối hiện đúng lời báo của API | Rà soát tổng thể N-02, A-09 |
 
 Các component dùng chung chưa có trang nào dùng ở U2 (`StatusMessage`, `Toast`, `DataTable`, `ErrorSummary`, `FormField`, `useSubmitGuard`, `client.ts`) được kiểm kiểu bằng `typecheck` ngay ở U2 và kiểm hành vi khi U3 dùng tới.
 

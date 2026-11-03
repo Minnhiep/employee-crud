@@ -6,6 +6,7 @@
 > - `inception/contract-design/contract-summary.md` (C1, C4, C5)
 > - `inception/refined-mockups/` (`mockups.md` mục 5–8, `interaction-spec.md` luồng F2, F3, mục 2.5)
 > - Rà soát Code Generation U1 (Major về lỗi khóa ngoại: U3 tự bắt lỗi khóa ngoại khi xóa) và U2 (sau khi xóa phải tải lại danh sách)
+> - Rà soát tổng thể 03/11/2026 (`construction/build-and-test/ra-soat-tong-the.md`, N-04, S-04/N-09): BR1.1–BR1.3 đổi có chủ đích ở Code Generation Step 11 (chuẩn hóa tên). Căn cứ chuẩn: RFC 8264 §4.3.3, §9.12, §9.13 (lớp chữ tự do cấm ký tự điều khiển và ký tự vô hình); RFC 8266 §2.1 (đổi khoảng trắng Unicode thành dấu cách, bỏ hai đầu, gộp khoảng trắng giữa); W3C Character Model for the World Wide Web: String Matching §2.2.1, §3.2.2.4 (không coi chữ "tương thích" là một, không dùng NFKC cho văn bản thường).
 >
 > **Bốn nhóm luật:**
 > - **BR1:** dữ liệu phòng ban (kiểm và lưu).
@@ -16,20 +17,25 @@
 ```yaml
 rules:
   - id: BR1.1
-    statement: Tên phòng ban được bỏ khoảng trắng hai đầu trước khi kiểm và lưu
+    statement: Tên phòng ban được chuẩn hóa trước khi kiểm và lưu; tên có ký tự không hợp lệ bị từ chối
     category: validation
     applies_to: DepartmentRequest.name
     trigger: Thêm hoặc sửa phòng ban (form và API)
-    logic: tên lưu = tên gửi lên đã bỏ khoảng trắng hai đầu
-    violation: -
-    source: FR1.2, FR1.3, C1 DepartmentRequest
+    logic: >
+      Bước 1: mọi chuỗi khoảng trắng (dấu cách, tab, xuống dòng, khoảng trắng Unicode như U+00A0; đúng tập char.IsWhiteSpace của .NET) gộp thành một dấu cách, bỏ khoảng trắng hai đầu.
+      Bước 2: IF còn ký tự điều khiển (Unicode Cc, ví dụ U+0000, ESC), ký tự định dạng vô hình (Unicode Cf, ví dụ U+200B, U+202E, U+FEFF) hoặc nửa cặp surrogate đứng một mình THEN lỗi trường name "Tên phòng ban chứa ký tự không hợp lệ".
+      Bước 3: đưa về dạng dựng sẵn NFC. Tên lưu = kết quả bước 3; BR1.2, BR1.3, BR1.4 kiểm trên tên này.
+      Đổi có chủ đích ở Code Generation Step 11 (rà soát tổng thể N-04, S-04/N-09, 2026-11-03): bản trước chỉ bỏ khoảng trắng hai đầu, nên "Kế  toán" (2 dấu cách) và "Kế toán" gõ kiểu tổ hợp (NFD) lách được BR1.4, còn U+0000 làm PostgreSQL từ chối và API trả 500.
+      Một hàm dùng chung: backend Platform/Text/TextInput.cs, form utils/normalizeText.ts (U4 dùng lại cho họ tên, email).
+    violation: Form báo cạnh ô, không gửi request; API trả 400 errors.name
+    source: FR1.2, FR1.3, FR4.1, FR4.2, C1 DepartmentRequest, ra-soat-tong-the.md (N-04, S-04)
 
   - id: BR1.2
     statement: Tên phòng ban bắt buộc
     category: validation
     applies_to: DepartmentRequest.name
     trigger: Thêm hoặc sửa
-    logic: IF tên sau khi bỏ khoảng trắng rỗng THEN lỗi trường name "Vui lòng nhập tên phòng ban"
+    logic: IF tên sau khi chuẩn hóa (BR1.1) rỗng THEN lỗi trường name "Vui lòng nhập tên phòng ban"
     violation: Form báo cạnh ô, không gửi request; API trả 400 errors.name
     source: AC1.2.2, FR4.1, FR4.2
 
@@ -38,9 +44,12 @@ rules:
     category: validation
     applies_to: DepartmentRequest.name
     trigger: Thêm hoặc sửa
-    logic: IF độ dài tên (sau khi bỏ khoảng trắng) > 100 THEN lỗi trường name "Tên phòng ban tối đa 100 ký tự"
+    logic: >
+      IF độ dài tên sau khi chuẩn hóa (BR1.1) > 100 THEN lỗi trường name "Tên phòng ban tối đa 100 ký tự".
+      Ô nhập không đặt maxLength (rà soát N-03): dán thừa thì giữ nguyên và hiện lời báo, không cắt bớt mà không báo.
+      Độ dài đo bằng đơn vị UTF-16 (string.Length của C#, String.length của JavaScript, hai bên giống nhau): chữ tiếng Việt dựng sẵn tính 1, một emoji tính 2. Cách đếm này chặt hơn hoặc bằng giới hạn của cột varchar(100) trong PostgreSQL (đếm theo ký tự), nên không bao giờ tràn cột (rà soát R-07).
     violation: Form báo cạnh ô; API trả 400 errors.name
-    source: AC1.2.4, FR4.1, FR4.2
+    source: AC1.2.4, FR4.1, FR4.2, ra-soat-tong-the.md (N-03)
 
   - id: BR1.4
     statement: Tên phòng ban không trùng, so không phân biệt hoa thường
@@ -209,9 +218,9 @@ rules:
 
 | ID | Luật | Kết quả |
 |---|---|---|
-| BR1.1 | Bỏ khoảng trắng hai đầu | Tên lưu đã được trim |
+| BR1.1 | Chuẩn hóa tên (gộp khoảng trắng, NFC); chặn ký tự điều khiển, vô hình, surrogate lẻ | Tên lưu đã chuẩn hóa; ký tự lạ → 400 "Tên phòng ban chứa ký tự không hợp lệ" |
 | BR1.2 | Tên bắt buộc | 400 "Vui lòng nhập tên phòng ban" |
-| BR1.3 | Tối đa 100 ký tự | 400 "Tên phòng ban tối đa 100 ký tự" |
+| BR1.3 | Tối đa 100 ký tự (đếm sau chuẩn hóa, ô không cắt bớt) | 400 "Tên phòng ban tối đa 100 ký tự" |
 | BR1.4 | Không trùng (không phân biệt hoa thường) | 409 "Tên phòng ban đã tồn tại"; trùng với chính nó thì không sao |
 | BR2.1 | Danh sách | Sắp theo tên A-Z, mảng rỗng khi không có |
 | BR2.2 | Không tìm thấy | 404 "Không tìm thấy phòng ban có mã {id}." |

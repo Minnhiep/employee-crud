@@ -2,6 +2,7 @@
 
 ## Summary
 
+- Step 11 (Change Request rà soát tổng thể, 03/11/2026): chuẩn hóa họ tên, email và chuỗi tìm bằng hàm chung của U3 (gộp khoảng trắng, NFC, chặn ký tự điều khiển và ký tự vô hình theo RFC 8264/8266, W3C): hết lỗi 500 khi tìm có U+0000 (trả `[]`, Hiệp chọn), hết lách luật trùng email; bỏ `maxLength`; hộp xóa ghi thêm email; Sửa/Hủy từ kết quả tìm giữ `?search=`; dùng hàm lỗi chung của `client.ts`; sửa `SaveAsync` id 0 và comment "200"; +8 unit test
 - Builds: quản lý nhân viên đủ 4 tầng: bảng `employees` + khóa ngoại + 2 chỉ mục (migration `CreateEmployees`), `EmployeeService` (luật BR1, BR2.1–BR2.6, tìm kiếm), `EmployeesController` (5 API + `?search=`), chặn xóa phòng ban còn nhân viên (BR2.7), trang danh sách có tìm kiếm và form thêm/sửa/xóa bằng React TypeScript
 - Touches: `backend/EmployeeCrud.Api/Employees/`, `Migrations/`, `Departments/DepartmentService.cs`, `AppDbContext.cs`, `Program.cs` (1 dòng), `backend/EmployeeCrud.Api.Tests/Employees/`, `TestSupport/` (dời từ `Departments/`), `frontend/src/api/employees.ts`, `src/components/SearchBox.tsx`, `src/pages/employees/`, `App.tsx`
 - Tests: khoảng 35 unit test xUnit cho `EmployeeService` (kể cả Theory cho bộ ví dụ email) + 2 test thêm cho `DepartmentService`, độ phủ dòng mỗi service ≥ 80%; controller, migration, giao diện kiểm tay bằng curl/Postman, pgAdmin, trình duyệt
@@ -192,6 +193,64 @@
 - [x] Cập nhật `unit-test-instructions.md` (mục giao diện), `code-summary.md` (mục Step 10), `source-manifest.json`, `traceability.json`.
 
 **Không đổi:** API, backend, test backend, `client.ts`, `api/employees.ts`, `validateEmployee.ts`, đường dẫn trang, phần chung của U2 và trang phòng ban của U3.
+
+### Step 11: Sửa theo rà soát tổng thể (Change Request, 03/11/2026)
+
+> **Vì sao có bước này:** Hiệp yêu cầu rà toàn bộ "chuẩn như công ty thật" trước khi chốt; danh sách ở `build-and-test/ra-soat-tong-the.md`, Hiệp chọn sửa cả 4 nhóm (form 34027473) và dặn "chuẩn như các công ty lớn… giải quyết triệt để" (tin nhắn 87ea0d27). Phần thuộc U4 ở dưới. Không thêm tính năng. Dùng lại hàm chuẩn hóa chung U3 đã làm và đã được review (`Platform/Text/TextInput.cs`, `utils/normalizeText.ts`), cùng căn cứ chuẩn (RFC 8264 §4.3.3, RFC 8266 §2.1, W3C Character Model §2.2.1).
+>
+> **Hiệp đã chọn (form c6e6889f):** chuỗi tìm kiếm có ký tự lạ thì API trả danh sách rỗng (200 `[]`), không trả 400.
+
+**Luật mới (cùng luật với tên phòng ban ở U3):**
+
+| Ô | Trước | Sau |
+|---|---|---|
+| Họ tên | Chỉ bỏ khoảng trắng hai đầu | Chuẩn hóa: gộp mọi chuỗi khoảng trắng thành một dấu cách, bỏ hai đầu, đưa về NFC. Ký tự điều khiển (Cc), ký tự định dạng vô hình (Cf), nửa cặp surrogate → 400 `fullName` "Họ tên chứa ký tự không hợp lệ". Rỗng và tối đa 100 ký tự tính trên họ tên đã chuẩn hóa |
+| Email | Chỉ bỏ khoảng trắng hai đầu | Chuẩn hóa như trên. Ký tự lạ → 400 `email` "Email chứa ký tự không hợp lệ". Vì sao cần: U+200B không phải khoảng trắng nên lọt qua luật định dạng hiện nay, "a(U+200B)@congty.vn" lách được luật không trùng email. Sau đó: rỗng → tối đa 254 → định dạng → trùng (như cũ) |
+| Chuỗi tìm `?search=` | Chỉ bỏ khoảng trắng hai đầu; U+0000 làm API trả **500** | Chuẩn hóa như trên rồi mới tìm: gõ "Nguyễn&nbsp;&nbsp;Văn" (2 dấu cách) hoặc gõ kiểu tổ hợp vẫn ra "Nguyễn Văn". Có ký tự lạ → **200 `[]`** (Hiệp chọn): họ tên, email đã bị chặn ký tự lạ khi lưu nên chắc chắn không khớp ai, không gọi database |
+
+Thứ tự lời báo mỗi ô: ký tự không hợp lệ → rỗng → quá dài → (email) định dạng. Thứ tự giữa các ô giữ như cũ: họ tên → email → phòng ban (NFR3.6).
+
+Implement:
+
+- [x] `EmployeeService.Normalize`: dùng `TextInput.TryNormalize` cho họ tên và email; thêm hằng `FullNameInvalidCharactersMessage`, `EmailInvalidCharactersMessage`. Comment cũ "email PHẢI được trim trước khi kiểm" đổi thành "phải chuẩn hóa trước khi kiểm".
+- [x] `EmployeeService.GetAllAsync`: chuỗi tìm qua `TextInput.TryNormalize`; `false` → trả danh sách rỗng ngay (không gọi database); chuỗi rỗng → không lọc (như cũ).
+- [x] (A-08) `SaveAsync(int? id)`: thêm mới truyền `null` thay cho id 0; lỗi tranh chấp khi thêm mới không thể là "không tìm thấy" nên ném nguyên để U1 trả 500 và ghi log.
+- [x] (N-10) Sửa comment trong `UpdateAsync`: khi không đổi giá trị nào mà nhân viên vừa bị xóa ở nơi khác, bước đọc lại `GetByIdAsync` không thấy dòng nên trả **404**, không phải 200 như comment cũ ghi.
+- [x] Frontend `validateEmployee.ts`: dùng `normalizeText` cho họ tên và email; thêm 2 lời báo "chứa ký tự không hợp lệ"; độ dài và định dạng tính trên giá trị đã chuẩn hóa. `EmployeeFormPage.tsx` gửi họ tên, email đã chuẩn hóa (thay cho `.trim()`).
+- [x] `EmployeesPage.tsx`: chuẩn hóa chuỗi tìm bằng `normalizeText` trước khi ghi lên địa chỉ trang; có ký tự lạ thì ghi chuỗi đã bỏ khoảng trắng hai đầu và API trả danh sách rỗng (giao diện hiện "không tìm thấy" như mọi lần tìm không ra).
+- [x] (N-03) `EmployeeFormPage.tsx`: bỏ `maxLength` ở ô họ tên và ô email; dán thừa thì giữ nguyên và hiện lời báo "tối đa…".
+- [x] (N-05) Hộp xác nhận xóa ghi thêm email trong ngoặc sau họ tên, ví dụ "Nhân viên **Đỗ Văn An** (`do.an@congty.vn`) sẽ bị xóa vĩnh viễn…", để phân biệt hai người trùng họ tên.
+- [x] (N-07) Bấm Sửa từ kết quả tìm kiếm: Lưu hoặc Hủy quay về đúng danh sách đang tìm (`?search=` giữ nguyên). Cách làm: nút Sửa gửi chuỗi tìm qua `state` của đường dẫn; form dựng lại địa chỉ bằng `URLSearchParams` (không ghép chuỗi thô). Mở thẳng địa chỉ sửa (gõ tay, F5) thì quay về `/employees` như cũ.
+- [x] (A-06) `EmployeesPage.tsx`, `EmployeeFormPage.tsx`: dùng `GENERIC_MESSAGE`, `isAborted`, `messageOf` từ `api/client.ts`, bỏ bản chép trong từng trang.
+- [x] (A-05, phần U4) **Không** bỏ `search` khỏi danh sách phụ thuộc của `useEffect` trong `EmployeesPage`: hàm có dùng `search` bên trong nên quy tắc `react-hooks/exhaustive-deps` của ESLint bắt buộc khai báo, bỏ đi thì `npm run lint` báo lỗi. Ghi lý do vào `code-summary.md`.
+- [x] Tài liệu thiết kế U4: `functional-design/rules.md` BR1.1–BR1.7, BR2.2, BR4.2, BR4.6, BR4.7 và bảng tóm tắt ghi luật mới, đánh dấu đổi có chủ đích theo rà soát (N-03, N-04, N-05, N-07, S-04), để tài liệu không lệch code.
+- [x] Ghi lại cho U5: `docs/danh-sach-api.md` cần thêm hai lời báo "chứa ký tự không hợp lệ" và ghi chú "chuỗi tìm có ký tự lạ → `[]`".
+
+Unit test (viết và chạy ngay sau service, trong `EmployeeServiceTests`, tiếp từ #33):
+
+- [x] #33 Họ tên có khoảng trắng thừa (tab, U+00A0) và gõ kiểu tổ hợp → lưu đã gộp khoảng trắng, dạng NFC.
+- [x] #34 Họ tên chứa U+0000, U+200B, U+202E, nửa cặp surrogate → 400 `fullName` "Họ tên chứa ký tự không hợp lệ", không lưu gì.
+- [x] #35 Email chứa U+200B hoặc U+0000 → 400 `email` "Email chứa ký tự không hợp lệ" (trước đây U+200B lọt qua).
+- [x] #36 Email gõ kiểu tổ hợp trùng email dựng sẵn đã có → 409.
+- [x] #37 Tìm với chuỗi có U+0000 hoặc U+200B → danh sách rỗng, không lỗi.
+- [x] #38 Tìm "nguyễn&nbsp;&nbsp;văn" (2 dấu cách) và bản gõ kiểu tổ hợp → ra "Nguyễn Văn …".
+- [x] #39 (A-08) Thêm mới mà lưu gặp lỗi tranh chấp (giả lập) → ném nguyên lỗi, không báo "Không tìm thấy nhân viên có mã 0".
+- [x] #40 Sửa với họ tên chứa ký tự lạ → 400, dữ liệu cũ giữ nguyên.
+
+Kiểm (sau khi code):
+
+- [x] `npm --prefix frontend run verify` (khoảng 117 test); độ phủ dòng `EmployeeService` vẫn ≥ 80% (`npm --prefix frontend run coverage`).
+- [x] API thật (PostgreSQL): GET `?search=%00` → 200 `[]` (trước: 500); `?search=` có U+200B → `[]`; tìm "Nguyễn&nbsp;&nbsp;Văn" → có kết quả; POST họ tên hoặc email chứa U+0000, U+200B → 400 đúng ô; email gõ kiểu tổ hợp trùng → 409; dữ liệu nhân viên đang có không bị ảnh hưởng. Dữ liệu thử xóa xong.
+- [x] Playwright (Chromium; chạy riêng cổng 5174 như U3 nếu preview của Hiệp vẫn giữ 5173; tắt khi xong): dán 120 ký tự họ tên, 300 ký tự email → ô giữ nguyên, lời báo cạnh ô, không gửi request; email có ký tự vô hình → lời báo; tìm "&nbsp;&nbsp;Nguyễn&nbsp;&nbsp;&nbsp;Văn&nbsp;" → địa chỉ ghi chuỗi đã gộp, có kết quả; từ kết quả tìm bấm Sửa rồi Hủy → còn `?search=`; Sửa rồi Lưu → còn `?search=` và có thông báo; hộp xóa có email; K9, K14 của U2; console 0 lỗi của ứng dụng.
+- [x] Cập nhật `code-summary.md` (mục Step 11), `unit-test-instructions.md`, `source-manifest.json`, `traceability.json` nếu cần.
+
+Sửa sau review (Hiệp duyệt checkpoint U4, gõ 1, yêu cầu sửa R-07, R-08; 03/11/2026):
+
+- [x] **(R-07)** `SearchBox.tsx`, `EmployeesPage.tsx`: sau khi tìm, ô tìm luôn hiện chuỗi đã chuẩn hóa, kể cả khi chuỗi đó trùng chuỗi đang có trên địa chỉ.
+- [x] **(R-08)** Test #41 (sửa với email chứa ký tự lạ); ca chuỗi tìm toàn khoảng trắng đã có ở test #7, ghi rõ trong hướng dẫn test.
+- [x] Kiểm: `verify` xanh 118/118; Playwright ca R-07 đạt; ghi `code-summary.md` mục 5d.
+
+**Không đổi:** đường dẫn API, mã lỗi đã có, dạng JSON; giao diện (CSS, bố cục); migration và dữ liệu đang có trong database.
 
 ## Không làm trong U4
 

@@ -26,6 +26,13 @@ Quy ước tên mục để T1, T2 khớp: mỗi thao tác là một tiêu đề
 - **Mật khẩu trong lịch sử** (Step 9): Hiệp tự gõ chuỗi mật khẩu thật vào `git grep "<chuỗi>"` và `git log -p -S"<chuỗi>" --all`; cả hai phải rỗng. AI không biết và không ghi mật khẩu.
 - **Bản clone sạch** (Step 11): Hiệp clone ra thư mục ngoài dự án và làm theo README tới lúc thêm, sửa, xóa, tìm được trên giao diện.
 
+**Kiểm của Phần H (rà soát tổng thể, 03/11/2026):**
+- **Dữ liệu mẫu:** chạy `docs/du-lieu-mau.sql` trong pgAdmin → câu đếm `10`; chạy lại → vẫn `10`, không lỗi; chạy riêng dòng `DELETE` cuối file → `DELETE 10`, chỉ mất người `@congty.example`.
+- **Tài khoản `employee_app`** (README mục 13): sau khi đổi user-secrets, backend đọc, thêm, sửa, xóa được; `SET ROLE employee_app; CREATE TABLE thu_quyen (id int);` → `permission denied for schema public`, rồi `RESET ROLE;`.
+- **Migration bằng `postgres`** qua biến môi trường: in `Done.`; muốn chắc biến môi trường được dùng thì cho biến trỏ cổng không có database → phải báo "Failed to connect".
+- **Khối PowerShell có mật khẩu:** kiểm cú pháp bằng `[System.Management.Automation.Language.Parser]::ParseFile`, chạy thử với `ConvertTo-SecureString "<mật khẩu giả>" -AsPlainText -Force` thay cho `Read-Host`.
+- **Ví dụ lỗi mới trong `docs/danh-sach-api.md`:** `PATCH /api/departments` → 405; `POST` với `Content-Type: text/plain` → 415; tên có U+200B → 400 "chứa ký tự không hợp lệ"; 500 lấy trên backend phụ trỏ cổng không có database.
+
 ## Độ phủ
 
 - U5 không có mục tiêu độ phủ riêng vì không có code.

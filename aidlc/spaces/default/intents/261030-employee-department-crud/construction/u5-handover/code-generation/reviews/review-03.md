@@ -1,0 +1,47 @@
+## Review
+
+**Verdict:** READY
+**Reviewer:** aidlc-architecture-reviewer-agent
+**Date:** 2026-11-03T06:29:34Z
+**Iteration:** 1
+**Verdict Dictated:** no
+
+### Findings
+
+| ID | Severity | Location | Finding | Required action | Status |
+|---|---|---|---|---|---|
+| R-01 | Minor | README.md > mục 3 "Đặt connection string bằng user-secrets" | README viết `Remove-Variable p, s` "xóa nó khỏi bộ nhớ". Thực tế lệnh này chỉ bỏ tên biến; chuỗi mật khẩu dạng văn bản vẫn nằm trong bộ nhớ tiến trình PowerShell cho tới khi bị thu dọn, và dòng `PtrToStringAuto(SecureStringToBSTR(...))` không giải phóng vùng BSTR. Phần "không vào lịch sử PowerShell" thì đúng. | Sửa câu giải thích thành "bỏ biến sau khi dùng" (không hứa xóa khỏi bộ nhớ), hoặc thêm `ZeroFreeBSTR`. Đây chỉ là chỗ nói quá, không ảnh hưởng chạy. | Resolved (reviewer) |
+| R-02 | Minor | README.md > mục 11 "Sự cố thường gặp", lỗi Smart App Control | README bảo "chỉnh Smart App Control trong Windows Security, cân nhắc trước khi làm" nhưng không nói rõ hệ quả. Theo hiểu biết của tôi (chưa kiểm trên máy), trên Windows 11 tắt Smart App Control thường không bật lại được nếu không cài lại hệ điều hành. Người làm theo README có thể tắt mà không biết. | Thêm một câu nêu rõ hệ quả này (hoặc ghi "chưa kiểm") và gợi ý thử build lại trước. Kiểm với tài liệu Microsoft rồi mới khẳng định. | Resolved (reviewer) |
+| R-03 | Minor | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u5-handover/code-generation/unit-test-instructions.md > dòng T6 | Tiêu chí T6 chỉ cho phép chữ giữ chỗ `<mật-khẩu-của-bạn>`, nhưng README đã đổi sang `$p` và mẫu che `***`. Chạy T6 hôm nay ra 3 dòng (README.md dòng 48, 57, 60), đều không có mật khẩu thật; code-summary đã ghi nhận chỗ lệch này. Tiêu chí chưa được cập nhật. | Sửa cột "Đạt khi" của T6 thành "mọi dòng khớp chỉ chứa biến `$p` hoặc `***`". Không cần đổi tài liệu. | Resolved (reviewer) |
+| R-04 | Minor | docs/danh-sach-api.md > Quy ước chung và mục "Lỗi 400" | Tài liệu ghi đúng hành vi thật: lỗi 400 trả `application/json` và thiếu trường `type`, khác FR4/C3 (yêu cầu `application/problem+json`). Người đọc handover sẽ thấy 404/409 và 400 có hai kiểu khác nhau mà không rõ đó là lệch đã biết. Việc này đã nằm trong danh sách chuyển cho Build and Test (mục 4), nhưng chưa có ghi chú ngay trong tài liệu. | Thêm một dòng trong tài liệu (ví dụ "đây là hành vi hiện tại, đang chờ xem xét") để người đọc không tưởng là lỗi tài liệu. Việc sửa code do Build and Test quyết. | Resolved (reviewer) |
+| R-05 | Suggestion | aidlc/spaces/default/intents/261030-employee-department-crud/construction/u5-handover/code-generation/code-summary.md > §3.6 và §5 mục 2 | Hai điểm cần Hiệp nắm khi duyệt. (a) README chưa được chạy từ đầu trên máy trắng: bước đặt user-secrets lần đầu và tạo database mới chỉ kiểm bằng cách đọc lệnh (đã ghi là hạn chế cùng máy). (b) `ErrorMapper` chưa nhận SQLSTATE 23001, nên khi hai thao tác chen nhau, xóa phòng ban có thể trả 500 thay vì 409; tài liệu API mô tả 409 chỉ đúng trên đường đi qua Service. Cả hai đã được ghi đúng chỗ. | Không cần sửa U5. Hiệp nhớ rằng hai điểm này là rủi ro còn mở, và (b) cần xử lý ở Build and Test. Thư mục `C:UsersASUSthu-clone-employee-crud` ngoài dự án cũng cần Hiệp tự quyết giữ hay xóa. | Accepted risk |
+| R-06 | Suggestion | README.md > mục 3, khối lệnh `Read-Host` | Mật khẩu có ký tự đặc biệt của chuỗi kết nối (dấu `;`, `=`) sẽ làm hỏng connection string. Tôi chưa kiểm hành vi này, đây là suy luận từ cú pháp. Ngoài ra khối lệnh chỉ chạy trong PowerShell và chưa có ghi chú về điều đó. | Nếu muốn, thêm một dòng cảnh báo mật khẩu có `;` hoặc `=` cần bao trong dấu nháy. Không chặn bàn giao. | Accepted risk |
+| R-07 | Minor | README.md > mục 10, đoạn "Vì sao lệnh đo độ phủ backend nằm trong frontend/package.json" | Lời giải thích nói lệnh đo độ phủ nằm ở frontend "để có một lệnh npm run verify kiểm cả hai phía". Thực tế `verify` trong `frontend/package.json` chạy typecheck, lint, format:check, build rồi `dotnet test`, và không gọi `coverage`. Lệnh `coverage` là script riêng. Lý do viết trong README không khớp với cách script được nối. | Sửa câu giải thích cho đúng: `verify` kiểm kiểu, lint, định dạng, build và test backend; `coverage` là script riêng cũng đặt ở frontend để mọi lệnh kiểm nằm chung một chỗ. Hoặc nói rõ `verify` không đo độ phủ. | New |
+| R-08 | Minor | README.md > mục 3 (và mục 13 bước 3) khối PowerShell đặt connection string | Mật khẩu được ghép thẳng vào chuỗi kết nối rồi truyền làm tham số dòng lệnh cho `dotnet user-secrets set`. Không vào lịch sử PowerShell nên đúng ý đồ. Tuy vậy: (1) mật khẩu chứa dấu `;` hoặc `"` sẽ làm hỏng chuỗi kết nối hoặc cách truyền tham số trên Windows PowerShell 5.1, người mới sẽ khó đoán nguyên nhân; (2) tham số hiện ngắn hạn trong danh sách tiến trình của máy. | Thêm một dòng lưu ý: mật khẩu PostgreSQL không nên chứa `;` và `"`, nếu có thì bọc mật khẩu trong dấu nháy kép theo cú pháp Npgsql hoặc đổi mật khẩu khác. Có thể ghi thêm rằng tham số chỉ hiện ngắn trên máy cá nhân. | New |
+| R-09 | Minor | README.md > mục 13 bước 1 (GRANT) và phần "Kiểm" | Quyền cấp cho `employee_app` đủ cho ứng dụng: `employees.id` và `departments.id` là cột identity nên cần `USAGE, SELECT` trên sequence, đã có. Backend không gọi migrate lúc chạy (Program.cs chỉ có `AddDbContext` và `UseNpgsql`), nên không cần đọc `__EFMigrationsHistory`. Nhưng tài liệu chưa nói điều này, và lời kiểm chỉ thử `CREATE TABLE`. Nếu sau này thêm bước tự migrate khi khởi động thì tài khoản này sẽ lỗi `permission denied`. Lệnh `SET ROLE` chỉ có tác dụng đến `RESET ROLE`, nếu câu lệnh lỗi trong một giao dịch đang mở thì phải `ROLLBACK` trước. | Thêm một câu: ứng dụng không tự chạy migration nên tài khoản không cần quyền trên `__EFMigrationsHistory`; muốn tự migrate lúc khởi động thì phải dùng tài khoản có quyền sửa bảng. Ghi thêm "nếu pgAdmin báo giao dịch đã lỗi, chạy `ROLLBACK;` rồi `RESET ROLE;`". | New |
+| R-10 | Minor | docs/du-lieu-mau.sql > dòng DELETE ở dạng ghi chú | `DELETE ... WHERE email LIKE '%@congty.example'` chỉ gỡ dữ liệu theo đuôi email, nên cũng xóa mọi nhân viên người dùng tự thêm bằng email đuôi này. Hiệu ứng này đúng ý ("dữ liệu mẫu") nhưng chưa được nói. Dòng này cũng không có điều kiện nào ngăn xóa khi chưa bôi đen riêng dòng; lúc đó file chạy cả script không bị ảnh hưởng vì dòng đang là ghi chú, nên rủi ro thấp. | Thêm vào ghi chú trên dòng DELETE: "xóa cả những người bạn tự thêm bằng email đuôi này". Không cần đổi câu lệnh. | New |
+
+> R-01 Earlier decision: Accepted risk
+
+> R-02 Earlier decision: Accepted risk
+
+> R-03 Earlier decision: Accepted risk
+
+> R-04 Earlier decision: Accepted risk
+
+### Validation Tool Results
+
+| Tool | Result | Interpretation |
+|---|---|---|
+| Kiểm NFC và ký tự điều khiển/định dạng của `docs/du-lieu-mau.sql` (PowerShell, chỉ đọc) | `IsNormalized(FormC)` = True; migration `CreateDepartments.cs` cũng NFC | Khẳng định lời trong đầu file SQL về chữ dựng sẵn. Tên phòng ban trong SQL (Nhân sự, Kế toán, Kỹ thuật, Kinh doanh) khớp đúng 4 tên seed trong migration, nên phép nối `lower(d.name) = lower(v.department_name)` ra đủ 10 dòng. |
+| Đối chiếu email mẫu với `EmailPattern` trong `EmployeeService.cs` (`^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$`) | 10/10 email `@congty.example` khớp | Email hợp lệ theo luật API; độ dài họ tên mẫu đều dưới 100, email dưới 254. |
+| Đối chiếu SQL với migration `CreateEmployees.cs` | Cột `full_name`, `email`, `department_id` đúng tên; `id` là identity by default; chỉ mục `ux_employees_email` trên `lower(email)` | `INSERT ... ON CONFLICT DO NOTHING` không có đích cụ thể nên bắt được cả vi phạm chỉ mục biểu thức; chạy lại an toàn. |
+| Đối chiếu README mục 14 với `appsettings.json` | Bốn nhóm EF Core (`Database.Command`, `Database.Connection`, `Query`, `Update`) đặt `Critical` đúng như README; `appsettings.Development.json` có tồn tại | Khẳng định mục 14. `ProblemDetailsExceptionHandler` đúng là nơi ghi một dòng `LogError` kèm `traceId` cho lỗi 5xx và chỉ `LogInformation` cho lỗi dưới 500. |
+| Đối chiếu ví dụ JSON mới với `ErrorTitles.cs` và `StatusCodeProblemWriter.cs` | 405: title "Phương thức không được hỗ trợ", không có `detail`, type `#section-15.5.6`; 415: title và detail khớp, type `#section-15.5.16`; 500: title "Lỗi máy chủ" và detail chung khớp; 400 "Dữ liệu không hợp lệ" | Ví dụ khớp code (title, type, detail). Chưa gọi lại API vì phạm vi review không bật server; các số `traceId` và kết quả gọi thật dựa vào `code-summary.md` mục 6b. |
+| Thứ tự nguồn cấu hình (hiểu biết về ASP.NET Core; không chạy) | Biến môi trường `ConnectionStrings__Default` được nạp sau user-secrets nên thắng; `dotnet ef` dựng host bằng `Program.cs` nên đọc cùng cấu hình | Mục 13 bước 4 đúng. Khối `try/finally` xóa biến môi trường và `ZeroFreeBSTR` nằm trong `finally`, dọn đúng cả khi lệnh lỗi. |
+| `frontend/package-lock.json` tồn tại; `package.json` có `"node": ">=24"` | PASS | `npm ci` ở mục 7 chạy được. Không chạy `npm ci` theo yêu cầu. |
+| Tìm mật khẩu thật trong README.md, du-lieu-mau.sql, danh-sach-api.md | Không thấy; chỉ có chỗ giữ chỗ `Password=***` và hộp nhập `Read-Host` | Đạt luật không lưu mật khẩu vào repo. |
+
+### Summary
+
+Phần H đúng và tự nhất quán: SQL mẫu chạy lại an toàn, khớp migration và luật email; khối PowerShell và hướng dẫn tài khoản `employee_app` đúng về thứ tự nguồn cấu hình và quyền cần thiết; ví dụ lỗi khớp code; không có mật khẩu thật và Phần A–G không bị Phần H làm hỏng. Chỉ còn bốn điểm Minor về lời giải thích và lưu ý, không chặn.

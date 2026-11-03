@@ -9,7 +9,7 @@
 >
 > U2 là unit giao diện: không lưu dữ liệu, không có thực thể. Luật ở đây là **luật hành vi của khung trang và các phần dùng chung** mà U3, U4 dựa vào. Bốn nhóm:
 > - **BR1:** điều hướng và khung trang.
-> - **BR2:** gọi API (`client.js`).
+> - **BR2:** gọi API (`client.ts`).
 > - **BR3:** hiện trạng thái, lỗi, thông báo.
 > - **BR4:** chuẩn giao diện dùng chung.
 
@@ -70,7 +70,7 @@ rules:
   - id: BR2.1
     statement: Mọi lời gọi API đi qua một module chung
     category: constraint
-    applies_to: src/api/client.js
+    applies_to: src/api/client.ts
     trigger: Trang cần dữ liệu từ backend
     logic: >
       Trang không gọi fetch trực tiếp. Địa chỉ gốc lấy từ biến VITE_API_BASE_URL (file .env.development, mặc định "http://localhost:5081", Q1=A).
@@ -81,27 +81,29 @@ rules:
   - id: BR2.2
     statement: Mỗi lời gọi có hạn 10 giây và không tự gọi lại
     category: policy
-    applies_to: src/api/client.js
+    applies_to: src/api/client.ts
     trigger: Lời gọi chưa có trả lời sau 10 giây
     logic: IF quá 10 giây THEN hủy lời gọi và báo lỗi loại "network". Không bao giờ tự gọi lại; người dùng bấm "Thử lại".
     violation: -
     source: C3 client_rules, Contract Design Q3
 
   - id: BR2.3
-    statement: Lỗi mạng và lỗi máy chủ báo cùng một câu dễ hiểu
+    statement: Lỗi mạng và lỗi máy chủ báo câu dễ hiểu, đúng nguyên nhân
     category: policy
-    applies_to: src/api/client.js
-    trigger: fetch bị từ chối (backend tắt, CORS chặn), quá hạn, hoặc API trả 5xx
+    applies_to: src/api/client.ts
+    trigger: fetch bị từ chối (backend tắt, CORS chặn), quá hạn, API trả 5xx, hoặc API trả 200/201 mà body không phải JSON hợp lệ
     logic: >
       IF fetch bị từ chối hoặc quá hạn THEN lỗi loại "network", lời báo "Không kết nối được máy chủ, vui lòng thử lại".
-      IF 5xx THEN lỗi loại "server", lời báo = detail của ProblemDetails nếu có, ngược lại "Không kết nối được máy chủ, vui lòng thử lại".
+      IF 5xx có ProblemDetails THEN lỗi loại "server", lời báo = detail, ngược lại title.
+      IF 5xx không có ProblemDetails, hoặc 200/201 mà body không phải JSON hợp lệ THEN lỗi loại "server", lời báo chung "Đã có lỗi xảy ra, vui lòng thử lại sau." Máy chủ vẫn trả lời được nên không báo "Không kết nối được máy chủ".
+      Đổi có chủ đích ở Code Generation Step 10 (rà soát tổng thể N-02, review R-10, 2026-11-03): bản trước báo câu lỗi mạng cho 5xx không có detail.
     violation: -
-    source: AC4.2.2, C3 client_rules
+    source: AC4.2.2, C3 client_rules, construction/build-and-test/ra-soat-tong-the.md (N-02)
 
   - id: BR2.4
     statement: Lỗi 4xx giữ nguyên lời báo của API
     category: policy
-    applies_to: src/api/client.js
+    applies_to: src/api/client.ts
     trigger: API trả 400, 404, 409 (hoặc 4xx khác) dạng application/problem+json
     logic: >
       Lỗi mang status, title, detail, errors (khóa camelCase -> danh sách lời báo) đúng như API gửi; giao diện không tự viết lại lời báo.
@@ -113,7 +115,7 @@ rules:
   - id: BR2.5
     statement: Đọc phản hồi thành công một cách dễ dãi
     category: policy
-    applies_to: src/api/client.js
+    applies_to: src/api/client.ts
     trigger: API trả 2xx
     logic: 200/201 -> trả dữ liệu JSON; 204 -> trả "không có nội dung". Trường JSON lạ được giữ nguyên, không làm lỗi.
     violation: -
@@ -198,9 +200,9 @@ rules:
 | BR1.3 | Liên kết bỏ qua | Tab đầu tiên, nhảy vào `main` |
 | BR1.4 | Menu đang mở | `aria-current="page"`, đậm + gạch dưới |
 | BR1.5 | Tiếng Việt | Mọi chữ khung trang, `lang="vi"` |
-| BR2.1 | Một module gọi API | `client.js`, địa chỉ từ `VITE_API_BASE_URL` = `http://localhost:5081` |
+| BR2.1 | Một module gọi API | `client.ts`, địa chỉ từ `VITE_API_BASE_URL` = `http://localhost:5081` |
 | BR2.2 | Hạn 10 giây | Hủy và báo lỗi; không tự gọi lại |
-| BR2.3 | Lỗi mạng / 5xx | "Không kết nối được máy chủ, vui lòng thử lại" |
+| BR2.3 | Lỗi mạng / 5xx / body hỏng | Lỗi mạng: "Không kết nối được máy chủ, vui lòng thử lại"; 5xx: lời báo của API, không có thì "Đã có lỗi xảy ra, vui lòng thử lại sau." (cả khi 200/201 có body hỏng) |
 | BR2.4 | Lỗi 4xx | Giữ title/detail/errors của API |
 | BR2.5 | Thành công | 200/201 JSON, 204 rỗng, bỏ qua trường lạ |
 | BR3.1 | Tải / lỗi / rỗng | `StatusMessage` với vai trò ARIA đúng |

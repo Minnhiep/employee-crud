@@ -10,6 +10,12 @@
     { "path": "frontend/src/components/Toast.tsx" },
     { "path": "frontend/src/pages/NotFoundPage.tsx" },
     { "path": "frontend/src/pages/departments/DepartmentsPage.tsx" },
-    { "path": "frontend/src/pages/departments/DepartmentFormPage.tsx" }
+    { "path": "frontend/src/pages/departments/DepartmentFormPage.tsx" },
+    { "path": "frontend/src/pages/departments/validateDepartment.ts" },
+    { "path": "frontend/src/utils/normalizeText.ts" },
+    { "path": "frontend/src/App.tsx" },
+    { "path": "backend/EmployeeCrud.Api/Platform/Text/TextInput.cs" },
+    { "path": "backend/EmployeeCrud.Api/Departments/DepartmentService.cs" },
+    { "path": "backend/EmployeeCrud.Api.Tests/Departments/DepartmentServiceTests.cs" }
   ]
 }

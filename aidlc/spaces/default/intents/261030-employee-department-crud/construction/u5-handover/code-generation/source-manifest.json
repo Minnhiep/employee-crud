@@ -5,6 +5,7 @@
   "writes": [
     { "path": "README.md" },
     { "path": "docs/so-do-database.md" },
-    { "path": "docs/danh-sach-api.md" }
+    { "path": "docs/danh-sach-api.md" },
+    { "path": "docs/du-lieu-mau.sql" }
   ]
 }

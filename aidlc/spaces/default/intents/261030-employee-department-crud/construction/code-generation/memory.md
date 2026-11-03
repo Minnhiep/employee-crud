@@ -18,6 +18,8 @@
 
 - 2026-11-02T19:40:00Z — [unit u2-web-shell] Làm lại giao diện theo yêu cầu Hiệp (Change Request ở Build and Test): thay favicon Vite, thêm theme-color, bỏ khung focus ở h1/main, K9 chuyển sang U3, thanh bên dùng <header>; ghi ở code-summary §4c.
 
+- 2026-11-03T03:05:00Z — [unit u1-backend-platform] Loop-back 2 (BT-03, NFR6.2): chỉ thêm 3 dòng log level `Critical` cho nhóm EF Core vào `appsettings.json`. Kiểm bằng backend phụ cổng 5082 trỏ `Port=5999` (không cần Admin, không tắt DB thật): 3 → 1 dòng `fail:`; 409 vẫn 0 dòng `fail:`; verify 96/96. Phiên chính làm, chỉ reviewer là agent riêng.
+
 - 2026-11-03T02:20:00Z — [unit u4-employees] Step 10 khác kế hoạch, đều phát hiện khi tự kiểm hoặc Hiệp chụp ảnh: icon kính lúp đè chữ (bộ chọn CSS yếu hơn quy tắc chung nằm sau); họ tên/email dài làm bảng tràn ở 1280px; nút "Thử lại" lệch 4px. Hiệp nhờ soát "chuẩn công ty lớn" và giao em quyết (form d8187086): ô tên phòng ban rộng một cột (sửa `DepartmentFormPage.tsx` của U3 sau khi U3 đã duyệt), ô chọn trống chữ mờ, trang sửa ghi tên. Ảnh Hiệp chụp bị che bên phải là cửa sổ Playwright có khung đặt cứng, không phải lỗi bố cục; đã đóng cửa sổ kiểm thử để Hiệp xem bằng Chrome thường.
 
 - 2026-11-02T20:05:00Z — [unit u3-departments] Step 10 sửa thêm phần chung ngoài danh sách kế hoạch: icon tùy chọn của StatusMessage, Toast xuống góc dưới phải và giữ focus khi đóng; phát hiện khi tự soát ảnh và kiểm bàn phím. Ghi ở code-summary U3 §4b.

@@ -66,6 +66,14 @@ Lệnh này xóa thư mục kết quả cũ `backend/TestResults/coverage`, ch�
 | 19 | Delete | `SaveChangesAsync` ném `DbUpdateConcurrencyException` | NotFound | NFR3.3 |
 | 20 | Delete | `SaveChangesAsync` ném 23503 với tên ràng buộc khác | Ném lại nguyên `DbUpdateException` (để U1 xử lý) | NFR2.4 |
 | 21 | Exists | Có / không có (Theory) | true / false | BR2.6 |
+| 22 | Create | Tên có nhiều dấu cách, tab, khoảng trắng không ngắt (U+00A0) ở giữa và hai đầu | Lưu "Kinh doanh miền Bắc" (một dấu cách giữa các chữ) | BR1.1 |
+| 23 | Create | Đã có "Kế toán", tạo "Kế&nbsp;&nbsp;toán" (2 dấu cách) | Conflict `name`; database vẫn một dòng | BR1.1, BR1.4 |
+| 24 | Create | "Kế toán" gõ kiểu tổ hợp (NFD), sau đó tạo bản dựng sẵn (NFC) | Lần đầu lưu dạng NFC; lần sau Conflict | BR1.1, BR1.4 |
+| 25 | Create | U+0000, ESC, U+200B, U+202E, U+FEFF, nửa cao U+D800, nửa thấp U+DC00 (một test chạy lần lượt cả 7) | Validation `name` "Tên phòng ban chứa ký tự không hợp lệ"; không lưu gì | BR1.1 |
+| 26 | Create | Có emoji đủ hai nửa surrogate | Lưu nguyên | BR1.1 |
+| 27 | Update | Tên mới chứa U+0000 | Validation "chứa ký tự không hợp lệ"; tên cũ giữ nguyên | BR1.1 |
+
+Ca #22–#27 thêm ở Step 11 (rà soát tổng thể N-04, S-04). Trong file test, chữ có dấu và ký tự vô hình viết bằng mã `\u` để người đọc thấy rõ từng ký tự. Ca #25 không dùng `[InlineData]` vì nửa cặp surrogate không ghi được vào thuộc tính của test.
 
 Mỗi test theo mẫu Arrange / Act / Assert. Dữ liệu được nạp riêng trong từng test, không dùng dữ liệu chung.
 
@@ -89,3 +97,34 @@ Mỗi test theo mẫu Arrange / Act / Assert. Dữ liệu được nạp riêng 
 6. Tắt backend rồi F5 → hiện "Không kết nối được máy chủ, vui lòng thử lại" + "Thử lại". Bật lại backend và bấm "Thử lại" → có dữ liệu.
 7. Chỉ dùng bàn phím: đi được tới mọi nút; trình đọc màn hình đọc nhãn "Sửa phòng ban Kế toán".
 8. Lighthouse trên `npm --prefix frontend run preview` (cổng 5173): Performance ≥ 90.
+
+**Chuẩn hóa tên và dọn code (Step 11, rà soát tổng thể):**
+9. API: POST tên chứa U+0000, U+200B hoặc U+202E → 400 `errors.name` "Tên phòng ban chứa ký tự không hợp lệ" (trước Step 11, U+0000 ra 500). POST "Kế&nbsp;&nbsp;toán" hoặc "Kế toán" gõ kiểu tổ hợp → 409. POST tên hợp lệ có khoảng trắng thừa → 201, tên trả về đã gộp khoảng trắng. Nửa cặp surrogate bị tầng đọc JSON của ASP.NET chặn trước (400 "Dữ liệu gửi lên không đúng định dạng JSON"), kiểm trong service là lớp dự phòng. Thân request có ký tự đặc biệt nên ghi vào file rồi gửi bằng `curl --data-binary @file`.
+10. Form thêm: dán 120 ký tự → ô giữ đủ 120, lời báo "tối đa 100 ký tự" hiện cạnh ô, không có request. Dán tên có ký tự vô hình → "chứa ký tự không hợp lệ", không có request. Nhập "&nbsp;&nbsp;Kế&nbsp;&nbsp;&nbsp;toán&nbsp;" → request gửi `{"name":"Kế toán"}`, 409 hiện cạnh ô.
+11. Đang sửa "Kế toán" (gõ dở) mà chuyển sang địa chỉ sửa "Kinh doanh" ngay trong ứng dụng → form tạo mới, ô tên là "Kinh doanh" (A-13).
+12. Danh sách: chặn API → trạng thái lỗi có "Thử lại"; bỏ chặn, bấm "Thử lại" → có dữ liệu; xóa → dòng biến mất, focus về tiêu đề (A-05: kiểu tải mới, hành vi như cũ).
+
+## 7. Bộ ca đối chiếu hai bản chuẩn hóa (dùng chung U3, U4)
+
+Luật chuẩn hóa có hai bản: `TextInput.TryNormalize` (C#, có unit test #22–#27) và `normalizeText` (TypeScript, không có test tự động theo `team.md`). Hai bản phải luôn cho cùng kết quả, nên mỗi lần sửa một bên thì chạy lại **cả 14 ca** dưới đây ở **cả hai bên** (rà soát R-05). U4 thêm ca của họ tên, email vào cuối bảng.
+
+Cách chạy bên TypeScript: Node 24 chạy thẳng được file `.ts` (không cần build), ví dụ viết một file `.mts` tạm ngoài dự án, `import { normalizeText } from "<đường dẫn>/frontend/src/utils/normalizeText.ts"`, gọi hàm với từng ca rồi so kết quả. Bên C#: các ca 1–11 đã nằm trong `DepartmentServiceTests` #22–#26.
+
+| # | Chuỗi vào (ký tự đặc biệt ghi dạng U+XXXX) | Kết quả mong đợi |
+|---|---|---|
+| 1 | dấu cách, "Kinh", dấu cách, tab, dấu cách, "doanh", U+00A0, 2 dấu cách, "miền", 3 dấu cách, "Bắc", dấu cách | "Kinh doanh miền Bắc" |
+| 2 | "Kế", 2 dấu cách, "toán" | "Kế toán" |
+| 3 | "Kế toán" gõ kiểu tổ hợp: K, e, U+0302, U+0301, dấu cách, t, o, a, U+0301, n | "Kế toán" dạng dựng sẵn (ế = U+1EBF, á = U+00E1) |
+| 4 | U+0000 | không hợp lệ |
+| 5 | "Kế", U+001B (ESC), "toán" | không hợp lệ |
+| 6 | "Kế", U+200B, "toán" | không hợp lệ |
+| 7 | U+202E, "toán" | không hợp lệ |
+| 8 | U+FEFF, "Kế toán" | không hợp lệ |
+| 9 | "Kế", U+D800 (nửa cao đứng một mình), "toán" | không hợp lệ |
+| 10 | "Kế", U+DC00 (nửa thấp đứng một mình), "toán" | không hợp lệ |
+| 11 | "Phòng IT ", U+1F680 (emoji đủ hai nửa) | giữ nguyên |
+| 12 | "a", U+0085, "b" | "a b" (U+0085 là khoảng trắng theo .NET) |
+| 13 | chuỗi rỗng | chuỗi rỗng |
+| 14 | dấu cách, tab, U+3000, dấu cách | chuỗi rỗng |
+
+Kết quả ngày 03/11/2026: 14/14 ca hai bên khớp.

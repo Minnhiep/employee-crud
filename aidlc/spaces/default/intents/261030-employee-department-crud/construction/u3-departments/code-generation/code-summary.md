@@ -100,6 +100,55 @@ Hiệp xem ảnh trang nhân viên (chưa làm lại) và yêu cầu "dứt mộ
 
 **Kiểm (Playwright, Chromium, backend + PostgreSQL thật, 1440×900):** danh sách đúng thứ tự, "4 phòng ban"; bấm Lưu khi trống → 0 request, focus khung tóm tắt; K13 bấm lỗi → focus `input#name`, địa chỉ không đổi; "kế toán" → 409 "Tên phòng ban đã tồn tại" cạnh ô; K11 thêm/sửa thật (POST, PUT) → thông báo "Đã thêm…", "Đã cập nhật…", form sửa điền sẵn; K9 mở hộp bằng bàn phím → focus "Hủy", Tab → "Xóa phòng ban", Tab tiếp vẫn trong hộp, Esc → đóng, focus về nút "Xóa phòng ban …"; K14 xóa → dòng biến mất không F5, focus `h1`, đóng thông báo → focus `main#noi-dung`; xóa "Kỹ thuật" → 409 khung lỗi có tên, dòng còn, focus về nút Xóa; K12 rời trang khi đang tải → 0 lỗi; DOM 3 trang: 1 `h1`, `lang="vi"`, đủ landmark, 0 trùng id, 0 ô thiếu nhãn, 0 nút thiếu tên, bảng có `caption`; 320px không cuộn ngang; cột "Thao tác" căn phải đúng. Dữ liệu thử ("Phòng Thử…") đã xóa hết, còn đúng 4 phòng ban. `npm --prefix frontend run verify` xanh (96/96; JS 290,29 KB, CSS 16,60 KB). Ảnh: `.playwright-mcp/u3-list-final.png`, `u3-form-error.png`, `u3-dialog.png`, `u3-320.png`.
 
+## 4c. Step 11: sửa theo rà soát tổng thể (Change Request, 03/11/2026)
+
+Nguồn: `build-and-test/ra-soat-tong-the.md`; Hiệp chọn sửa cả 4 nhóm (form 34027473), duyệt plan Step 11 (gõ 1). Giữa bước, Hiệp dặn "chuẩn như các công ty lớn, kết hợp AI-DLC giải quyết triệt để" (tin nhắn 87ea0d27) → form 58339e3f: **chặn thêm ký tự định dạng vô hình** và **tra chuẩn quốc tế** để ghi căn cứ.
+
+| Mã | Trước | Sau | File |
+|---|---|---|---|
+| S-04, N-09 | Tên có U+0000 → PostgreSQL từ chối → API **500** | **400** `errors.name` "Tên phòng ban chứa ký tự không hợp lệ"; chặn cả ký tự điều khiển (Cc), ký tự định dạng vô hình (Cf: U+200B, U+202E, U+FEFF…) và nửa cặp surrogate | `Platform/Text/TextInput.cs` (mới), `DepartmentService.cs` |
+| N-04 | Chỉ bỏ khoảng trắng hai đầu: "Kế&nbsp;&nbsp;toán" và "Kế toán" gõ kiểu tổ hợp (NFD) lách được luật không trùng | Gộp mọi chuỗi khoảng trắng thành một dấu cách, đưa về NFC, rồi mới kiểm rỗng / độ dài / trùng và lưu | như trên; `utils/normalizeText.ts` (mới), `validateDepartment.ts`, `DepartmentFormPage.tsx` (gửi tên đã chuẩn hóa) |
+| N-03 | `maxLength` cắt bớt phần dán thừa mà không báo | Bỏ `maxLength`; lời báo "tối đa 100 ký tự" hiện cạnh ô | `DepartmentFormPage.tsx` |
+| A-13 | Route sửa phòng ban `key="edit"` cố định: đổi id trong ứng dụng thì form giữ dữ liệu cũ | `DepartmentEditRoute` với `key` theo id, giống `EmployeeEditRoute` | `App.tsx` |
+| A-05 | Trang danh sách tải bằng 2 đường (effect lần đầu + hàm `reload` có `AbortController` riêng) | Một `useEffect` theo `reloadKey`, kết quả ghi kèm khóa lần tải; giống `EmployeesPage` | `DepartmentsPage.tsx` |
+| A-06 | Câu lỗi chung và `isAborted`/`messageOf` chép trong từng trang | Dùng bản xuất từ `api/client.ts` (U2 Step 10) | `DepartmentsPage.tsx`, `DepartmentFormPage.tsx` |
+
+**Căn cứ chuẩn (đã tra 03/11/2026, Hiệp cho tra):**
+
+| Bước của luật | Chuẩn | Ghi chú |
+|---|---|---|
+| Cấm ký tự điều khiển và ký tự vô hình | RFC 8264 §4.3.3 (lớp FreeformClass cấm Controls §9.12 và PrecisIgnorableProperties §9.13) | Ta chặn theo loại Unicode Cc và Cf. Hai bên cho kết quả giống nhau với các ký tự hiện có; nếu .NET và trình duyệt dùng bảng Unicode khác phiên bản thì có thể lệch ở ký tự mới thêm, nhưng API vẫn kiểm lại nên lệch chỉ làm form báo sớm hơn hoặc muộn hơn API (rà soát R-08). **Giới hạn đã biết:** (1) RFC còn cấm thêm một số ký tự "bỏ qua được" ngoài Cf (ví dụ bộ chọn biến thể U+FE0F trong emoji, ký tự lấp Hangul U+3164), ta chưa chặn; (2) ngược lại, chặn cả loại Cf nghĩa là chặn luôn U+200D (ZWJ) và U+200C (ZWNJ): emoji ghép bằng ZWJ (ví dụ emoji gia đình) bị từ chối, chữ Ba Tư và một số chữ Ấn Độ cần hai ký tự này cũng không nhập được. Đây là chủ ý (an toàn hơn) và chấp nhận được vì tên phòng ban tiếng Việt không cần (rà soát R-06) |
+| Gộp khoảng trắng | RFC 8266 §2.1 (đổi khoảng trắng Unicode thành dấu cách, bỏ hai đầu, gộp khoảng trắng giữa) | Ta gộp thêm tab và xuống dòng (RFC coi là ký tự điều khiển và từ chối) vì người dùng hay dán từ nơi khác; ô một dòng nên không mất ý nghĩa |
+| Đưa về một dạng chữ | W3C "Character Model: String Matching" §2.2.1, §3.2.2.4 khuyên không dùng chuẩn hóa tương thích (NFKC) cho văn bản thường vì làm đổi nghĩa chữ (ví dụ "²" → "2") | RFC 8266 dùng NFKC; ta **giữ NFC** theo W3C. Chữ tiếng Việt cho kết quả như nhau ở cả hai |
+
+**Khác kế hoạch (Hiệp đã chọn, hoặc nhỏ cùng mục đích):**
+
+1. Chặn thêm ký tự định dạng vô hình (Cf) ở cả API và form (form 58339e3f). Kế hoạch đã sửa theo.
+2. Form tự bắt được cả nửa cặp surrogate (biểu thức `\p{Cs}` của JavaScript), không phải đợi API như kế hoạch ghi.
+3. Test đánh số #22–#27 (số #21 đã có), 6 ca thay vì 5: ca #25 gộp 7 ký tự lạ trong một test, thêm ca #26 emoji hợp lệ để chắc nhánh "đủ hai nửa surrogate" chạy đúng.
+4. Smart App Control chặn file `EmployeeCrud.Api.dll` mới build (0x800711C7, nhật ký Code Integrity sự kiện 3077) ở 3 lần chạy test. Hiệp chọn làm như U4 (form ac967db6): thêm 2 comment có ích (thứ tự kiểm trong `NormalizeName`, tập khoảng trắng trong `TextInput`) để ra file mới → chạy được. Không đổi cài đặt máy.
+5. Công cụ ghi file của AI tự đổi mã `\u200B`, `\uFEFF`… thành ký tự thật (vô hình) trong code. Đã ghi lại các đoạn đó bằng cách khác và quét cả 9 file bằng script tìm ký tự Cc/Cf/Cs/dấu tổ hợp: sạch.
+6. Cổng 5173 đang có `vite preview` của Hiệp (bản build cũ), nên kiểm giao diện chạy riêng: frontend dev cổng 5174, backend 5081 cho phép thêm origin 5174 bằng biến môi trường `Cors__AllowedOrigins__1` (không sửa file cấu hình). Kiểm xong đã tắt; preview của Hiệp giữ nguyên.
+
+**Đã kiểm:**
+- Unit test: 109/109 (103 cũ + 6 mới). Độ phủ dòng: `DepartmentService` 100%, `TextInput` 100%, `EmployeeService` 100%.
+- Bản JavaScript `normalizeText` cho cùng kết quả với bản C# trên 14 ca (7 ca ký tự lạ, gộp khoảng trắng, NFD, emoji, U+0085, chuỗi rỗng, chuỗi toàn khoảng trắng).
+- API thật (PostgreSQL): U+0000, U+200B, U+202E → 400 đúng lời báo; "Kế&nbsp;&nbsp;toán", NFD → 409; POST "&nbsp;&nbsp;Phòng&nbsp;&nbsp;&nbsp;thử(U+00A0) nghiệm&nbsp;&nbsp;" → 201 "Phòng thử nghiệm"; PUT với U+0000 → 400, tên cũ giữ nguyên; nửa cặp surrogate bị tầng đọc JSON chặn trước (400). 4 tên phòng ban đang có đều đã ở dạng chuẩn (không cần sửa dữ liệu). Bản ghi thử đã xóa.
+- Playwright (Chromium): dán 120 ký tự → ô giữ 120, lời báo hiện, 0 request; ký tự vô hình → lời báo, 0 request; "&nbsp;&nbsp;Kế&nbsp;&nbsp;&nbsp;toán&nbsp;" → gửi `{"name":"Kế toán"}`, 409 cạnh ô; sửa "Kế toán" (gõ dở) rồi chuyển sang sửa "Kinh doanh" → ô tên "Kinh doanh"; chặn API → "Thử lại" → có dữ liệu; K9 (focus "Hủy", Esc về nút Xóa), xóa → dòng biến mất, K14 focus `h1`. Console: chỉ 2 dòng trình duyệt tự ghi cho 2 ca cố ý gây lỗi (409, chặn mạng), 0 lỗi của ứng dụng.
+- `npm --prefix frontend run verify` xanh (typecheck, lint 0 cảnh báo, Prettier, build, 109/109).
+
+## 4d. Sửa sau review Step 11 (Hiệp duyệt checkpoint U3, gõ 1, yêu cầu sửa R-05 đến R-09; 03/11/2026)
+
+Reviewer kết luận READY; 5 góp ý Minor, đều là tài liệu, không đổi code.
+
+| Điểm | Sửa | File |
+|---|---|---|
+| R-05 | Ghi bộ 14 ca đối chiếu hai bản chuẩn hóa (C# và TypeScript) thành danh sách kiểm dùng chung, kèm cách chạy bên TypeScript; U4 thêm ca vào cuối | `unit-test-instructions.md` mục 7 |
+| R-06 | Mục "giới hạn đã biết": chặn cả loại Cf nên chặn luôn ZWJ (U+200D), ZWNJ (U+200C); emoji ghép bằng ZWJ bị từ chối; chủ ý, chấp nhận vì tên tiếng Việt không cần | mục 4c, bảng căn cứ chuẩn |
+| R-07 | BR1.3 ghi rõ độ dài đếm theo đơn vị UTF-16 (emoji tính 2), chặt hơn hoặc bằng cột `varchar(100)` nên không tràn | `functional-design/rules.md` BR1.3 |
+| R-08 | Câu "giống nhau ở .NET và JavaScript" đổi thành: giống nhau với ký tự hiện có; lệch phiên bản Unicode chỉ làm form báo sớm hoặc muộn hơn, API vẫn quyết định | mục 4c, bảng căn cứ chuẩn |
+| R-09 | Phần đầu plan: "Tests" ghi 27 ca (6 ca Step 11), "Touches" thêm hai file dùng chung | `code-generation-plan.md` Summary |
+
 ## 5. Test viết nhưng chưa chạy
 
 Không có. Mọi test đã viết đều chạy và xanh. Theo `team.md`, không có test tự động cho controller và React; hai tầng này đã kiểm tay như bảng trên.

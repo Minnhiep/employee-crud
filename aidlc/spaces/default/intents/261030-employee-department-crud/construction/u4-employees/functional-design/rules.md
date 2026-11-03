@@ -7,6 +7,7 @@
 > - `inception/refined-mockups/` (`interaction-spec.md` luồng F1–F4, mục 2.4, 2.5; `mockups.md` mục 2–4)
 > - `functional-design-questions.md` (Q1: giữ email như đã gõ; Q2: một luật định dạng email chung; Q3: form báo khi chưa có phòng ban)
 > - Rà soát U1 (U4 bắt 23503 khi ghi nhân viên), rà soát U3 (khóa ngoại phải đúng tên `fk_employees_department`)
+> - Rà soát tổng thể 03/11/2026 (`construction/build-and-test/ra-soat-tong-the.md`, N-03, N-04, N-05, N-07, S-04/N-09): BR1.1–BR1.7, BR2.2, BR4.2, BR4.6, BR4.7 đổi có chủ đích ở Code Generation Step 11. Dùng chung luật chuẩn hóa với tên phòng ban (U3 `functional-design/rules.md` BR1.1, hàm `Platform/Text/TextInput.cs` và `utils/normalizeText.ts`); căn cứ chuẩn: RFC 8264 §4.3.3, RFC 8266 §2.1, W3C Character Model §2.2.1. Hiệp chọn chuỗi tìm có ký tự lạ thì trả danh sách rỗng (form c6e6889f).
 >
 > **Bốn nhóm luật:**
 > - **BR1:** dữ liệu nhân viên (kiểm và lưu).
@@ -17,20 +18,25 @@
 ```yaml
 rules:
   - id: BR1.1
-    statement: Họ tên và email được bỏ khoảng trắng hai đầu trước khi kiểm và lưu
+    statement: Họ tên và email được chuẩn hóa trước khi kiểm và lưu; giá trị có ký tự không hợp lệ bị từ chối
     category: validation
     applies_to: EmployeeRequest.fullName, EmployeeRequest.email
     trigger: Thêm hoặc sửa nhân viên (form và API)
-    logic: giá trị lưu = giá trị gửi lên đã bỏ khoảng trắng hai đầu
-    violation: -
-    source: FR2.2, FR2.3, requirements mục 2, mục 6
+    logic: >
+      Cùng luật với tên phòng ban (U3 BR1.1): gộp mọi chuỗi khoảng trắng thành một dấu cách, bỏ hai đầu, đưa về NFC.
+      IF còn ký tự điều khiển (Unicode Cc, ví dụ U+0000), ký tự định dạng vô hình (Unicode Cf, ví dụ U+200B, U+202E) hoặc nửa cặp surrogate
+      THEN lỗi trường fullName "Họ tên chứa ký tự không hợp lệ" / trường email "Email chứa ký tự không hợp lệ".
+      Giá trị lưu = giá trị đã chuẩn hóa; BR1.2–BR1.7 kiểm trên giá trị này. Thứ tự trong mỗi ô: ký tự không hợp lệ → rỗng → quá dài → (email) định dạng.
+      Đổi có chủ đích ở Code Generation Step 11 (rà soát N-04, S-04): bản trước chỉ bỏ khoảng trắng hai đầu, nên U+200B lọt qua luật định dạng email và "a(U+200B)@x.vn" lách được BR1.7.
+    violation: Form báo cạnh ô, không gửi request; API trả 400 errors.fullName hoặc errors.email
+    source: FR2.2, FR2.3, FR4.1, FR4.2, requirements mục 2, mục 6, ra-soat-tong-the.md (N-04, S-04)
 
   - id: BR1.2
     statement: Họ tên bắt buộc
     category: validation
     applies_to: EmployeeRequest.fullName
     trigger: Thêm hoặc sửa
-    logic: IF họ tên sau khi bỏ khoảng trắng rỗng THEN lỗi trường fullName "Vui lòng nhập họ tên"
+    logic: IF họ tên sau khi chuẩn hóa (BR1.1) rỗng THEN lỗi trường fullName "Vui lòng nhập họ tên"
     violation: Form báo cạnh ô, không gửi request; API trả 400 errors.fullName
     source: FR4.1, FR4.2, AC2.2.3, AC4.1.1
 
@@ -39,7 +45,9 @@ rules:
     category: validation
     applies_to: EmployeeRequest.fullName
     trigger: Thêm hoặc sửa
-    logic: IF độ dài họ tên (sau khi bỏ khoảng trắng) > 100 THEN lỗi trường fullName "Họ tên tối đa 100 ký tự"
+    logic: >
+      IF độ dài họ tên sau khi chuẩn hóa (BR1.1) > 100 THEN lỗi trường fullName "Họ tên tối đa 100 ký tự".
+      Đếm theo đơn vị UTF-16 như U3 BR1.3. Ô nhập không đặt maxLength (rà soát N-03): dán thừa thì giữ nguyên và hiện lời báo.
     violation: Form báo cạnh ô; API trả 400 errors.fullName
     source: requirements mục 2, AC4.1.2
 
@@ -48,7 +56,7 @@ rules:
     category: validation
     applies_to: EmployeeRequest.email
     trigger: Thêm hoặc sửa
-    logic: IF email sau khi bỏ khoảng trắng rỗng THEN lỗi trường email "Vui lòng nhập email"
+    logic: IF email sau khi chuẩn hóa (BR1.1) rỗng THEN lỗi trường email "Vui lòng nhập email"
     violation: Form báo cạnh ô; API trả 400 errors.email
     source: requirements mục 2, interaction-spec 2.5
 
@@ -57,7 +65,9 @@ rules:
     category: validation
     applies_to: EmployeeRequest.email
     trigger: Thêm hoặc sửa
-    logic: IF độ dài email (sau khi bỏ khoảng trắng) > 254 THEN lỗi trường email "Email tối đa 254 ký tự"
+    logic: >
+      IF độ dài email sau khi chuẩn hóa (BR1.1) > 254 THEN lỗi trường email "Email tối đa 254 ký tự".
+      Ô nhập không đặt maxLength (rà soát N-03).
     violation: Form báo cạnh ô; API trả 400 errors.email
     source: requirements mục 2
 
@@ -82,7 +92,7 @@ rules:
     logic: >
       IF có nhân viên khác (id khác) mà lower(email) = lower(email mới) THEN 409, errors.email "Email đã được sử dụng".
       Sửa giữ nguyên email hoặc chỉ đổi hoa thường email của chính mình thì không coi là trùng.
-      Email lưu đúng như người dùng gõ (sau khi bỏ khoảng trắng), không đổi về chữ thường (Q1).
+      Email lưu đúng như người dùng gõ (sau khi chuẩn hóa theo BR1.1), không đổi về chữ thường (Q1). So trùng trên giá trị đã chuẩn hóa, nên bản gõ kiểu tổ hợp (NFD) hay có ký tự vô hình không lách được luật này.
     violation: API 409 "Dữ liệu bị trùng" errors.email; form hiện cạnh ô Email
     source: FR2.5, AC2.2.4, AC2.3.2, AC2.3.3, Q1
 
@@ -119,11 +129,13 @@ rules:
     applies_to: GET /api/employees?search=
     trigger: Có tham số search
     logic: >
-      Bỏ khoảng trắng hai đầu chuỗi tìm. IF rỗng THEN trả tất cả.
+      Chuẩn hóa chuỗi tìm như BR1.1 (gộp khoảng trắng, bỏ hai đầu, NFC), nên gõ hai dấu cách hoặc gõ kiểu tổ hợp vẫn tìm ra.
+      IF chuỗi tìm có ký tự không hợp lệ (Cc, Cf, surrogate lẻ) THEN trả mảng rỗng (200), không gửi xuống database: họ tên, email đã bị chặn các ký tự đó khi lưu nên không ai khớp (Hiệp chọn, form c6e6889f; trước Step 11, U+0000 làm PostgreSQL từ chối và API trả 500).
+      IF rỗng THEN trả tất cả.
       ELSE trả nhân viên mà lower(fullName) chứa lower(chuỗi) HOẶC lower(email) chứa lower(chuỗi).
       Có phân biệt dấu: "binh" không khớp "Bình". Ký tự % và _ là chữ thường, không phải ký tự đại diện.
     violation: -
-    source: FR3.1, FR3.2, AC3.1.1–AC3.1.5, C2
+    source: FR3.1, FR3.2, AC3.1.1–AC3.1.5, C2, ra-soat-tong-the.md (S-04/N-09)
 
   - id: BR2.3
     statement: Lấy, sửa, xóa nhân viên không tồn tại trả 404
@@ -234,7 +246,7 @@ rules:
     applies_to: EmployeesPage, SearchBox
     trigger: Bấm "Tìm" hoặc Enter; mở trang có ?search=; bấm Back
     logic: >
-      Gõ chưa làm gì. Bấm Tìm/Enter: bỏ khoảng trắng hai đầu, ghi lên địa chỉ (/employees?search=an; rỗng thì bỏ tham số), rồi tải lại danh sách theo địa chỉ.
+      Gõ chưa làm gì. Bấm Tìm/Enter: chuẩn hóa như BR2.2 (gộp khoảng trắng, NFC; có ký tự lạ thì chỉ bỏ hai đầu và API trả rỗng), ghi lên địa chỉ (/employees?search=an; rỗng thì bỏ tham số), rồi tải lại danh sách theo địa chỉ; ô tìm hiện đúng chuỗi đã ghi.
       Mở trang hay bấm Back: ô tìm điền sẵn chuỗi trên địa chỉ và danh sách theo chuỗi đó. "Xóa tìm kiếm" đưa về /employees.
       Ô tìm và nút Tìm khóa trong lúc đang tải.
     violation: -
@@ -279,9 +291,12 @@ rules:
     category: policy
     applies_to: EmployeeFormPage
     trigger: API trả 201 (thêm) hoặc 200 (sửa); bấm Hủy
-    logic: chuyển về /employees, Toast "Đã thêm nhân viên \"<tên>\"" hoặc "Đã cập nhật nhân viên \"<tên>\""; Hủy là liên kết về /employees
+    logic: >
+      Chuyển về danh sách, Toast "Đã thêm nhân viên \"<tên>\"" hoặc "Đã cập nhật nhân viên \"<tên>\""; Hủy là liên kết về danh sách.
+      "Danh sách" là /employees, trừ khi mở form sửa bằng nút Sửa từ kết quả tìm: khi đó về /employees?search=<chuỗi đang tìm> (rà soát N-07, Step 11).
+      Chuỗi tìm đi theo state của đường dẫn và được dựng lại bằng URLSearchParams; mở thẳng địa chỉ sửa (gõ tay, F5) thì về /employees.
     violation: -
-    source: AC2.2.1, AC2.3.1, AC4.5.1, AC4.5.2
+    source: AC2.2.1, AC2.3.1, AC4.5.1, AC4.5.2, ra-soat-tong-the.md (N-07)
 
   - id: BR4.7
     statement: Xóa nhân viên phải xác nhận, khóa nút khi chờ, và tải lại danh sách (giữ chuỗi tìm)
@@ -289,7 +304,7 @@ rules:
     applies_to: EmployeesPage, nút Xóa
     trigger: Bấm Xóa trên một dòng
     logic: >
-      Hộp window.confirm: "Xóa nhân viên \"<tên>\"? Thao tác này không hoàn tác được." Hủy: không làm gì.
+      Hộp xác nhận ConfirmDialog (thay window.confirm từ Step 10): "Nhân viên <họ tên> (<email>) sẽ bị xóa vĩnh viễn. Thao tác này không thể hoàn tác." Ghi kèm email vì hai người có thể trùng họ tên (rà soát N-05, Step 11). Hủy: không làm gì.
       OK: khóa nút Xóa (useSubmitGuard), gọi DELETE. 204: tải lại danh sách theo chuỗi tìm hiện tại, Toast "Đã xóa nhân viên \"<tên>\"", focus về h1.
       404: tải lại, báo "Mục này đã không còn". Lỗi mạng: báo lỗi kết nối, mở lại nút.
     violation: -
@@ -320,7 +335,7 @@ rules:
 
 | ID | Luật | Kết quả |
 |---|---|---|
-| BR1.1 | Bỏ khoảng trắng hai đầu | Họ tên, email lưu đã trim |
+| BR1.1 | Chuẩn hóa họ tên, email (gộp khoảng trắng, NFC); chặn ký tự điều khiển, vô hình, surrogate lẻ | Lưu giá trị đã chuẩn hóa; ký tự lạ → 400 "Họ tên / Email chứa ký tự không hợp lệ" |
 | BR1.2 | Họ tên bắt buộc | 400 "Vui lòng nhập họ tên" |
 | BR1.3 | Họ tên ≤ 100 | 400 "Họ tên tối đa 100 ký tự" |
 | BR1.4 | Email bắt buộc | 400 "Vui lòng nhập email" |
@@ -330,7 +345,7 @@ rules:
 | BR1.8 | Phòng ban bắt buộc | 400 "Vui lòng chọn phòng ban" |
 | BR1.9 | Phòng ban phải đang có | 400 "Phòng ban không tồn tại" |
 | BR2.1 | Danh sách | Sắp theo họ tên rồi id, có `departmentName` |
-| BR2.2 | Tìm kiếm | Họ tên hoặc email chứa chuỗi, không phân biệt hoa thường, có phân biệt dấu |
+| BR2.2 | Tìm kiếm | Chuỗi tìm chuẩn hóa như BR1.1; họ tên hoặc email chứa chuỗi, không phân biệt hoa thường, có phân biệt dấu; chuỗi có ký tự lạ → 200 `[]` |
 | BR2.3 | Không tìm thấy | 404 "Không tìm thấy nhân viên có mã {id}." |
 | BR2.4 | Mã thành công | 200 / 201 + Location / 200 / 204 |
 | BR2.5 | Xóa | Xóa hẳn |
@@ -345,7 +360,7 @@ rules:
 | BR4.3 | Kiểm form | Như API, lỗi cạnh ô + khung tóm tắt |
 | BR4.4 | Ô chọn phòng ban | Nạp từ API; lỗi / rỗng có báo |
 | BR4.5 | Form sửa | Điền sẵn; 404 khi mở / khi lưu |
-| BR4.6 | Lưu xong / Hủy | Về danh sách + "Đã thêm / Đã cập nhật ..." |
-| BR4.7 | Xóa | Xác nhận, khóa nút, tải lại giữ chuỗi tìm |
+| BR4.6 | Lưu xong / Hủy | Về danh sách (giữ `?search=` khi sửa từ kết quả tìm) + "Đã thêm / Đã cập nhật ..." |
+| BR4.7 | Xóa | Hộp xác nhận ghi họ tên và email, khóa nút, tải lại giữ chuỗi tìm |
 | BR4.8 | Khóa nút Lưu | Bấm đúp chỉ một request |
 | BR4.9 | Nhãn | Label gắn ô; `aria-label` đủ tên |
