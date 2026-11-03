@@ -35,12 +35,12 @@ Lời báo lỗi trong body viết bằng tiếng Việt để giao diện hiệ
 
 | # | Phương thức | Đường dẫn | Làm gì | Thành công | Lỗi có thể |
 |---|---|---|---|---|---|
-| 1 | GET | `/api/departments` | Danh sách phòng ban, sắp theo tên | 200 | |
+| 1 | GET | `/api/departments` | Danh sách phòng ban, sắp theo tên, kèm số nhân viên | 200 | |
 | 2 | POST | `/api/departments` | Thêm phòng ban | 201 | 400, 409 |
-| 3 | GET | `/api/departments/{id}` | Xem một phòng ban | 200 | 404 |
+| 3 | GET | `/api/departments/{id}` | Xem một phòng ban, kèm số nhân viên | 200 | 404 |
 | 4 | PUT | `/api/departments/{id}` | Sửa tên phòng ban | 200 | 400, 404, 409 |
 | 5 | DELETE | `/api/departments/{id}` | Xóa phòng ban | 204 | 404, 409 |
-| 6 | GET | `/api/employees` | Danh sách nhân viên, có tìm theo họ tên hoặc email | 200 | |
+| 6 | GET | `/api/employees` | Danh sách nhân viên, có tìm theo họ tên hoặc email và lọc theo phòng ban | 200 | 400 (`departmentId` sai dạng) |
 | 7 | POST | `/api/employees` | Thêm nhân viên | 201 | 400, 409 |
 | 8 | GET | `/api/employees/{id}` | Xem một nhân viên | 200 | 404 |
 | 9 | PUT | `/api/employees/{id}` | Sửa nhân viên | 200 | 400, 404, 409 |
@@ -54,18 +54,17 @@ Mỗi thao tác đi qua cùng một đường: React gọi API → Controller nh
 
 ### GET /api/departments
 
-Lấy mọi phòng ban, sắp theo tên A–Z. Đọc bảng `departments`.
+Lấy mọi phòng ban, sắp theo tên A–Z, mỗi phòng kèm `employeeCount` (số nhân viên lúc đọc). Đọc bảng `departments`; số người được đếm bằng truy vấn con trên bảng `employees` trong **cùng một câu SQL**, nên bao nhiêu phòng cũng chỉ một lần gọi database.
 
 Request: không có body.
 
-Response `200`:
+Response `200` (trích 3 dòng, sau khi chạy [dữ liệu mẫu](du-lieu-mau.sql); Kế toán và Kỹ thuật có thêm vài người tự nhập):
 
 ```json
 [
-  { "id": 2, "name": "Kế toán" },
-  { "id": 4, "name": "Kinh doanh" },
-  { "id": 3, "name": "Kỹ thuật" },
-  { "id": 1, "name": "Nhân sự" }
+  { "id": 2, "name": "Kế toán", "employeeCount": 11 },
+  { "id": 4, "name": "Kinh doanh", "employeeCount": 12 },
+  { "id": 3, "name": "Kỹ thuật", "employeeCount": 14 }
 ]
 ```
 
@@ -76,14 +75,16 @@ Thêm phòng ban mới. Ghi vào bảng `departments`.
 Request:
 
 ```json
-{ "name": "Phòng Mẫu" }
+{ "name": "Đào tạo" }
 ```
 
-Response `201`, header `Location: http://localhost:5081/api/departments/10`:
+Response `201`, header `Location: http://localhost:5081/api/departments/25` (phòng mới luôn có `employeeCount` 0):
 
 ```json
-{ "id": 10, "name": "Phòng Mẫu" }
+{ "id": 25, "name": "Đào tạo", "employeeCount": 0 }
 ```
+
+Tên nên theo quy ước: viết hoa chữ cái đầu, không kèm chữ "Phòng" (README, mục "Quy ước tên phòng ban"). API không tự đổi chữ.
 
 Lỗi có thể: `400` tên rỗng hoặc dài quá 100 ký tự; `409` tên đã có (không phân biệt hoa thường).
 
@@ -91,12 +92,12 @@ Lỗi có thể: `400` tên rỗng hoặc dài quá 100 ký tự; `409` tên đ�
 
 Xem một phòng ban. Đọc bảng `departments`.
 
-Request: không có body. Ví dụ `GET /api/departments/10`.
+Request: không có body. Ví dụ `GET /api/departments/25`. Trang chi tiết phòng ban (`/departments/{id}` trên giao diện) gọi API này cùng lúc với `GET /api/employees?departmentId={id}`.
 
 Response `200`:
 
 ```json
-{ "id": 10, "name": "Phòng Mẫu" }
+{ "id": 25, "name": "Đào tạo", "employeeCount": 0 }
 ```
 
 Lỗi có thể: `404` không có phòng ban mã đó.
@@ -105,16 +106,16 @@ Lỗi có thể: `404` không có phòng ban mã đó.
 
 Đổi tên phòng ban. Ghi vào bảng `departments`.
 
-Request (`PUT /api/departments/10`):
+Request (`PUT /api/departments/25`):
 
 ```json
-{ "name": "Phòng Mẫu Đổi Tên" }
+{ "name": "Đào tạo nội bộ" }
 ```
 
-Response `200`:
+Response `200` (`employeeCount` đếm lại sau khi lưu):
 
 ```json
-{ "id": 10, "name": "Phòng Mẫu Đổi Tên" }
+{ "id": 25, "name": "Đào tạo nội bộ", "employeeCount": 0 }
 ```
 
 Lỗi có thể: `400` tên rỗng hoặc quá dài; `404` không có phòng ban mã đó; `409` tên trùng với phòng ban khác.
@@ -123,11 +124,11 @@ Lỗi có thể: `400` tên rỗng hoặc quá dài; `404` không có phòng ban
 
 Xóa phòng ban. Chỉ xóa được khi phòng ban **không còn nhân viên**. Xóa khỏi bảng `departments`.
 
-Request: không có body. Ví dụ `DELETE /api/departments/10`.
+Request: không có body. Ví dụ `DELETE /api/departments/25`.
 
 Response `204`: không có body.
 
-Lỗi có thể: `404` không có phòng ban mã đó; `409` phòng ban còn nhân viên (xem ví dụ ở mục Lỗi 409).
+Lỗi có thể: `404` không có phòng ban mã đó; `409` phòng ban còn nhân viên, câu báo ghi số người còn lại (xem ví dụ ở mục Lỗi 409). Giao diện biết trước số người nhờ `employeeCount` nên không cho bấm xóa; 409 chỉ còn xảy ra khi có người được thêm chen vào giữa lúc tải và lúc xóa.
 
 ---
 
@@ -146,7 +147,7 @@ Response `200` (không có `search`):
 ```json
 [
   { "id": 1, "fullName": "Đỗ Văn An", "email": "do.an@congty.vn", "departmentId": 3, "departmentName": "Kỹ thuật" },
-  { "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen@example.com", "departmentId": 10, "departmentName": "Phòng Mẫu Đổi Tên" }
+  { "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen@example.com", "departmentId": 25, "departmentName": "Đào tạo nội bộ" }
 ]
 ```
 
@@ -154,11 +155,23 @@ Response `200` với `?search=mẫu`:
 
 ```json
 [
-  { "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen@example.com", "departmentId": 10, "departmentName": "Phòng Mẫu Đổi Tên" }
+  { "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen@example.com", "departmentId": 25, "departmentName": "Đào tạo nội bộ" }
 ]
 ```
 
 Không ai khớp thì trả `200` với danh sách rỗng `[]`.
+
+Tham số không bắt buộc thứ hai: `departmentId`, chỉ lấy nhân viên của phòng ban đó; dùng cùng `search` thì phải thỏa **cả hai**. Ví dụ `GET /api/employees?departmentId=2&search=mai`:
+
+```json
+[
+  { "id": 2052, "fullName": "Nguyễn Thị Mai", "email": "mai.nguyen@congty.example", "departmentId": 2, "departmentName": "Kế toán" }
+]
+```
+
+- `departmentId` phải là số nguyên dương viết bằng chữ số 0–9 (không dấu `+`, `-`, khoảng trắng, dấu chấm), trong phạm vi số nguyên 32 bit. Sai dạng (`abc`, `0`, `-1`, `99999999999`, ` 5`, `+5`) thì trả `400` với lỗi ở ô `departmentId` (xem ví dụ ở mục Lỗi 400). API tự đọc số để câu báo là tiếng Việt.
+- Số hợp lệ nhưng không có phòng ban đó (ví dụ `?departmentId=999999`) thì trả `200` với `[]`: lọc không ra ai, không phải lỗi "không tìm thấy".
+- Bỏ trống (`?departmentId=`) nghĩa là không lọc.
 
 Chuỗi tìm được chuẩn hóa như họ tên, email đã lưu, nên `?search=nguyễn%20%20văn` (hai dấu cách) vẫn tìm ra "Nguyễn Văn …". Chuỗi tìm có ký tự điều khiển hoặc ký tự vô hình (ví dụ `?search=%00`) cũng trả `200` với `[]`: họ tên, email đã bị chặn các ký tự đó khi lưu nên không ai khớp, và API không gửi chuỗi đó xuống database.
 
@@ -169,13 +182,13 @@ Thêm nhân viên. Ghi vào bảng `employees`.
 Request:
 
 ```json
-{ "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen@example.com", "departmentId": 10 }
+{ "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen@example.com", "departmentId": 25 }
 ```
 
 Response `201`, header `Location: http://localhost:5081/api/employees/2008`:
 
 ```json
-{ "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen@example.com", "departmentId": 10, "departmentName": "Phòng Mẫu Đổi Tên" }
+{ "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen@example.com", "departmentId": 25, "departmentName": "Đào tạo nội bộ" }
 ```
 
 Lỗi có thể: `400` thiếu họ tên, email sai định dạng, thiếu phòng ban hoặc phòng ban không tồn tại; `409` email đã có (không phân biệt hoa thường).
@@ -189,7 +202,7 @@ Request: không có body. Ví dụ `GET /api/employees/2008`.
 Response `200`:
 
 ```json
-{ "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen@example.com", "departmentId": 10, "departmentName": "Phòng Mẫu Đổi Tên" }
+{ "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen@example.com", "departmentId": 25, "departmentName": "Đào tạo nội bộ" }
 ```
 
 Lỗi có thể: `404` không có nhân viên mã đó.
@@ -201,13 +214,13 @@ Sửa họ tên, email, phòng ban của nhân viên. Gửi đủ cả ba trư�
 Request (`PUT /api/employees/2008`):
 
 ```json
-{ "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen2@example.com", "departmentId": 10 }
+{ "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen2@example.com", "departmentId": 25 }
 ```
 
 Response `200`:
 
 ```json
-{ "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen2@example.com", "departmentId": 10, "departmentName": "Phòng Mẫu Đổi Tên" }
+{ "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen2@example.com", "departmentId": 25, "departmentName": "Đào tạo nội bộ" }
 ```
 
 Lỗi có thể: `400` như khi thêm; `404` không có nhân viên mã đó; `409` email trùng với nhân viên khác.
@@ -227,6 +240,18 @@ Lỗi có thể: `404` không có nhân viên mã đó.
 ## Ví dụ lỗi
 
 ### Lỗi 400 Bad Request
+
+`departmentId` sai dạng khi lọc, `GET /api/employees?departmentId=abc`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "Dữ liệu không hợp lệ",
+  "status": 400,
+  "errors": { "departmentId": ["Phòng ban lọc không hợp lệ"] },
+  "traceId": "00-a5279f6ca9ae2ab3303b7b93214b2332-5cce64899f232244-00"
+}
+```
 
 #### Lỗi 400 — tên phòng ban rỗng
 
@@ -298,10 +323,10 @@ Response `404`, `Content-Type: application/problem+json`:
 
 #### Lỗi 409 — trùng tên phòng ban
 
-Request: `POST /api/departments` khi đã có phòng ban "Phòng Mẫu Đổi Tên"
+Request: `POST /api/departments` khi đã có phòng ban "Đào tạo nội bộ"
 
 ```json
-{ "name": "PHÒNG MẪU ĐỔI TÊN" }
+{ "name": "ĐÀO TẠO NỘI BỘ" }
 ```
 
 Response `409`, `Content-Type: application/problem+json`:
@@ -320,7 +345,7 @@ Trùng email cũng tương tự: gửi `"email": "MAU.NGUYEN2@EXAMPLE.COM"` khi 
 
 #### Lỗi 409 — xóa phòng ban còn nhân viên
 
-Request: `DELETE /api/departments/10` khi phòng ban 10 còn nhân viên
+Request: `DELETE /api/departments/2` khi phòng ban "Kế toán" (mã 2) còn 11 nhân viên
 
 Response `409`, `Content-Type: application/problem+json`:
 
@@ -329,12 +354,12 @@ Response `409`, `Content-Type: application/problem+json`:
   "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
   "title": "Không thể xóa phòng ban",
   "status": 409,
-  "detail": "Không thể xóa phòng ban \"Phòng Mẫu Đổi Tên\" vì vẫn còn nhân viên.",
-  "traceId": "00-9c8936750dd8e7277b96576f94dff589-455cf3ad54550b4c-00"
+  "detail": "Không thể xóa phòng ban \"Kế toán\" vì còn 11 nhân viên.",
+  "traceId": "00-5594fea7e3c3d848634da8b02547bcaa-6858c647b9e39dbb-00"
 }
 ```
 
-API kiểm "còn nhân viên" trước khi xóa. Database còn chặn thêm một lớp bằng khóa ngoại (xem mục "Thử ràng buộc" trong [sơ đồ database](so-do-database.md)).
+API đếm số nhân viên còn trong phòng trước khi xóa; câu báo luôn theo một mẫu `Không thể xóa phòng ban "<tên>" vì còn N nhân viên.`, kể cả khi có người được thêm chen vào đúng lúc xóa (API đếm lại rồi mới báo). Database còn chặn thêm một lớp bằng khóa ngoại (xem mục "Thử ràng buộc" trong [sơ đồ database](so-do-database.md)).
 
 ### Lỗi 405 Method Not Allowed
 

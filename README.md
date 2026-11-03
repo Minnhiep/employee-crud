@@ -125,7 +125,7 @@ npm run dev
 
 | Cái gì | Địa chỉ |
 |---|---|
-| Trang web | <http://localhost:5173> |
+| Trang web | <http://localhost:5173> (Nhân viên, Phòng ban; bấm tên phòng ban để mở trang chi tiết `/departments/{id}`) |
 | API | <http://localhost:5081/api/departments>, <http://localhost:5081/api/employees> |
 | Trang tài liệu API (Swagger UI) | <http://localhost:5081/swagger> |
 | Đặc tả OpenAPI (JSON) | <http://localhost:5081/openapi/v1.json> |
@@ -179,11 +179,20 @@ Các lỗi dưới đây đã gặp thật khi làm bài trên Windows 11, khôn
 
 ## 12. Dữ liệu mẫu để demo
 
-Database mới tạo chỉ có 4 phòng ban mẫu. File [docs/du-lieu-mau.sql](docs/du-lieu-mau.sql) thêm 10 nhân viên tên giả (email đuôi `@congty.example`) để demo danh sách và tìm kiếm.
+Database mới tạo chỉ có 4 phòng ban mẫu. File [docs/du-lieu-mau.sql](docs/du-lieu-mau.sql) thêm 4 phòng ban (Hành chính, Truyền thông, Mua hàng, Chăm sóc khách hàng) và **80 nhân viên tên giả** (email đuôi `@congty.example`), 9–12 người mỗi phòng, để demo danh sách, tìm kiếm, lọc theo phòng ban, số nhân viên từng phòng và xem tốc độ khi có nhiều dữ liệu.
 
 1. pgAdmin 4 → `employee_db` → chuột phải → **Query Tool** → mở file `docs/du-lieu-mau.sql` → **Execute** (F5).
-2. Kết quả câu đếm cuối file phải là `10`. Chạy lại lần nữa vẫn an toàn (email đã có thì bỏ qua).
-3. Gỡ dữ liệu mẫu: làm theo dòng hướng dẫn cuối file (chỉ xóa người có email `@congty.example`).
+2. Câu đếm cuối file phải ra tổng `80`, và bảng số người từng phòng như ghi trong file. Chạy lại lần nữa vẫn an toàn (phòng ban, email đã có thì bỏ qua).
+3. Xem tốc độ: gọi <http://localhost:5081/api/employees> vài lần (thời gian hiện ở thẻ Network của trình duyệt, hoặc Postman); chấm Lighthouse trên bản build (`npm run build` rồi `npm run preview` trong `frontend`), không chấm trên `npm run dev` vì bản dev không nén code nên điểm thấp sai.
+4. Gỡ dữ liệu mẫu: làm theo khối hướng dẫn cuối file. Khối này chạy trong một transaction (lỗi giữa chừng thì không xóa gì) và chỉ dùng cho database demo trên máy. Lưu ý trước khi chạy:
+   - Nó xóa **mọi** người có email đuôi `@congty.example`, kể cả người bạn tự thêm bằng đuôi email này.
+   - Nó xóa 4 phòng có **tên trùng** 4 phòng thêm (Hành chính, Truyền thông, Mua hàng, Chăm sóc khách hàng) nếu phòng đó đã không còn ai, kể cả khi phòng đó do bạn tự tạo. 4 phòng mẫu của migration và phòng còn người luôn được giữ.
+
+### Quy ước tên phòng ban
+
+- Viết hoa chữ cái đầu, các chữ sau viết thường, trừ tên riêng và chữ viết tắt; không kèm chữ "Phòng". Ví dụ: `Kế toán`, `Nhân sự`, `Chăm sóc khách hàng`, `IT`.
+- Cách viết này mượn quy tắc viết hoa tên cơ quan, tổ chức trong văn bản hành chính (Nghị định 30/2020/NĐ-CP về công tác văn thư). Nghị định đó dành cho cơ quan nhà nước; ở đây chỉ dùng làm mẫu cho thống nhất.
+- Đây là gợi ý (hiện ngay dưới ô nhập tên), không phải luật kiểm: hệ thống không tự đổi chữ người dùng gõ, để giữ đúng chữ viết tắt như `IT`, `R&D`. Phòng ban đã có mà viết sai quy ước (ví dụ `Nhân Sự`) thì sửa bằng nút **Sửa** ở trang Phòng ban.
 
 ## 13. Tài khoản database riêng cho ứng dụng (khuyên dùng)
 
@@ -246,5 +255,5 @@ Bài làm đúng phạm vi `docs/ke-hoach.md`. Hai việc dưới đây công ty
 
 - [docs/so-do-database.md](docs/so-do-database.md): sơ đồ hai bảng, cột, ràng buộc, cách đối chiếu bằng pgAdmin.
 - [docs/danh-sach-api.md](docs/danh-sach-api.md): 10 thao tác API kèm JSON mẫu, ví dụ lỗi 400/404/405/409/415/500, cách gọi bằng Postman.
-- [docs/du-lieu-mau.sql](docs/du-lieu-mau.sql): 10 nhân viên mẫu để demo (mục 12).
+- [docs/du-lieu-mau.sql](docs/du-lieu-mau.sql): 80 nhân viên mẫu và 4 phòng ban thêm để demo (mục 12).
 - [docs/ke-hoach.md](docs/ke-hoach.md): đề bài thực tập.
