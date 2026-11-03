@@ -72,7 +72,7 @@ public class DepartmentServiceTests
 
         var result = await CreateService().GetByIdAsync(seeded[0].Id);
 
-        Assert.Equal(new DepartmentDto(seeded[0].Id, "Kế toán"), result);
+        Assert.Equal(new DepartmentDto(seeded[0].Id, "Kế toán", 0), result);
     }
 
     [Fact] // #4
@@ -154,7 +154,7 @@ public class DepartmentServiceTests
 
         var result = await CreateService().UpdateAsync(seeded[0].Id, new DepartmentRequest { Name = " Tài chính " });
 
-        Assert.Equal(new DepartmentDto(seeded[0].Id, "Tài chính"), result);
+        Assert.Equal(new DepartmentDto(seeded[0].Id, "Tài chính", 0), result);
         Assert.Equal(["Tài chính"], await NamesInDatabaseAsync());
     }
 
@@ -247,7 +247,7 @@ public class DepartmentServiceTests
         var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
         Assert.Null(error.Field);
         Assert.Equal("Không thể xóa phòng ban", error.Title);
-        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì vẫn còn nhân viên.", error.Message);
+        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì còn 1 nhân viên.", error.Message);
     }
 
     [Fact] // #19
@@ -283,7 +283,7 @@ public class DepartmentServiceTests
 
         var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
         Assert.Equal("Không thể xóa phòng ban", error.Title);
-        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì vẫn còn nhân viên.", error.Message);
+        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì còn 1 nhân viên.", error.Message);
         Assert.Equal(["Kế toán"], await NamesInDatabaseAsync());
     }
 
@@ -315,7 +315,90 @@ public class DepartmentServiceTests
 
         var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
         Assert.Equal("Không thể xóa phòng ban", error.Title);
-        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì vẫn còn nhân viên.", error.Message);
+        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì còn 1 nhân viên.", error.Message);
+    }
+
+    // ---- Số nhân viên theo phòng ban (Change Request FR8, U4: BR5.1, BR5.2) ----
+
+    [Fact] // D4. Danh sách có employeeCount đúng từng phòng, kể cả phòng 0 người.
+    public async Task GetAll_ReturnsEmployeeCountPerDepartment()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Alpha", "Beta");
+        await TestDb.SeedEmployeeAsync(_options, "An Le", "an@congty.vn", seeded[0].Id);
+        await TestDb.SeedEmployeeAsync(_options, "Binh Tran", "binh@congty.vn", seeded[0].Id);
+
+        var result = await CreateService().GetAllAsync();
+
+        Assert.Equal([("Alpha", 2), ("Beta", 0)], result.Select(d => (d.Name, d.EmployeeCount)));
+    }
+
+    [Fact] // D5. Một phòng ban (trang chi tiết) có số người.
+    public async Task GetById_ReturnsEmployeeCount()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
+        await TestDb.SeedEmployeeAsync(_options, "An Le", "an@congty.vn", seeded[0].Id);
+
+        var result = await CreateService().GetByIdAsync(seeded[0].Id);
+
+        Assert.Equal(new DepartmentDto(seeded[0].Id, "Kế toán", 1), result);
+    }
+
+    [Fact] // D6. Thêm mới trả 0; đổi tên trả số người hiện có (phản hồi POST/PUT cùng hình dạng GET).
+    public async Task CreateAndUpdate_ReturnEmployeeCount()
+    {
+        var created = await CreateService().CreateAsync(new DepartmentRequest { Name = "Kế toán" });
+        await TestDb.SeedEmployeeAsync(_options, "An Le", "an@congty.vn", created.Id);
+        await TestDb.SeedEmployeeAsync(_options, "Binh Tran", "binh@congty.vn", created.Id);
+
+        var updated = await CreateService().UpdateAsync(created.Id, new DepartmentRequest { Name = "Tài chính" });
+
+        Assert.Equal(0, created.EmployeeCount);
+        Assert.Equal(new DepartmentDto(created.Id, "Tài chính", 2), updated);
+    }
+
+    [Fact] // D7. Còn 2 người thì câu 409 nói đúng "còn 2 nhân viên", phòng ban vẫn còn.
+    public async Task Delete_WhenTwoEmployees_MessageHasCount()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
+        await TestDb.SeedEmployeeAsync(_options, "An Le", "an@congty.vn", seeded[0].Id);
+        await TestDb.SeedEmployeeAsync(_options, "Binh Tran", "binh@congty.vn", seeded[0].Id);
+
+        var exception = await Record.ExceptionAsync(() => CreateService().DeleteAsync(seeded[0].Id));
+
+        var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
+        Assert.Equal(DepartmentService.HasEmployeesMessage("Kế toán", 2), error.Message);
+        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì còn 2 nhân viên.", error.Message);
+        Assert.Equal(["Kế toán"], await NamesInDatabaseAsync());
+    }
+
+    [Fact] // D8. Chen nhau: bước kiểm thấy 0 người, lúc lưu khóa ngoại chặn; đếm lại thấy 2 thì báo 2.
+    public async Task Delete_WhenForeignKeyBlocksAfterRecount_ReportsCountNow()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
+        // Context giả thêm 2 nhân viên NGAY TRƯỚC lúc lưu (sau bước kiểm thấy 0 người) rồi ném lỗi khóa ngoại,
+        // đúng như có người khác thêm nhân viên chen vào giữa hai bước.
+        var service = new DepartmentService(new SeedBeforeSaveThenFailContext(
+            _options,
+            seeded[0].Id,
+            PostgresError(PostgresErrorCodes.RestrictViolation, DbConstraintNames.EmployeeDepartmentForeignKey)));
+
+        var exception = await Record.ExceptionAsync(() => service.DeleteAsync(seeded[0].Id));
+
+        var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
+        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì còn 2 nhân viên.", error.Message);
+    }
+
+    [Fact] // D9. Chen nhau mà đếm lại ra 0 (người đó vừa bị xóa tiếp): vẫn báo 1, không ra câu "còn 0 nhân viên".
+    public async Task Delete_WhenForeignKeyBlocksButRecountIsZero_ReportsOne()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
+        var service = CreateServiceThatFailsOnSave(
+            PostgresError(PostgresErrorCodes.ForeignKeyViolation, DbConstraintNames.EmployeeDepartmentForeignKey));
+
+        var exception = await Record.ExceptionAsync(() => service.DeleteAsync(seeded[0].Id));
+
+        var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
+        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì còn 1 nhân viên.", error.Message);
     }
 
     // ---- Kiểm tồn tại (cho U4) ----

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 
@@ -31,6 +32,7 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
     public const string EmailInvalidMessage = "Email không đúng định dạng";
     public const string DepartmentRequiredMessage = "Vui lòng chọn phòng ban";
     public const string DepartmentNotFoundMessage = "Phòng ban không tồn tại";
+    public const string DepartmentFilterInvalidMessage = "Phòng ban lọc không hợp lệ";
 
     // BR1.6: một luật định dạng email, chép GIỐNG HỆT ở frontend/src/pages/employees/validateEmployee.ts.
     // Đọc thành lời: trước "@" ít nhất một ký tự không phải khoảng trắng hay "@"; sau "@" ít nhất hai đoạn
@@ -48,8 +50,14 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
     private static readonly Expression<Func<Employee, EmployeeDto>> ToDto = e =>
         new EmployeeDto(e.Id, e.FullName, e.Email, e.DepartmentId, e.Department.Name);
 
-    public async Task<IReadOnlyList<EmployeeDto>> GetAllAsync(string? search, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<EmployeeDto>> GetAllAsync(
+        string? search,
+        string? departmentId = null,
+        CancellationToken cancellationToken = default)
     {
+        // BR5.3: kiểm phòng ban lọc TRƯỚC chuỗi tìm, để tham số sai luôn được báo 400 (kể cả khi chuỗi tìm cũng lạ).
+        var departmentFilter = ParseDepartmentFilter(departmentId);
+
         // BR2.2: chuẩn hóa chuỗi tìm giống họ tên, email lúc lưu (gộp khoảng trắng, NFC), nên gõ hai dấu cách
         // hoặc gõ kiểu tổ hợp vẫn tìm ra. Có ký tự lạ (ví dụ U+0000) thì không ai khớp được, vì họ tên, email đã bị
         // chặn ký tự đó khi lưu: trả rỗng luôn, không gửi xuống PostgreSQL (trước đây U+0000 làm API trả 500;
@@ -60,6 +68,13 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         }
 
         var query = db.Employees.AsNoTracking();
+
+        // Lọc theo phòng (FR8.3) nằm trong cùng câu SQL với tìm kiếm: hai điều kiện ghép AND.
+        // Phòng không tồn tại thì không ai khớp, trả [] (lọc không ra kết quả, không phải 404; ADR-007).
+        if (departmentFilter is int filterId)
+        {
+            query = query.Where(e => e.DepartmentId == filterId);
+        }
 
         // Rỗng thì không lọc.
         if (term.Length > 0)
@@ -260,6 +275,25 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
 
     private static DomainError NotFound(int id) =>
         DomainError.NotFound($"Không tìm thấy nhân viên có mã {id}.");
+
+    // BR5.3: departmentId đến từ địa chỉ trang nên controller nhận dạng chuỗi và service tự đọc số. Nhờ vậy giá trị
+    // sai trả câu tiếng Việt, không lọt câu tiếng Anh của model binding (ADR-007).
+    // NumberStyles.None: chỉ chữ số 0-9, không nhận dấu "+", "-", khoảng trắng hay dấu phân cách hàng nghìn;
+    // TryParse cũng tự từ chối số vượt phạm vi int. Rỗng (hoặc chỉ khoảng trắng) nghĩa là không lọc.
+    private static int? ParseDepartmentFilter(string? departmentId)
+    {
+        if (string.IsNullOrWhiteSpace(departmentId))
+        {
+            return null;
+        }
+
+        if (int.TryParse(departmentId, NumberStyles.None, CultureInfo.InvariantCulture, out var id) && id > 0)
+        {
+            return id;
+        }
+
+        throw DomainError.Validation(DepartmentIdField, DepartmentFilterInvalidMessage);
+    }
 
     // Dữ liệu đã chuẩn hóa và đã qua kiểm, dùng chung cho thêm và sửa.
     private sealed record ValidInput(string FullName, string Email, int DepartmentId);

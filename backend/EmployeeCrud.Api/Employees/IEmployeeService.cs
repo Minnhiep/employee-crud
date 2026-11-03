@@ -8,8 +8,13 @@ public interface IEmployeeService
     /// <summary>
     /// Nhân viên kèm tên phòng ban, sắp theo họ tên rồi id (BR2.1).
     /// Có chuỗi tìm thì chỉ lấy người có họ tên hoặc email chứa chuỗi đó, không phân biệt hoa thường (BR2.2).
+    /// Có <paramref name="departmentId"/> (chuỗi từ địa chỉ trang) thì chỉ lấy người của phòng đó; sai dạng báo
+    /// Validation ở trường departmentId (BR5.3).
     /// </summary>
-    Task<IReadOnlyList<EmployeeDto>> GetAllAsync(string? search, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<EmployeeDto>> GetAllAsync(
+        string? search,
+        string? departmentId = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Một nhân viên; không có thì báo NotFound (BR2.3).</summary>
     Task<EmployeeDto> GetByIdAsync(int id, CancellationToken cancellationToken = default);

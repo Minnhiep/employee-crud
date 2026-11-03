@@ -14,11 +14,18 @@ public class EmployeesController(IEmployeeService employees) : ControllerBase
     /// <summary>
     /// Danh sách nhân viên kèm tên phòng ban, sắp theo họ tên.
     /// Có <c>?search=</c> thì chỉ lấy người có họ tên hoặc email chứa chuỗi đó (không phân biệt hoa thường).
+    /// Có <c>?departmentId=</c> thì chỉ lấy người của phòng đó (FR8.3); sai dạng trả 400.
     /// </summary>
+    // departmentId nhận dạng chuỗi, không phải int?: nếu để ASP.NET tự đổi kiểu thì "abc" ra 400 câu tiếng Anh;
+    // service tự đọc số để báo câu tiếng Việt như mọi lỗi khác (ADR-007).
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<EmployeeDto>>(StatusCodes.Status200OK)]
-    public async Task<IReadOnlyList<EmployeeDto>> GetAll([FromQuery] string? search, CancellationToken cancellationToken) =>
-        await employees.GetAllAsync(search, cancellationToken);
+    [ProducesResponseType<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+    public async Task<IReadOnlyList<EmployeeDto>> GetAll(
+        [FromQuery] string? search,
+        [FromQuery] string? departmentId,
+        CancellationToken cancellationToken) =>
+        await employees.GetAllAsync(search, departmentId, cancellationToken);
 
     /// <summary>Một nhân viên theo mã.</summary>
     // {id:int}: đường dẫn như /api/employees/abc không khớp route nào, nên trả 404.

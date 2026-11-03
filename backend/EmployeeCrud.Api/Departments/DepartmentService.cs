@@ -20,18 +20,19 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
     public const string CannotDeleteTitle = "Không thể xóa phòng ban";
 
     public async Task<IReadOnlyList<DepartmentDto>> GetAllAsync(CancellationToken cancellationToken = default) =>
-        // Chỉ đọc: không theo dõi thay đổi, chỉ lấy hai cột cần cho DTO; sắp ngay trong database.
+        // Chỉ đọc: không theo dõi thay đổi; sắp ngay trong database. Số nhân viên là truy vấn con trong
+        // cùng câu SELECT (BR5.1, ADR-006), nên 8 hay 80 phòng ban vẫn chỉ một lần gọi database.
         await db.Departments
             .AsNoTracking()
             .OrderBy(d => d.Name)
-            .Select(d => new DepartmentDto(d.Id, d.Name))
+            .Select(d => new DepartmentDto(d.Id, d.Name, db.Employees.Count(e => e.DepartmentId == d.Id)))
             .ToListAsync(cancellationToken);
 
     public async Task<DepartmentDto> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
         await db.Departments
             .AsNoTracking()
             .Where(d => d.Id == id)
-            .Select(d => new DepartmentDto(d.Id, d.Name))
+            .Select(d => new DepartmentDto(d.Id, d.Name, db.Employees.Count(e => e.DepartmentId == d.Id)))
             .FirstOrDefaultAsync(cancellationToken)
         ?? throw NotFound(id);
 
@@ -44,7 +45,8 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         db.Departments.Add(department);
         await db.SaveChangesAsync(cancellationToken);
 
-        return ToDto(department);
+        // Phòng vừa tạo chưa thể có nhân viên nào.
+        return new DepartmentDto(department.Id, department.Name, 0);
     }
 
     public async Task<DepartmentDto> UpdateAsync(int id, DepartmentRequest request, CancellationToken cancellationToken = default)
@@ -67,7 +69,8 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
             throw NotFound(id);
         }
 
-        return ToDto(department);
+        // Đổi tên không đổi số người, nhưng vẫn đếm để phản hồi PUT có cùng hình dạng với GET (hợp đồng C1).
+        return new DepartmentDto(department.Id, department.Name, await CountEmployeesAsync(id, cancellationToken));
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -75,10 +78,12 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         // Đọc dòng trước khi xóa: vừa để báo 404, vừa có sẵn tên để đưa vào lời báo khi còn nhân viên.
         var department = await FindTrackedAsync(id, cancellationToken);
 
-        // BR2.7 (U4): kiểm trước, còn nhân viên thì không xóa. Câu này dùng chỉ mục ix_employees_department_id.
-        if (await db.Employees.AnyAsync(e => e.DepartmentId == id, cancellationToken))
+        // BR5.2: kiểm trước, còn nhân viên thì không xóa và nói rõ còn bao nhiêu người.
+        // Đếm bằng chỉ mục ix_employees_department_id.
+        var employeeCount = await CountEmployeesAsync(id, cancellationToken);
+        if (employeeCount > 0)
         {
-            throw HasEmployeesConflict(department.Name);
+            throw HasEmployeesConflict(department.Name, employeeCount);
         }
 
         db.Departments.Remove(department);
@@ -93,8 +98,11 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         catch (DbUpdateException exception) when (IsEmployeeForeignKeyViolation(exception))
         {
             // Đường dự phòng của BR2.5: có người vừa thêm nhân viên vào phòng ban này sau bước kiểm ở trên,
-            // khóa ngoại RESTRICT (U4) báo 23503. Trả cùng lời báo với bước kiểm trước.
-            throw HasEmployeesConflict(department.Name);
+            // khóa ngoại RESTRICT (U4) chặn. Đếm lại để câu báo có số đúng lúc này (BR5.2).
+            // Lúc database chặn chắc chắn còn ít nhất một người; nếu đếm lại ra 0 (người đó vừa bị xóa tiếp)
+            // thì vẫn báo 1 thay vì câu vô lý "còn 0 nhân viên".
+            var countNow = await CountEmployeesAsync(id, cancellationToken);
+            throw HasEmployeesConflict(department.Name, Math.Max(1, countNow));
         }
     }
 
@@ -155,15 +163,17 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
             ConstraintName: DbConstraintNames.EmployeeDepartmentForeignKey,
         };
 
+    private Task<int> CountEmployeesAsync(int departmentId, CancellationToken cancellationToken) =>
+        db.Employees.CountAsync(e => e.DepartmentId == departmentId, cancellationToken);
+
     // Một hàm duy nhất tạo lỗi "còn nhân viên", gọi từ cả bước kiểm trước lẫn nhánh bắt 23503,
-    // để hai đường luôn ra cùng một câu (NFR3.5).
-    private static DomainError HasEmployeesConflict(string departmentName) =>
-        DomainError.Conflict(
-            $"Không thể xóa phòng ban \"{departmentName}\" vì vẫn còn nhân viên.",
-            title: CannotDeleteTitle);
+    // để hai đường luôn ra cùng một mẫu câu (NFR3.5, hợp đồng C1).
+    public static string HasEmployeesMessage(string departmentName, int employeeCount) =>
+        $"Không thể xóa phòng ban \"{departmentName}\" vì còn {employeeCount} nhân viên.";
+
+    private static DomainError HasEmployeesConflict(string departmentName, int employeeCount) =>
+        DomainError.Conflict(HasEmployeesMessage(departmentName, employeeCount), title: CannotDeleteTitle);
 
     private static DomainError NotFound(int id) =>
         DomainError.NotFound($"Không tìm thấy phòng ban có mã {id}.");
-
-    private static DepartmentDto ToDto(Department department) => new(department.Id, department.Name);
 }

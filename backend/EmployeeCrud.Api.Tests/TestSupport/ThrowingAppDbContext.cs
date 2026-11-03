@@ -12,6 +12,7 @@ namespace EmployeeCrud.Api.Tests.TestSupport;
 internal sealed class ThrowingAppDbContext(DbContextOptions<AppDbContext> options, Exception toThrow)
     : AppDbContext(options)
 {
+    // Chỉ ghi đè SaveChangesAsync: các truy vấn đọc (AnyAsync, CountAsync...) trước bước lưu vẫn chạy thật trên InMemory.
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         throw toThrow;
 }

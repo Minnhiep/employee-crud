@@ -621,4 +621,91 @@ public class EmployeeServiceTests
         AssertValidation(exception, "email", "Email chứa ký tự không hợp lệ");
         Assert.Equal("minh@congty.vn", Assert.Single(await EmployeesInDatabaseAsync()).Email);
     }
+
+    // ---- Lọc theo phòng ban (Change Request FR8.3, BR5.3) ----
+
+    // Hai phòng: Kế toán có Minh, Hoa; Kỹ thuật có An. Trả về id của hai phòng.
+    private async Task<(int Accounting, int Engineering)> SeedTwoDepartmentsAsync()
+    {
+        var departments = await TestDb.SeedAsync(_options, "Kế toán", "Kỹ thuật");
+        await TestDb.SeedEmployeeAsync(_options, "Minh Le", "minh@congty.vn", departments[0].Id);
+        await TestDb.SeedEmployeeAsync(_options, "Hoa Pham", "hoa@congty.vn", departments[0].Id);
+        await TestDb.SeedEmployeeAsync(_options, "An Tran", "an@congty.vn", departments[1].Id);
+        return (departments[0].Id, departments[1].Id);
+    }
+
+    [Fact] // #42. Chỉ lấy người của phòng được chọn, vẫn sắp theo họ tên.
+    public async Task GetAll_WithDepartmentId_ReturnsOnlyThatDepartment()
+    {
+        var (accounting, _) = await SeedTwoDepartmentsAsync();
+
+        var result = await CreateService().GetAllAsync(search: null, departmentId: accounting.ToString());
+
+        Assert.Equal(["Hoa Pham", "Minh Le"], result.Select(e => e.FullName));
+    }
+
+    [Fact] // #43. Lọc và tìm cùng lúc: phải thỏa cả hai (AND).
+    public async Task GetAll_WithDepartmentIdAndSearch_AppliesBoth()
+    {
+        var (accounting, engineering) = await SeedTwoDepartmentsAsync();
+
+        var inAccounting = await CreateService().GetAllAsync("minh", accounting.ToString());
+        var inEngineering = await CreateService().GetAllAsync("minh", engineering.ToString());
+
+        Assert.Equal(["Minh Le"], inAccounting.Select(e => e.FullName));
+        Assert.Empty(inEngineering);
+    }
+
+    [Theory] // #44. Rỗng hoặc chỉ khoảng trắng nghĩa là không lọc.
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetAll_WithEmptyDepartmentId_ReturnsEveryone(string? departmentId)
+    {
+        await SeedTwoDepartmentsAsync();
+
+        var result = await CreateService().GetAllAsync(search: null, departmentId);
+
+        Assert.Equal(3, result.Count);
+    }
+
+    [Theory] // #45–#48. Không phải số nguyên dương viết bằng chữ số 0-9 trong phạm vi int: 400 tiếng Việt ở ô departmentId.
+    [InlineData("abc")] // #45
+    [InlineData("0")] // #46
+    [InlineData("-1")] // #46
+    [InlineData("99999999999")] // #47: vượt int
+    [InlineData(" 5")] // #48: có khoảng trắng
+    [InlineData("+5")] // #48: có dấu
+    [InlineData("1.5")]
+    public async Task GetAll_WithInvalidDepartmentId_ThrowsValidation(string departmentId)
+    {
+        await SeedTwoDepartmentsAsync();
+
+        var exception = await Record.ExceptionAsync(() => CreateService().GetAllAsync(search: null, departmentId));
+
+        AssertValidation(exception, "departmentId", "Phòng ban lọc không hợp lệ");
+    }
+
+    [Fact] // #49. Số hợp lệ nhưng không có phòng đó: lọc không ra ai, trả rỗng (không phải 404).
+    public async Task GetAll_WithUnknownDepartmentId_ReturnsEmptyList()
+    {
+        var (accounting, engineering) = await SeedTwoDepartmentsAsync();
+        var unknown = Math.Max(accounting, engineering) + 1000;
+
+        var result = await CreateService().GetAllAsync(search: null, unknown.ToString());
+
+        Assert.Empty(result);
+    }
+
+    [Fact] // #50. Phòng lọc sai được báo trước, kể cả khi chuỗi tìm cũng có ký tự lạ (bình thường trả rỗng).
+    public async Task GetAll_WithInvalidDepartmentIdAndInvalidSearch_ThrowsValidationFirst()
+    {
+        await SeedTwoDepartmentsAsync();
+        var searchWithControlCharacter = "minh" + (char)0;
+
+        var exception = await Record.ExceptionAsync(
+            () => CreateService().GetAllAsync(searchWithControlCharacter, "abc"));
+
+        AssertValidation(exception, "departmentId", "Phòng ban lọc không hợp lệ");
+    }
 }
