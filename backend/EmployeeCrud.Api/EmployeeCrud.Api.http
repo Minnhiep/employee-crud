@@ -1,10 +1,10 @@
 @baseUrl = http://localhost:5081
 
-# Gọi thử 10 thao tác ngay trong VS Code (bấm "Send Request" phía trên mỗi khối), thay cho Postman khi cần nhanh.
+# Gọi thử 10 thao tác (và các ví dụ lọc 6b–6d) ngay trong VS Code (bấm "Send Request" phía trên mỗi khối), thay cho Postman khi cần nhanh.
 # Chạy backend trước: dotnet run --project backend/EmployeeCrud.Api
 # Đổi các số id (1, 2...) theo dữ liệu thật trên máy. Chi tiết và ví dụ phản hồi: docs/danh-sach-api.md
 
-### 1. Danh sách phòng ban (sắp theo tên)
+### 1. Danh sách phòng ban (sắp theo tên, mỗi phòng kèm employeeCount)
 GET {{baseUrl}}/api/departments
 Accept: application/json
 
@@ -17,7 +17,7 @@ POST {{baseUrl}}/api/departments
 Content-Type: application/json
 
 {
-  "name": "Phòng Thử Nghiệm"
+  "name": "Thử nghiệm"
 }
 
 ### 4. Sửa tên phòng ban
@@ -33,6 +33,18 @@ DELETE {{baseUrl}}/api/departments/99999
 
 ### 6. Danh sách nhân viên, có thể tìm theo họ tên hoặc email (không phân biệt hoa thường)
 GET {{baseUrl}}/api/employees?search=an
+Accept: application/json
+
+### 6b. Lọc nhân viên theo phòng ban (số phòng không có thì trả [])
+GET {{baseUrl}}/api/employees?departmentId=2
+Accept: application/json
+
+### 6c. Lọc theo phòng ban và tìm cùng lúc (phải thỏa cả hai)
+GET {{baseUrl}}/api/employees?departmentId=2&search=mai
+Accept: application/json
+
+### 6d. departmentId sai dạng: 400, lỗi ở ô departmentId "Phòng ban lọc không hợp lệ"
+GET {{baseUrl}}/api/employees?departmentId=abc
 Accept: application/json
 
 ### 7. Một nhân viên theo mã
