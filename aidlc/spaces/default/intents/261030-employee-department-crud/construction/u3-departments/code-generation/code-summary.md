@@ -74,6 +74,32 @@ Phiên bản gói thật: EF Core / Relational / InMemory 10.0.14, Npgsql.EFCore
 | Lighthouse (Hiệp đo, `npm run preview`, khung Galaxy A55 360px) | **Performance 100, Accessibility 100** |
 | Quét bí mật, quét `dangerouslySetInnerHTML` / `FromSqlRaw` / `ExecuteSqlRaw` | 0 dòng |
 
+## 4b. Step 10: làm lại giao diện chuẩn doanh nghiệp (03/11/2026)
+
+Hiệp xem ảnh trang nhân viên (chưa làm lại) và yêu cầu "dứt một lần, chuẩn như công ty, đến chi tiết nhỏ nhất". Bước này siết **phần chung** (file của U2, kế hoạch đã nêu tên) và làm lại **trang phòng ban**.
+
+**File:** `styles/tokens.css`, `styles/components.css`, `components/PageHeader.tsx`, `components/StatusMessage.tsx`, `components/Toast.tsx`, `pages/NotFoundPage.tsx` (phần chung); `pages/departments/DepartmentsPage.tsx`, `pages/departments/DepartmentFormPage.tsx`.
+
+| Hạng mục | Trước | Sau |
+|---|---|---|
+| Mật độ | Chữ 15px, nút/ô 40px | Chữ 14px, tiêu đề trang 20px, tiêu đề tấm 16px; nút/ô 36px, nút dòng 28px, icon trong nút 16px |
+| Đầu trang | Tiêu đề trên nền xám | Dải trắng tràn ngang (`PageHeader`): đường dẫn trang, tiêu đề, mô tả, nút chính; thân trang (`page-body`) nền xám lề 24px, tối đa 1440px |
+| Tấm | Chỉ viền | `panel__header` (tiêu đề + số lượng), `panel__body`, `panel__footer` (thanh nút căn phải, nền xám nhạt); form giới hạn 880px |
+| Bảng | Dòng cao, nút "Sửa" viền + "Xóa" đỏ đặc | Dòng 48px, đầu cột 13px; ô đầu/cuối lùi 24px thẳng mép tiêu đề tấm; "Sửa"/"Xóa" nút chữ nhỏ có icon, cột "Thao tác" căn phải |
+| Xóa | `window.confirm` | `ConfirmDialog`: "Xóa phòng ban?" ghi tên in đậm, [Hủy] [Xóa phòng ban] |
+| Form | Lưu trước Hủy, nút "Lưu" | Tấm "Thông tin phòng ban", chân tấm [Hủy] [Lưu phòng ban], gợi ý "Tối đa 100 ký tự, không trùng với phòng ban khác.", chữ mẫu "Ví dụ: Kế toán" |
+| Ô chọn | Mũi tên mặc định | Mũi tên SVG, cao 36px (dùng ở U4) |
+| Thông báo | Góc trên phải, che nút chính | Góc dưới phải; đóng (hoặc tự ẩn) khi focus đang trong thông báo thì focus về vùng nội dung chính |
+
+**Khác kế hoạch (nhỏ, cùng mục đích):**
+
+1. `StatusMessage`: nút hành động có `icon` tùy chọn (trước luôn có dấu "+", sai nghĩa với "Về danh sách phòng ban").
+2. `Toast`: chuyển xuống góc dưới phải (ở góc trên nó che nút "Thêm phòng ban" 5 giây) và giữ focus khi đóng (Playwright thấy focus rơi về `body`). Kế hoạch không ghi hai việc này; phát hiện khi tự soát ảnh và kiểm bàn phím.
+3. Lời báo xóa 404: "Mục này đã không còn" → "Phòng ban này không còn, danh sách đã được tải lại.".
+4. Thêm `data-testid="department-delete-confirm"` cho nút xác nhận trong hộp; các `data-testid` cũ giữ nguyên.
+
+**Kiểm (Playwright, Chromium, backend + PostgreSQL thật, 1440×900):** danh sách đúng thứ tự, "4 phòng ban"; bấm Lưu khi trống → 0 request, focus khung tóm tắt; K13 bấm lỗi → focus `input#name`, địa chỉ không đổi; "kế toán" → 409 "Tên phòng ban đã tồn tại" cạnh ô; K11 thêm/sửa thật (POST, PUT) → thông báo "Đã thêm…", "Đã cập nhật…", form sửa điền sẵn; K9 mở hộp bằng bàn phím → focus "Hủy", Tab → "Xóa phòng ban", Tab tiếp vẫn trong hộp, Esc → đóng, focus về nút "Xóa phòng ban …"; K14 xóa → dòng biến mất không F5, focus `h1`, đóng thông báo → focus `main#noi-dung`; xóa "Kỹ thuật" → 409 khung lỗi có tên, dòng còn, focus về nút Xóa; K12 rời trang khi đang tải → 0 lỗi; DOM 3 trang: 1 `h1`, `lang="vi"`, đủ landmark, 0 trùng id, 0 ô thiếu nhãn, 0 nút thiếu tên, bảng có `caption`; 320px không cuộn ngang; cột "Thao tác" căn phải đúng. Dữ liệu thử ("Phòng Thử…") đã xóa hết, còn đúng 4 phòng ban. `npm --prefix frontend run verify` xanh (96/96; JS 290,29 KB, CSS 16,60 KB). Ảnh: `.playwright-mcp/u3-list-final.png`, `u3-form-error.png`, `u3-dialog.png`, `u3-320.png`.
+
 ## 5. Test viết nhưng chưa chạy
 
 Không có. Mọi test đã viết đều chạy và xanh. Theo `team.md`, không có test tự động cho controller và React; hai tầng này đã kiểm tay như bảng trên.

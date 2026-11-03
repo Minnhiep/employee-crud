@@ -61,12 +61,13 @@ rules:
   - id: BR1.5
     statement: Vi phạm khóa ngoại ở database đổi thành 400 hoặc 409 tùy thao tác
     category: constraint
-    applies_to: "lỗi PostgreSQL 23503 trên fk_employees_department"
+    applies_to: "lỗi PostgreSQL 23503 (hoặc 23001 khi xóa phòng ban) trên fk_employees_department"
     trigger: Ghi nhân viên vào phòng ban vừa bị xóa, hoặc xóa phòng ban vừa có nhân viên (hai thao tác chen nhau)
     logic: >
       IF mã 23503 khi thêm/sửa nhân viên THEN 400, errors { departmentId: ["Phòng ban không tồn tại"] }.
-      IF mã 23503 khi xóa phòng ban THEN 409, title "Không thể xóa phòng ban", detail "Không thể xóa phòng ban vì vẫn còn nhân viên." (đường dự phòng - đường chính có tên phòng ban do U4 ném Conflict).
+      IF mã 23001 khi xóa phòng ban THEN 409, title "Không thể xóa phòng ban", detail "Không thể xóa phòng ban vì vẫn còn nhân viên." (đường dự phòng - đường chính có tên phòng ban do U4 ném Conflict).
       Phân biệt hai trường hợp bằng thao tác đang thực hiện (U3/U4 báo ngữ cảnh khi lưu), không đoán từ chuỗi lỗi.
+      Đính chính (Build and Test, 03/11/2026): khóa ngoại đặt ON DELETE RESTRICT nên khi xóa phòng ban còn nhân viên PostgreSQL 18 báo 23001 (restrict_violation), không phải 23503 (thấy thật ở U4, U5). Khi thêm/sửa nhân viên vẫn là 23503.
     violation: -
     source: NFR3, FR2.6, FR1.6
 
@@ -180,7 +181,7 @@ rules:
 | BR1.2 | Dữ liệu sai | 400 "Dữ liệu không hợp lệ" + errors camelCase |
 | BR1.3 | Xung đột nghiệp vụ | 409 + errors (có trường) hoặc detail (không có trường) |
 | BR1.4 | Database báo trùng (23505) | 409, nhận ra theo tên ràng buộc |
-| BR1.5 | Database báo vi phạm khóa ngoại (23503) | 400 `departmentId` khi ghi nhân viên / 409 khi xóa phòng ban |
+| BR1.5 | Database báo vi phạm khóa ngoại (23503; 23001 khi xóa phòng ban) | 400 `departmentId` khi ghi nhân viên / 409 khi xóa phòng ban |
 | BR1.6 | Lỗi ngoài dự kiến | 500 chung chung; chi tiết chỉ ghi vào log |
 | BR1.7 | Lỗi do framework tự sinh | 400 / 404 / 405 / 415 theo phong bì C3 |
 | BR1.8 | Kiểu nội dung lỗi | `application/problem+json` |

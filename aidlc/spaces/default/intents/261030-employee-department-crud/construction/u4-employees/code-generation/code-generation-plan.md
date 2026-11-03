@@ -151,6 +151,48 @@
   - nháp cho README của U5: API nhân viên kèm JSON mẫu, migration 2, quay lui về `CreateDepartments`.
 - [x] Ghi `source-manifest.json` và `traceability.json`, bao đủ các mã của tech-stack-decisions (NFR3.7, NFR3.8, NFR4.5–NFR4.7, NFR6.4–NFR6.6) và observability (NFR6.1, NFR6.2) (rà soát NFR Design U4 Minor 1).
 
+### Step 10: Áp chuẩn giao diện doanh nghiệp cho trang nhân viên (Hiệp yêu cầu, 03/11/2026)
+
+> **Vì sao có bước này:** Hiệp yêu cầu làm lại giao diện chuyên nghiệp "như các doanh nghiệp lớn đang dùng", "dứt một lần duy nhất, đến chi tiết nhỏ nhất", chỉ đổi giao diện, đúng `docs/ke-hoach.md` (tin nhắn "chỉnh lại tỉ lệ là chuẩn, xong áp dụng cho employees"). U3 Step 10 đã sửa phần chung (cỡ chữ, nút 36px, dải đầu trang, tấm có đầu/thân/chân, bảng, ô chọn, hộp xác nhận) và áp cho trang phòng ban. Bước này áp **đúng chuẩn đó** cho hai trang nhân viên, để hai mục trong thanh bên trông và dùng như nhau.
+
+**Implement, trang danh sách (`pages/employees/EmployeesPage.tsx`):**
+
+- [x] `PageHeader`: đường dẫn "Nhân sự > Nhân viên", mô tả "Danh sách nhân viên, tìm theo họ tên hoặc email.", nút "Thêm nhân viên" có icon (bỏ dấu "+" viết tay).
+- [x] Tấm danh sách: đầu tấm "Danh sách nhân viên" + ghi chú số dòng ("3 nhân viên", khi tìm: "Tìm thấy 2 nhân viên"); vùng ghi chú này **luôn có sẵn** trong trang với `aria-live`, vì trình đọc màn hình chỉ đọc chắc chắn vùng đã có từ trước khi nội dung đổi. Thanh công cụ dưới đầu tấm chứa ô tìm.
+- [x] Bảng: cột "Họ tên" có vòng tròn chữ cái đầu (chữ đầu của từ đầu và từ cuối, ví dụ "Đỗ Văn An" → "ĐA"; chỉ để trang trí, trình đọc màn hình bỏ qua), "Email" chữ màu phụ, "Phòng ban" chữ thường, "Thao tác" căn phải; nút dòng "Sửa"/"Xóa" nhỏ có icon như trang phòng ban.
+- [x] Xóa: thay `window.confirm` bằng `ConfirmDialog` ("Xóa nhân viên?", "Nhân viên **<tên>** sẽ bị xóa vĩnh viễn. Thao tác này không thể hoàn tác.", [Hủy] [Xóa nhân viên], `data-testid="employee-delete-confirm"`). Xóa xong: Toast, focus về tiêu đề (cùng cách trang phòng ban). 404: tải lại + "Nhân viên này không còn, danh sách đã được tải lại."; lỗi mạng: khung lỗi có icon. Bỏ state `deletingId` (hộp thoại đã hiện "Đang xóa…").
+- [x] Trạng thái trong tấm: đang tải "Đang tải dữ liệu…"; lỗi "Không tải được danh sách nhân viên" + lý do + "Thử lại"; trống "Chưa có nhân viên nào" + "Thêm nhân viên đầu tiên và chọn phòng ban cho họ." + nút "Thêm nhân viên"; không khớp "Không tìm thấy nhân viên phù hợp" + `Không có họ tên hoặc email nào chứa "<chuỗi>".` + nút phụ "Xóa tìm kiếm".
+
+**Implement, ô tìm (`components/SearchBox.tsx`, file của U4):**
+
+- [x] Ô có icon kính lúp bên trong, chữ mờ "Tìm theo họ tên hoặc email"; nhãn vẫn có cho trình đọc màn hình (ẩn khỏi mắt, như các ô tìm của Microsoft, SAP); nút "Tìm" giữ nguyên. Vẫn chỉ tìm khi bấm Tìm hoặc Enter.
+- [x] **Sửa lỗi focus (khác thiết kế, anh cần biết):** em kiểm thật thấy gõ chuỗi rồi Enter thì focus bàn phím rơi về đầu trang (`BODY`), người dùng bàn phím mất chỗ đang đứng (WCAG 2.4.3). Hai nguyên nhân: (1) trang đặt `key` theo chuỗi tìm nên mỗi lần tìm ô bị tạo lại; (2) ô bị khóa (`disabled`) khi đang tải, mà trình duyệt bỏ focus khỏi ô bị khóa. Cách sửa: ô tự đồng bộ chữ khi địa chỉ đổi (Back/Forward, "Xóa tìm kiếm") mà không bị tạo lại; ô và nút **không khóa** khi đang tải. Bấm Tìm lần nữa trong lúc tải vẫn an toàn, vì lời gọi cũ đã bị hủy (NFR5.5). Điều này khác `frontend-components.md` §3 (thuộc tính `disabled` "khóa khi đang tải"); em bỏ thuộc tính đó.
+
+**Implement, form (`pages/employees/EmployeeFormPage.tsx`):**
+
+- [x] `PageHeader`: đường dẫn "Nhân sự > Nhân viên > Thêm mới / Sửa"; mô tả "Nhập thông tin nhân viên mới. Trường có dấu \* là bắt buộc." / "Cập nhật thông tin nhân viên. Trường có dấu \* là bắt buộc." (bỏ dòng "(\* là ô bắt buộc)").
+- [x] Form trong tấm "Thông tin nhân viên", lưới hai cột trên màn rộng (một cột dưới 960px): hàng 1 "Họ tên" | "Email", hàng 2 "Phòng ban". Chữ mờ: "Ví dụ: Nguyễn Văn An", `ten@congty.vn`. Gợi ý: "Tối đa 100 ký tự." / "Không trùng với email của nhân viên khác.".
+- [x] Ô Phòng ban dùng mũi tên SVG chung; dòng "Đang tải danh sách phòng ban…", lỗi có icon + nút nhỏ "Thử lại", hoặc "Chưa có phòng ban nào." + liên kết "Thêm phòng ban" nằm ngay dưới ô, cùng cột.
+- [x] Chân tấm: [Hủy] [Lưu nhân viên] (đang lưu: "Đang lưu…"). Trạng thái tải / không tìm thấy / lỗi nằm trong tấm như form phòng ban.
+- [x] Giữ nguyên luật kiểm `validateEmployee.ts`, cách xử lý lỗi API cạnh ô, khung tóm tắt nhận focus, chặn bấm đúp, mọi `data-testid`.
+
+**Implement, thêm sau khi duyệt (Hiệp giao em quyết theo chuẩn doanh nghiệp, form d8187086; rà soát R-05, R-06):**
+
+- [x] `pages/departments/DepartmentFormPage.tsx` (**file của U3, sửa sau khi U3 đã duyệt**): ô "Tên phòng ban" đặt trong `form__grid`, rộng một cột như ô "Họ tên"; trang sửa ghi "Cập nhật tên phòng ban <tên>.".
+- [x] `EmployeeFormPage.tsx`: ô chọn trống chữ mờ; trang sửa ghi "Cập nhật thông tin của <họ tên>.".
+- [x] Xóa gặp 404: đưa focus về tiêu đề ở cả `EmployeesPage.tsx` và `DepartmentsPage.tsx` (**file của U3**), vì bảng tải lại nên nút Xóa không còn để nhận focus (R-05).
+
+**Implement, CSS:** dọn các lớp không còn dùng sau bước này (`.badge`, `.list-count`, `.toolbar__count`, `.form__note`, nếu `grep` xác nhận không còn nơi nào dùng); thêm tối đa một lớp nhỏ cho cột Phòng ban (ô chọn + dòng trạng thái) nếu cần.
+
+**Kiểm (sau khi code; không có test tự động React theo `team.md`):**
+
+- [x] `npm --prefix frontend run verify` (96 test backend, typecheck, lint, Prettier, build); `npm --prefix frontend audit --omit=dev`; vẫn chỉ 3 gói chạy.
+- [x] Playwright (Chromium, backend + PostgreSQL thật): danh sách, đếm dòng; tìm bằng Enter và bằng nút (focus ở lại ô), Back/Forward đổi chữ trong ô, không khớp → "Xóa tìm kiếm"; thêm (trống → lỗi 3 ô + khung tóm tắt nhận focus, không gửi request; email sai mẫu; email trùng khác hoa thường → 409 cạnh ô; hợp lệ → Toast); sửa (điền sẵn, đổi phòng ban); xóa qua hộp xác nhận (focus "Hủy", Esc trả focus về nút Xóa, xóa xong focus tiêu đề); tắt backend → lỗi tải và lỗi nạp phòng ban có "Thử lại"; 320px; kiểm DOM (`h1`, landmark, nhãn, không trùng id); console 0 lỗi 0 cảnh báo. Dữ liệu thử tên giả, thử xong xóa.
+- [x] Chụp ảnh (danh sách, tìm không khớp, form, form có lỗi, hộp xác nhận, 320px) để anh xem.
+- [x] Cập nhật `unit-test-instructions.md` (mục giao diện), `code-summary.md` (mục Step 10), `source-manifest.json`, `traceability.json`.
+
+**Không đổi:** API, backend, test backend, `client.ts`, `api/employees.ts`, `validateEmployee.ts`, đường dẫn trang, phần chung của U2 và trang phòng ban của U3.
+
 ## Không làm trong U4
 
 - Không lọc theo phòng ban, không phân trang, không tìm không dấu, không nhân viên mẫu (requirements mục 7).

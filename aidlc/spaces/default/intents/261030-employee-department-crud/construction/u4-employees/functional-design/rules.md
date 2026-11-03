@@ -173,7 +173,7 @@ rules:
     logic: >
       Sau khi tìm thấy phòng ban, IF có ít nhất một nhân viên thuộc phòng ban đó THEN lỗi xung đột
       title "Không thể xóa phòng ban", detail "Không thể xóa phòng ban \"<tên>\" vì vẫn còn nhân viên." và không xóa.
-      Đường dự phòng 23503 của U3 giữ nguyên cho trường hợp chen nhau. Chữ ký hàm không đổi.
+      Đường dự phòng của U3 (bắt 23503 và 23001) giữ nguyên cho trường hợp chen nhau. Chữ ký hàm không đổi.
     violation: API 409; giao diện phòng ban (U3) hiện lỗi role="alert" ở đầu trang, dòng vẫn còn
     source: FR1.6, AC1.4.3, C4, ADR-002
 
@@ -203,7 +203,7 @@ rules:
     logic: >
       Khóa ngoại tên đúng fk_employees_department (dùng chung hằng với U1/U3) từ employees.department_id tới departments.id, ON DELETE RESTRICT;
       kèm chỉ mục thường trên department_id.
-    violation: Xóa SQL tay phòng ban còn nhân viên thì PostgreSQL báo 23503
+    violation: Xóa SQL tay phòng ban còn nhân viên thì PostgreSQL báo 23001 (restrict_violation; đính chính Build and Test 03/11/2026, trước ghi 23503, đã thấy thật ở U4, U5)
     source: FR1.6, C5, rà soát Code Generation U3
 
   - id: BR3.4

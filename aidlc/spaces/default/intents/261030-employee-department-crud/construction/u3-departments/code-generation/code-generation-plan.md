@@ -2,6 +2,7 @@
 
 ## Summary
 
+- Redesign (Step 10, Hiệp yêu cầu 03/11/2026): siết lại hệ thiết kế chung theo mật độ phần mềm quản trị doanh nghiệp (chữ 14px, nút/ô nhập 36px, dải đầu trang trắng, tấm có phần đầu/thân/chân) và làm lại trang danh sách + form phòng ban (đường dẫn trang, thanh công cụ, bảng gọn, nút dòng nhỏ có icon, hộp xác nhận xóa, form trong tấm, Hủy rồi Lưu); không đổi API, luật, test backend
 - Builds: quản lý phòng ban đủ 4 tầng: bảng `departments` + chỉ mục + 4 dòng mẫu (migration), `DepartmentService` (luật BR1, BR2), `DepartmentsController` (5 API), trang danh sách và form thêm/sửa/xóa bằng React TypeScript
 - Touches: `backend/EmployeeCrud.Api/Departments/`, `backend/EmployeeCrud.Api/Migrations/`, `Program.cs` (1 dòng), `backend/EmployeeCrud.Api.Tests/Departments/`, `frontend/src/api/departments.ts`, `frontend/src/pages/departments/`, `App.tsx`, `dotnet-tools.json`, `frontend/package.json` (script `coverage`)
 - Tests: khoảng 20 unit test xUnit cho `DepartmentService` (InMemory + ngữ cảnh ném lỗi giả), độ phủ dòng ≥ 80%; controller, migration, giao diện kiểm tay bằng curl/Postman, pgAdmin, trình duyệt
@@ -140,6 +141,44 @@
   - nháp cho README của U5: chạy migration, đọc độ phủ, bật log SQL;
   - việc chuyển cho U4: khóa ngoại đúng tên `fk_employees_department`; xóa phòng ban còn nhân viên kiểm thật bằng Postman (409) ở Build and Test.
 - [x] Ghi `source-manifest.json` và `traceability.json`.
+
+### Step 10: Làm lại giao diện chuẩn doanh nghiệp (Hiệp yêu cầu, 03/11/2026)
+
+> **Vì sao có bước này:** Hiệp yêu cầu làm lại giao diện chuyên nghiệp "như các doanh nghiệp lớn đang dùng", "dứt một lần duy nhất, đến chi tiết nhỏ nhất" (form 08aacca2, 1af678f9; tin nhắn e9cfca12, c772c370), chỉ đổi giao diện, đúng `docs/ke-hoach.md`. U2 đã đổi khung (thanh bên, icon, hộp xác nhận), nhưng ảnh Hiệp chụp cho thấy phần chung còn to và thưa, phân tầng chưa rõ. Bước này **sửa luôn phần chung** (file của U2, nêu tên dưới đây) rồi áp vào trang phòng ban; U4 sau đó chỉ áp vào trang nhân viên.
+
+**Chuẩn áp dụng** (đối chiếu Ant Design Pro, Microsoft Fluent, SAP Fiori):
+
+| Nhóm | Trước (U2) | Sau |
+|---|---|---|
+| Chữ | Thân 15px, tiêu đề 22px | Thân và bảng **14px**, nhãn 14px đậm vừa, chữ phụ 13px, tiêu đề trang 20px, tiêu đề tấm 16px |
+| Điều khiển | Nút/ô nhập cao 40px | **36px**; nút trong dòng bảng 28px; nút có icon 16px; bo góc 6px |
+| Đầu trang | Tiêu đề nằm trên nền xám | **Dải đầu trang trắng** sát mép trên, có đường kẻ dưới: đường dẫn trang, tiêu đề + mô tả bên trái, nút chính bên phải |
+| Nội dung | Rộng tối đa 1200px, lề 32px | Lề 24px, rộng theo màn hình (tối đa 1440px); form giới hạn 880px để ô nhập không dài quá |
+| Tấm | Chỉ có viền | **Phần đầu** (tiêu đề tấm, ghi chú), **thân**, **chân** (thanh nút căn phải, nền xám nhạt) |
+| Bảng | Dòng cao, chữ to | Dòng 48px, đầu cột 13px đậm màu phụ trên nền xám nhạt, kẻ dòng mảnh, rê chuột tô nhạt; cột thao tác căn phải |
+| Nút dòng | Nút viền "Sửa", nút đỏ đặc "Xóa" | Nút chữ nhỏ có icon: "Sửa" màu chính, "Xóa" màu đỏ, không nền; nút đỏ đặc chỉ có trong hộp xác nhận |
+| Ô chọn | Mũi tên mặc định của trình duyệt | Mũi tên SVG cùng kiểu icon, cùng chiều cao 36px |
+| Gợi ý ô nhập | Cách ô 8px | Ngay dưới ô (4px), chữ 13px |
+| Thanh bên | 240px, mục 40px | 232px; vùng logo cao 56px khớp dải đầu trang; mục 40px chữ 14px |
+
+**Implement, phần chung (file của U2):**
+
+- [x] `styles/tokens.css`, `styles/base.css`, `styles/components.css`: áp bảng trên; thêm `page-header` dạng dải trắng, `panel__header/__body/__footer`, `form--narrow`, `select` có mũi tên SVG; giữ mọi biến màu đã đo tương phản (17/17 đạt), viền focus 3px, `prefers-reduced-motion`, bố cục 320px.
+- [x] `components/PageHeader.tsx`: nhận `headingRef` từ trang (trang gọi `usePageTitle` như trước) thay vì tự gọi bên trong, để trang còn đưa được focus về tiêu đề sau khi xóa (WCAG 2.4.3). Sửa `pages/NotFoundPage.tsx` theo cách mới.
+
+**Implement, trang phòng ban (U3):**
+
+- [x] `pages/departments/DepartmentsPage.tsx`: `PageHeader` (đường dẫn "Nhân sự > Phòng ban", mô tả "Danh mục phòng ban dùng khi gán nhân viên.", nút "Thêm phòng ban" có icon); tấm có thanh công cụ ghi "N phòng ban"; bảng cột "Tên phòng ban" + "Thao tác"; nút dòng "Sửa"/"Xóa" nhỏ có icon; xóa qua `ConfirmDialog` ("Xóa phòng ban?" — "Phòng ban **<tên>** sẽ bị xóa vĩnh viễn. Thao tác này không thể hoàn tác." — [Hủy] [Xóa phòng ban]); lỗi xóa (409, mạng) hiện khung lỗi có icon trên tấm; trạng thái tải/lỗi/trống nằm trong tấm. Giữ nguyên `data-testid`, luồng tải/tải lại/hủy lời gọi, focus về tiêu đề sau khi xóa.
+- [x] `pages/departments/DepartmentFormPage.tsx`: `PageHeader` (đường dẫn "Nhân sự > Phòng ban > Thêm mới / Sửa", mô tả có câu "Trường có dấu * là bắt buộc."); form trong tấm ("Thông tin phòng ban"), ô "Tên phòng ban" gợi ý "Tối đa 100 ký tự, không trùng với phòng ban khác."; chân tấm [Hủy] [Lưu phòng ban] (đang lưu: "Đang lưu…"); trạng thái tải / không tìm thấy / lỗi trong tấm. Giữ nguyên luật kiểm, `data-testid`, khung tóm tắt lỗi.
+
+**Kiểm (sau khi code; không có test tự động React theo `team.md`):**
+
+- [x] `npm --prefix frontend run verify` (96 test backend, typecheck, lint, Prettier, build); `audit --omit=dev`; vẫn chỉ 3 gói chạy.
+- [x] Playwright (Chromium, backend + PostgreSQL thật): danh sách đúng thứ tự, "4 phòng ban"; thêm (trống → lỗi cạnh ô + khung tóm tắt nhận focus, không gửi request; "kế toán" → 409 cạnh ô; hợp lệ → Toast, về danh sách); sửa; xóa: K9 của U2 (hộp: focus ở "Hủy", Tab trong hộp, Esc đóng và focus về nút Xóa, nút giữ focus khi đang xóa), xóa phòng ban còn nhân viên → khung lỗi có tên, dòng còn; K11–K14 của U2; 320px; kiểm DOM (lang, `h1`, landmark, nhãn, `caption`, không trùng id); đo lại tương phản; console 0 lỗi 0 cảnh báo. Dữ liệu thử tên giả, thử xong xóa.
+- [x] Chụp ảnh trước/sau (danh sách, form, form có lỗi, hộp xác nhận, 320px) để Hiệp xem.
+- [x] Cập nhật `unit-test-instructions.md` (mục giao diện), `code-summary.md` (mục Step 10), `source-manifest.json`, `traceability.json`.
+
+**Không đổi:** API, `client.ts`, `api/departments.ts`, luật kiểm `validateDepartment.ts`, backend, test backend, đường dẫn trang.
 
 ## Không làm trong U3
 

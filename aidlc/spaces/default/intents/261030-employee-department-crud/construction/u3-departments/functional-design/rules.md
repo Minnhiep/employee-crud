@@ -93,9 +93,9 @@ rules:
     statement: Không xóa được phòng ban còn nhân viên (U3 chuẩn bị, U4 kích hoạt)
     category: constraint
     applies_to: DELETE /api/departments/{id}
-    trigger: Database báo vi phạm khóa ngoại fk_employees_department khi xóa (23503)
+    trigger: Database báo vi phạm khóa ngoại fk_employees_department khi xóa (23001; đính chính Build and Test 03/11/2026, trước ghi 23503)
     logic: >
-      U3 bắt DbUpdateException có PostgresException 23503 / fk_employees_department ngay ở thao tác xóa và ném lỗi xung đột
+      U3 bắt DbUpdateException có PostgresException 23503 hoặc 23001 / fk_employees_department ngay ở thao tác xóa và ném lỗi xung đột
       title "Không thể xóa phòng ban", detail "Không thể xóa phòng ban \"<tên>\" vì vẫn còn nhân viên." (đường dự phòng khi hai thao tác chen nhau).
       U4 thêm bước kiểm còn nhân viên TRƯỚC khi xóa (C4 change_by_u4), cùng lời báo. Trước U4 chưa có bảng nhân viên nên nhánh này chưa xảy ra.
     violation: API 409; giao diện hiện lỗi role="alert" ở đầu trang, dòng vẫn còn
@@ -217,7 +217,7 @@ rules:
 | BR2.2 | Không tìm thấy | 404 "Không tìm thấy phòng ban có mã {id}." |
 | BR2.3 | Mã thành công | 200 / 201 + Location / 200 / 204 |
 | BR2.4 | Xóa | Xóa hẳn |
-| BR2.5 | Còn nhân viên | 409 "Không thể xóa phòng ban" (U3 bắt 23503, U4 kiểm trước) |
+| BR2.5 | Còn nhân viên | 409 "Không thể xóa phòng ban" (U3 bắt 23503/23001, U4 kiểm trước) |
 | BR2.6 | `ExistsAsync` | Cho U4 dùng |
 | BR3.1 | Bảng, chỉ mục | `departments`, `ux_departments_name` trên `lower(name)` |
 | BR3.2 | Dữ liệu mẫu | 4 phòng ban, id do database cấp |

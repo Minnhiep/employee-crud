@@ -105,15 +105,22 @@ Xóa phòng ban không còn nhân viên vẫn dùng test có sẵn của U3. M�
 **API** (curl/Postman, backend chạy bằng `dotnet run --project backend/EmployeeCrud.Api --launch-profile http`): các lời gọi ở Step 6 của kế hoạch, gồm tìm `đỗ`/`ĐỖ`/`đỗ văn`/`do van`, `%25`, `_`, xóa phòng ban còn nhân viên → 409; mỗi lời gọi ≤ 1 giây, kể cả với 1.000 dòng.
 
 **Giao diện** (backend đang chạy, mở `http://localhost:5173/employees`):
-1. Chưa có ai: "Chưa có nhân viên nào." + "Thêm nhân viên".
+1. Chưa có ai: "Chưa có nhân viên nào" + "Thêm nhân viên đầu tiên và chọn phòng ban cho họ." + nút "Thêm nhân viên".
 2. Thêm: bỏ trống → lỗi cạnh ô, khung tóm tắt nhận focus. Email `a@b` → "Email không đúng định dạng". Email đã có (khác hoa thường) → 409 hiện cạnh ô Email. Hợp lệ → về danh sách, "Đã thêm nhân viên ...". DevTools Network không báo lỗi CORS.
 3. Lỗi từ API vẫn còn khi rời ô mà chưa sửa; sửa ô thì lỗi đó mới mất.
 4. Bấm đúp Lưu nhanh → Network chỉ có **một** POST.
 5. Ô Phòng ban: tạm thời không có phòng ban nào (hoặc tắt backend lúc mở form) → hiện dòng hướng dẫn kèm liên kết / dòng lỗi + "Thử lại", nút Lưu khóa.
-6. Tìm: gõ "an" rồi Enter → địa chỉ có `?search=an`, dòng "Đang hiện N nhân viên". Back → về kết quả trước; F5 → giữ kết quả. Không khớp → "Không tìm thấy nhân viên phù hợp với "...". " + "Xóa tìm kiếm".
+6. Tìm: gõ "an" rồi Enter → địa chỉ có `?search=an`, đầu tấm ghi "Tìm thấy N nhân viên", **focus vẫn ở ô tìm**. Back → về kết quả trước và chữ trong ô đổi theo; F5 → giữ kết quả. Không khớp → "Không tìm thấy nhân viên phù hợp" + `Không có họ tên hoặc email nào chứa "...".` + "Xóa tìm kiếm"; bấm "Xóa tìm kiếm" → về danh sách đầy đủ, ô tìm rỗng và nhận focus.
 7. Sửa: form điền sẵn 3 ô, phòng ban chọn sẵn; lưu → "Đã cập nhật ...". Mở `/employees/99999/edit` và `/employees/abc/edit` → "Không tìm thấy nhân viên". Từ form sửa người A, gõ địa chỉ sửa người B → form nạp lại đúng người B.
-8. Xóa: hộp xác nhận; Hủy → không làm gì. OK → dòng biến mất **không cần F5**, chuỗi tìm vẫn giữ, Toast hiện, focus về tiêu đề.
+8. Xóa: hộp "Xóa nhân viên?" ghi tên in đậm, focus ở "Hủy"; Hủy hoặc Esc → không làm gì, focus về nút Xóa của dòng đó. "Xóa nhân viên" → dòng biến mất **không cần F5**, chuỗi tìm vẫn giữ, thông báo góc dưới phải, focus về tiêu đề.
 9. Trang Phòng ban: xóa phòng ban còn nhân viên → lỗi `role="alert"` có tên phòng ban, dòng vẫn còn.
 10. Tắt backend rồi F5 → "Không kết nối được máy chủ, vui lòng thử lại" + "Thử lại".
 11. Chỉ dùng bàn phím: đi được tới mọi ô và nút; trình đọc màn hình đọc "Sửa nhân viên <tên>".
 12. Lighthouse trên `npm --prefix frontend run preview` (cổng 5173), trang `/employees`: Performance ≥ 90.
+
+**Giao diện sau Step 10** (chuẩn chung với trang phòng ban):
+
+13. Trang danh sách: dải đầu trang trắng có "Nhân sự > Nhân viên", tiêu đề, mô tả, nút "Thêm nhân viên" bên phải; tấm "Danh sách nhân viên" có số dòng, thanh công cụ có ô tìm (icon kính lúp không đè chữ); bảng có vòng chữ cái đầu ("Đỗ Văn An" → "ĐA"), cột "Thao tác" căn phải.
+14. Form: tấm "Thông tin nhân viên", hai cột trên màn rộng (Họ tên | Email, rồi Phòng ban), một cột dưới 960px; chân tấm [Hủy] [Lưu nhân viên]. Ô Phòng ban lỗi nạp: chữ lỗi và nút "Thử lại" thẳng hàng. Chưa chọn phòng ban: chữ "Chọn phòng ban" mờ như chữ mẫu; chọn rồi thì đậm. Trang sửa ghi "Cập nhật thông tin của <họ tên>."; form phòng ban: ô tên rộng bằng một cột như ô "Họ tên", trang sửa ghi "Cập nhật tên phòng ban <tên>.".
+15. Họ tên 100 ký tự và email dài: bảng tự xuống dòng, nút Sửa/Xóa vẫn trong màn hình ở 1024px trở lên; ở 320px bảng cuộn ngang trong tấm, trang không cuộn ngang.
+16. Kéo hẹp/rộng cửa sổ Chrome thường (taskbar ở cạnh nào cũng vậy): trang co theo chỗ còn lại, không bị che bên phải.

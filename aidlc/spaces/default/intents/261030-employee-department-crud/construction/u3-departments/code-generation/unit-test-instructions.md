@@ -80,11 +80,12 @@ Mỗi test theo mẫu Arrange / Act / Assert. Dữ liệu được nạp riêng 
 **API** (curl/Postman, backend chạy bằng `dotnet run --project backend/EmployeeCrud.Api --launch-profile http`): các lời gọi ở Step 6 của kế hoạch, mỗi lời gọi ≤ 1 giây.
 
 **Giao diện** (backend đang chạy, mở `http://localhost:5173/departments`):
-1. Danh sách hiện đúng thứ tự Kế toán, Kinh doanh, Kỹ thuật, Nhân sự, kèm dòng "Có 4 phòng ban".
+1. Dải đầu trang: đường dẫn "Nhân sự > Phòng ban", tiêu đề, mô tả, nút "Thêm phòng ban". Tấm "Danh sách phòng ban" ghi "4 phòng ban"; bảng đúng thứ tự Kế toán, Kinh doanh, Kỹ thuật, Nhân sự; cột "Thao tác" căn phải với nút "Sửa", "Xóa" nhỏ có icon. (Cập nhật theo Step 10.)
 2. Thêm: bỏ trống → lỗi cạnh ô và khung tóm tắt nhận focus. Nhập "kế toán" → 409 hiện cạnh ô. Nhập tên mới → về danh sách, hiện "Đã thêm phòng ban ...". Trong DevTools, tab Network không báo lỗi CORS.
 3. Bấm đúp Lưu nhanh → Network chỉ có **một** POST.
 4. Sửa: form điền sẵn tên; lưu → hiện "Đã cập nhật ...". Mở `/departments/99999/edit` → báo "Không tìm thấy phòng ban".
-5. Xóa: hộp xác nhận; Hủy → không làm gì. OK → dòng biến mất **không cần F5**, Toast hiện, focus về tiêu đề.
+5. Xóa: hộp xác nhận "Xóa phòng ban?" ghi tên phòng ban, focus ở nút "Hủy"; Tab chỉ đi trong hộp; Esc hoặc "Hủy" → không làm gì, focus về nút Xóa đã mở hộp. "Xóa phòng ban" → dòng biến mất **không cần F5**, thông báo hiện góc dưới phải, focus về tiêu đề; bấm "Đóng thông báo" thì focus về vùng nội dung chính (không rơi về đầu trang). (Cập nhật theo Step 10: hộp thoại thay `window.confirm`.)
+5b. Form thêm/sửa: dải đầu trang "Nhân sự > Phòng ban > Thêm mới / Sửa"; form trong tấm "Thông tin phòng ban" rộng tối đa 880px; chân tấm "Hủy" rồi "Lưu phòng ban"; lỗi cạnh ô có icon, khung tóm tắt có icon, bấm một lỗi trong khung thì focus vào ô.
 6. Tắt backend rồi F5 → hiện "Không kết nối được máy chủ, vui lòng thử lại" + "Thử lại". Bật lại backend và bấm "Thử lại" → có dữ liệu.
 7. Chỉ dùng bàn phím: đi được tới mọi nút; trình đọc màn hình đọc nhãn "Sửa phòng ban Kế toán".
 8. Lighthouse trên `npm --prefix frontend run preview` (cổng 5173): Performance ≥ 90.

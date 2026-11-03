@@ -12,13 +12,13 @@
     { "path": "backend/EmployeeCrud.Api/Program.cs" },
     { "path": "backend/EmployeeCrud.Api.Tests/Employees/" },
     { "path": "backend/EmployeeCrud.Api.Tests/TestSupport/" },
-    { "path": "backend/EmployeeCrud.Api.Tests/Departments/TestDb.cs" },
-    { "path": "backend/EmployeeCrud.Api.Tests/Departments/ThrowingAppDbContext.cs" },
     { "path": "backend/EmployeeCrud.Api.Tests/Departments/DepartmentServiceTests.cs" },
     { "path": "frontend/src/api/employees.ts" },
     { "path": "frontend/src/components/SearchBox.tsx" },
     { "path": "frontend/src/pages/employees/" },
-    { "path": "frontend/src/pages/EmployeesPage.tsx" },
+    { "path": "frontend/src/pages/departments/DepartmentFormPage.tsx" },
+    { "path": "frontend/src/pages/departments/DepartmentsPage.tsx" },
+    { "path": "frontend/src/styles/components.css" },
     { "path": "frontend/src/App.tsx" }
   ]
 }

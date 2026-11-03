@@ -13,6 +13,14 @@
 - 2026-11-01T15:45:00Z [unit u2-web-shell] — Giữa lúc build, Hiệp đổi frontend sang TypeScript (sửa project.md Tech Stack/Forbidden, team.md Code Style, tài liệu U2, kế hoạch; build chạy tiếp với kế hoạch đã sửa). Vite mới tạo oxlint → dùng ESLint 10 (Hiệp: "chuẩn nhất khi đi làm"); jsx-a11y chưa hỗ trợ ESLint 10 nên bỏ. FormField đổi sang render-prop để TypeScript kiểm được thuộc tính ô. Typecheck dùng `tsc -p` thay `tsc -b`.
 - 2026-11-01T10:10:00Z [unit u1-backend-platform] — Agent bị chặn quyền khi chạy `dotnet new webapi`; Hiệp chọn "hỏi từng lệnh", nên phần còn lại chạy ở phiên chính. Thêm theo lựa chọn của Hiệp: ghim `Microsoft.EntityFrameworkCore` 10.* (hết xung đột 10.0.4/10.0.14); câu hướng dẫn thiếu chuỗi kết nối bỏ phần `Password=` để quét bí mật ra 0 dòng. Tool manifest nằm ở `dotnet-tools.json` gốc (.NET 10 mặc định). `StatusCodeProblemWriter` ghi JSON trực tiếp vì `IProblemDetailsService` giao 415 của controller cho bộ ghi MVC đang tắt (SuppressMapClientErrors) → thân rỗng.
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
+- 2026-11-02T18:50:00Z — [unit u1-backend-platform] Loop-back 1 từ Build and Test: làm Step 9 ngay ở phiên chính (không giao developer agent), như Hiệp đã chọn từ U1; chỉ reviewer là agent riêng. Viết test hồi quy 400 trước khi sửa để chứng minh gốc (`[Produces]` ghi đè `ObjectResult`), đỏ rồi xanh.
+- 2026-11-02T18:50:00Z — [unit u1-backend-platform] Thêm `JsonSerializerOptions` (`UnsafeRelaxedJsonEscaping`) cho `JsonResult` sau khi kiểm thật thấy chữ tiếng Việt bị mã thoát; Hiệp chọn "Sửa luôn" qua form.
+
+- 2026-11-02T19:40:00Z — [unit u2-web-shell] Làm lại giao diện theo yêu cầu Hiệp (Change Request ở Build and Test): thay favicon Vite, thêm theme-color, bỏ khung focus ở h1/main, K9 chuyển sang U3, thanh bên dùng <header>; ghi ở code-summary §4c.
+
+- 2026-11-03T02:20:00Z — [unit u4-employees] Step 10 khác kế hoạch, đều phát hiện khi tự kiểm hoặc Hiệp chụp ảnh: icon kính lúp đè chữ (bộ chọn CSS yếu hơn quy tắc chung nằm sau); họ tên/email dài làm bảng tràn ở 1280px; nút "Thử lại" lệch 4px. Hiệp nhờ soát "chuẩn công ty lớn" và giao em quyết (form d8187086): ô tên phòng ban rộng một cột (sửa `DepartmentFormPage.tsx` của U3 sau khi U3 đã duyệt), ô chọn trống chữ mờ, trang sửa ghi tên. Ảnh Hiệp chụp bị che bên phải là cửa sổ Playwright có khung đặt cứng, không phải lỗi bố cục; đã đóng cửa sổ kiểm thử để Hiệp xem bằng Chrome thường.
+
+- 2026-11-02T20:05:00Z — [unit u3-departments] Step 10 sửa thêm phần chung ngoài danh sách kế hoạch: icon tùy chọn của StatusMessage, Toast xuống góc dưới phải và giữ focus khi đóng; phát hiện khi tự soát ảnh và kiểm bàn phím. Ghi ở code-summary U3 §4b.
 
 ## Tradeoffs
 <!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->

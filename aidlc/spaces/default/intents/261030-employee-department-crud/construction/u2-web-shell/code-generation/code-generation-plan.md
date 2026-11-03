@@ -2,6 +2,7 @@
 
 ## Summary
 
+- Redesign (Step 9, Hiệp yêu cầu 03/11/2026): làm lại giao diện chuẩn phần mềm quản trị doanh nghiệp: khung có thanh bên trái + thanh trên có đường dẫn trang, hệ màu/chữ/khoảng cách mới, icon SVG tự vẽ thay ký tự "(!)", hộp xác nhận xóa dạng hộp thoại, câu chữ viết lại; không thêm thư viện, giữ mọi mục tiêu WCAG/Lighthouse
 - Builds: khung giao diện React (Vite, **TypeScript strict**): menu, liên kết bỏ qua, router với trang 404, component dùng chung có kiểu props, `client.ts` gọi API, CSS chung
 - Touches: thư mục mới `frontend/` (src/api, components, hooks, pages, styles; tsconfig, vite.config.ts, eslint.config.js, .env.development, package.json); không sửa backend
 - Tests: không có test tự động cho React (team.md); kiểm bằng `npm run lint` (ESLint + typescript-eslint), `npm run format:check`, `npm run build` (gồm kiểm kiểu `tsc`) và 8 bước kiểm tay trên trình duyệt
@@ -12,8 +13,8 @@
 
 | Story / AC | Phần U2 làm | Bước |
 |---|---|---|
-| US4.1: AC4.1.1, AC4.1.3 | `ErrorSummary`, `FormField`, `splitErrors`; `client.js` giữ lời báo API | 4, 5 |
-| US4.2: AC4.2.1–AC4.2.3 | `StatusMessage`; lỗi mạng trong `client.js` | 4, 5 |
+| US4.1: AC4.1.1, AC4.1.3 | `ErrorSummary`, `FormField`, `splitErrors`; `client.ts` giữ lời báo API | 4, 5 |
+| US4.2: AC4.2.1–AC4.2.3 | `StatusMessage`; lỗi mạng trong `client.ts` | 4, 5 |
 | US4.3: AC4.3.1, AC4.3.3 | `AppLayout`, `NavMenu`, router, trang 404, chữ tiếng Việt | 3, 6 |
 | US4.4: AC4.4.1, AC4.4.2 | `useSubmitGuard`, kiểu `btn[disabled]` | 2, 5 |
 | US4.5: AC4.5.1 | `Toast` | 5 |
@@ -24,7 +25,7 @@
 0. **Bản sửa ngày 2026-11-01 (anh yêu cầu giữa lúc làm):**
    - **TypeScript thay JavaScript** (anh chọn; `project.md`, `team.md` đã sửa luật): file `.tsx`/`.ts`, `tsconfig.json` bật `strict`, `npm run build` chạy `tsc -b` để kiểm kiểu trước khi build, ESLint thêm `typescript-eslint`. Các file `.jsx`/`.js` em đã viết theo kế hoạch cũ sẽ được chuyển sang `.tsx`/`.ts` và khai báo kiểu.
    - **ESLint thay oxlint:** bản Vite mới tạo sẵn oxlint; anh bảo chọn công cụ chuẩn nhất khi đi làm, nên em dùng ESLint 10 (bản đang được hỗ trợ). Không dùng `eslint-plugin-jsx-a11y` vì chưa hỗ trợ ESLint 10; accessibility vẫn kiểm bằng Lighthouse và danh sách WCAG ở Build and Test.
-   - Gói đã cài thật: React 19.3, React Router 8.5, Vite 8.3, Prettier 3.9, ESLint 10.14. `npm audit`: 0 lỗ hổng ở gói chạy trong trình duyệt; 6 mức "moderate" trong công cụ ESLint (thư viện `minimatch`, chỉ chạy trên máy dev), không sửa bằng `--force`.
+   - Gói đã cài thật: React 19.3, React Router 8.5, Vite 8.3, Prettier 3.9, ESLint 10.14. `npm audit`: 0 lỗ hổng ở gói chạy trong trình duyệt; 6 mức "moderate" trong công cụ ESLint lúc mới cài ESLint, 12 mức sau khi cài thêm `typescript-eslint` (số cuối cùng, xem `code-summary.md` mục 4; đều ở thư viện `minimatch`, chỉ chạy trên máy dev), không sửa bằng `--force`.
 1. **Lệnh chạy ở phiên chính, anh duyệt từng lệnh** (như anh chọn ở U1).
 2. **`npm create vite@latest` tải bộ tạo dự án vào bộ đệm npm** của máy để chạy một lần; không cài công cụ toàn máy. Mọi gói của dự án vào `frontend/node_modules/` (cục bộ).
 3. **Gói thêm:** `react-router` (điều hướng); khi phát triển: `prettier`, `typescript`, `typescript-eslint`, `eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `globals`. Ngoài ra chỉ có gói Vite tạo sẵn (React, React DOM, kiểu `@types/react`).
@@ -40,7 +41,7 @@
 - [x] `npm install` trong `frontend/`, rồi `npm install react-router` và `npm install -D prettier`; thay oxlint bằng ESLint 10 (`eslint`, `@eslint/js`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `globals`) với `eslint.config.js`.
 - [x] **TypeScript:** `npm install -D typescript typescript-eslint`; `tsconfig.json` (strict, `noUncheckedIndexedAccess`, `jsx: react-jsx`, `moduleResolution: bundler`, `noEmit`, kèm `vite-env.d.ts` khai báo `VITE_API_BASE_URL`); script `build` = `tsc -b && vite build`, thêm `typecheck` = `tsc -b`; `eslint.config.js` dùng cấu hình `typescript-eslint` cho `**/*.{ts,tsx}`.
 - [x] `vite.config.ts`: `server` và `preview` đều `port: 5173`, `strictPort: true` (NFR7.1).
-- [x] `.env.development`: `VITE_API_BASE_URL=http://localhost:5081`, kèm comment: giá trị này phải khớp giá trị mặc định trong `src/api/client.js` (Q1 = A, NFR7.3).
+- [x] `.env.development`: `VITE_API_BASE_URL=http://localhost:5081`, kèm comment: giá trị này phải khớp giá trị mặc định trong `src/api/client.ts` (Q1 = A, NFR7.3).
 - [x] `package.json`: thêm script `format` (`prettier --write .`) và `format:check` (`prettier --check .`); thêm `"engines": { "node": ">=24" }`. File `.prettierignore` loại `dist`.
 - [x] `index.html`: `<html lang="vi">`, `<meta charset>`, `viewport`, `<meta name="description">`, `<title>Quản lý nhân sự</title>`; giữ favicon của Vite (NFR8.4, BR1.5).
 - [x] Bỏ file mẫu của template (`App.css`, `index.css`, logo trong `src/assets`, nội dung đếm số trong `App.jsx`).
@@ -65,7 +66,7 @@
 
 ### Step 4: Gọi API (implement)
 
-- [x] `src/api/client.js`: `apiGet`, `apiPost`, `apiPut`, `apiDelete`, mỗi hàm nhận thêm `{ signal }` tùy chọn; lớp `ApiError` (`kind`: `network` \| `server` \| `client` \| `aborted`; `status`; `title`; `detail`; `errors`; `message`).
+- [x] `src/api/client.ts`: `apiGet`, `apiPost`, `apiPut`, `apiDelete`, mỗi hàm nhận thêm `{ signal }` tùy chọn; lớp `ApiError` (`kind`: `network` \| `server` \| `client` \| `aborted`; `status`; `title`; `detail`; `errors`; `message`).
   - Địa chỉ gốc `import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5081"`; comment: backend chạy bằng `dotnet run` (hồ sơ `http`), giao diện phải mở đúng `http://localhost:5173` (không `127.0.0.1`) vì CORS so nguyên văn.
   - Hạn 10 giây bằng `AbortController`, chỉ hủy hẹn giờ sau khi đọc xong body; gộp với `signal` của trang. Hủy do trang → `ApiError` `kind: "aborted"` (trang bỏ qua, không hiện lỗi); quá hạn hoặc fetch bị từ chối → `network` "Không kết nối được máy chủ, vui lòng thử lại" (BR2.2, BR2.3).
   - 2xx: 200/201 đọc JSON, 204 trả `null`; body không đọc được → `server` với câu lỗi mạng.
@@ -94,13 +95,50 @@
 ### Step 7: Cấu hình môi trường, quét và gói phụ thuộc
 
 - [x] `npm audit` trong `frontend/`, ghi kết quả (không `audit fix --force`).
-- [x] Quét ở thư mục gốc: `git grep --untracked -i -n -E "(password|pwd)\s*=" -- frontend` → 0 dòng; `git grep --untracked -n -E "dangerouslySetInnerHTML|innerHTML|eval\(|new Function" -- frontend/src` → 0 dòng; `git grep --untracked -n "5081" -- frontend` → đúng hai nơi (`.env.development`, `client.js`).
+- [x] Quét ở thư mục gốc: `git grep --untracked -i -n -E "(password|pwd)\s*=" -- frontend` → 0 dòng; `git grep --untracked -n -E "dangerouslySetInnerHTML|innerHTML|eval\(|new Function" -- frontend/src` → 0 dòng; `git grep --untracked -n "5081" -- frontend` → giá trị thật ở đúng hai nơi (`.env.development`, `client.ts`), cộng một dòng comment trong `client.ts` nhắc giữ hai nơi khớp nhau.
 - [x] Kiểm backend không bị ảnh hưởng: `dotnet test backend/EmployeeCrud.slnx` vẫn 19/19.
 
 ### Step 8: Tài liệu và truy vết
 
 - [x] Viết `code-summary.md`: file đã tạo, phiên bản gói thật, quyết định chính, kết quả lint/build/kiểm tay/audit, phần "cài đặt frontend" làm nháp cho README (U5), và các việc chuyển cho U3/U4 (kiểm CORS thật từ 5173 bằng một POST; kiểm bấm đúp chỉ một request; kiểm xóa xong dòng biến mất không cần F5; hạn 10 giây; đo lại Lighthouse).
 - [x] Ghi `source-manifest.json` và `traceability.json`.
+
+### Step 9: Làm lại giao diện chuẩn doanh nghiệp (Hiệp yêu cầu, 03/11/2026)
+
+> **Vì sao có bước này:** ở Build and Test, Hiệp thấy giao diện "như con nít, như AI làm" và chọn (form 08aacca2, 1af678f9): quay lại Code Generation của U2, U3, U4; bố cục admin có thanh bên; tự viết CSS (không thêm thư viện, giữ NFR5.4); sửa cả biểu tượng, màu/phông/khoảng cách, bố cục, câu chữ; **chỉ đổi giao diện, không thêm tính năng** (`project.md` Mandated). U2 làm phần khung và component dùng chung; U3, U4 áp vào trang của mình ở bước Code Generation của chúng.
+
+**Hướng thiết kế** (phần mềm nhân sự nội bộ cho phòng HR; việc chính: tra và sửa hồ sơ nhanh, ít bấm, ít đọc):
+
+| Nhóm | Chọn | Vì sao |
+|---|---|---|
+| Màu | Nền ứng dụng `#F3F5F8`; khối nội dung trắng `#FFFFFF`; thanh bên xanh đậm `#12304A`; màu hành động `#0F62C5`; chữ `#1B2430`, chữ phụ `#5A6472`; viền ô nhập `#7B8794`, đường kẻ bảng `#E1E6EC`; đỏ `#B42318`, xanh lá `#067647` | Một màu thương hiệu duy nhất cho hành động, còn lại là xám trung tính: kiểu phần mềm quản trị thật. Mọi cặp chữ/nền ≥ 4.5:1, viền ô nhập ≥ 3:1 (WCAG 1.4.3, 1.4.11) |
+| Chữ | Giữ phông hệ thống (`"Segoe UI Variable", "Segoe UI", system-ui`): chữ thân 15px, bảng 14px, tiêu đề trang 22px đậm 600; số dùng `tabular-nums` | Không tải phông ngoài (chạy offline, Lighthouse giữ 100); Segoe UI hiển thị tiếng Việt tốt trên Windows |
+| Bố cục | Thanh bên 240px (logo + menu có icon) cố định bên trái; thanh trên có đường dẫn trang ("Nhân sự / Nhân viên / Thêm mới"); nội dung trên nền xám, mỗi khối là một tấm trắng viền mảnh, bo 8px (nút, ô nhập bo 6px). Dưới 960px thanh bên thành thanh ngang trên cùng | Bố cục quen thuộc của phần mềm quản trị (MISA, Base.vn, Ant Design Pro); 320px vẫn không cuộn ngang (WCAG 1.4.10) |
+| Điểm nhấn | Một chỗ: thanh bên xanh đậm có dấu logo; còn lại tiết chế, không đổ bóng (trừ hộp thoại), không gradient, không chữ in hoa toàn bộ, không mũi tên "→" | Tránh kiểu "giao diện AI" đại trà |
+
+**Implement (U2):**
+
+- [x] `styles/tokens.css`: thay bộ biến theo bảng trên (màu, cỡ chữ, khoảng cách 4/8/12/16/24/32, bo góc 6/8, chiều cao điều khiển 2.25rem cho nút/ô nhập trong bảng và 2.5rem trong form, độ rộng thanh bên).
+- [x] `styles/base.css`: nền ứng dụng, cỡ chữ mới; giữ nguyên `:focus-visible` 3px, `.sr-only`, liên kết bỏ qua, `prefers-reduced-motion`.
+- [x] `styles/components.css`: viết lại các khối: `layout` (lưới thanh bên + thanh trên + nội dung), `sidebar`, `topbar`/`breadcrumb`, `page-header` (tiêu đề + mô tả ngắn + nút chính), `panel` (tấm trắng, có phần đầu tấm), `toolbar` (ô tìm có icon kính lúp, đếm kết quả bên phải), `table` (đầu cột nền xám nhạt, dòng nhạt khi rê chuột, cột thao tác là nút chữ nhỏ có icon), `btn` (primary / secondary / ghost / ghost-danger / danger, cỡ sm và md), `badge` (tên phòng ban dạng thẻ), `avatar` (chữ cái đầu của họ tên), `field` (form lưới 2 cột trên màn rộng), `form-actions` (thanh nút cuối tấm, căn phải), `alert`, `status` (tải / lỗi / trống có icon), `toast` (góc trên phải), `dialog`.
+- [x] `components/Icon.tsx` (mới): bộ icon SVG tự vẽ, nét 1.75px, `aria-hidden="true"`: users, building, plus, search, edit, trash, alert-circle, check-circle, x, chevron-right, refresh, inbox. Không thêm gói icon.
+- [x] `components/AppLayout.tsx`, `components/NavMenu.tsx`: khung thanh bên + thanh trên; menu dọc có icon, mục đang mở có nền + vạch trái + `aria-current` (không chỉ dựa vào màu); giữ liên kết bỏ qua và `main#noi-dung`.
+- [x] `components/PageHeader.tsx` (mới): đường dẫn trang (`nav aria-label="Đường dẫn"`), `h1` nhận focus khi đổi trang, dòng mô tả, chỗ đặt nút chính. U3, U4 dùng.
+- [x] `components/ConfirmDialog.tsx` (mới): hộp xác nhận dùng thẻ `<dialog>` gốc của trình duyệt (`showModal()`: tự khóa nền, tự giữ focus trong hộp, Esc để đóng); tiêu đề, nội dung có tên mục, nút "Hủy" (nhận focus đầu tiên, an toàn hơn) và nút đỏ "Xóa …"; trả focus về nút đã mở. Thay `window.confirm` ở U3, U4 vì hộp thoại mặc định của trình duyệt trông không giống phần mềm thật và không ghi được tên nút rõ nghĩa.
+- [x] `StatusMessage`, `Toast`, `ErrorSummary`, `FormField`, `DataTable`: đổi sang icon SVG (thay "(!)", "✓"), kiểu mới, giữ nguyên props và hành vi đã kiểm (role="status"/"alert", `aria-describedby`, `aria-invalid`, focus vào khung tóm tắt lỗi). `DataTable` thêm chỗ đặt thanh công cụ trong tấm.
+- [x] `pages/NotFoundPage.tsx`: trạng thái trống có icon, câu "Đường dẫn này không tồn tại hoặc đã bị đổi.", nút "Về danh sách nhân viên".
+- [x] Câu chữ chung: "Vui lòng sửa các lỗi sau:" → "Chưa lưu được. Kiểm tra lại các trường sau:"; "(* là ô bắt buộc)" → "Trường có dấu * là bắt buộc."; đếm kết quả "Có N …" → "N nhân viên" ở thanh công cụ; "Đang tải..." → "Đang tải dữ liệu…". Lời báo lỗi nghiệp vụ từ API giữ nguyên.
+
+**Kiểm (sau khi code; không có test tự động React theo `team.md`):**
+
+- [x] `npm --prefix frontend run verify` (typecheck, lint 0 cảnh báo, Prettier, build, 96 test backend); `npm --prefix frontend audit --omit=dev`; `package.json` vẫn chỉ 3 gói chạy.
+- [x] Playwright (Chromium) trên `npm run dev`: K1–K8 làm lại theo bố cục mới, K10 (320px: thanh bên thành thanh trên, không cuộn ngang), kiểm DOM 6 trang như Build and Test (lang, `h1`, tiêu đề tab, landmark, nhãn, `caption`/`scope`, không trùng id); chụp ảnh trước/sau để Hiệp xem.
+- [ ] K9 (hộp xác nhận: Tab ở trong hộp, Esc đóng, focus về nút Xóa ban đầu, nút giữ focus khi đang xóa): **chưa kiểm ở U2** vì chưa trang nào dùng `ConfirmDialog`; kiểm ở U3, trang đầu tiên dùng hộp này (rà soát U2, R-06).
+- [x] Cập nhật `unit-test-instructions.md` (K1–K10), `code-summary.md` (mục Step 9), `source-manifest.json`, `traceability.json`.
+
+**Ảnh hưởng tới U3, U4 (làm ở Code Generation của từng Unit sau U2):** trang danh sách và form dùng `PageHeader`, `panel`, `toolbar`, `ConfirmDialog`, `avatar`, `badge`; câu chữ trang viết lại; `data-testid` giữ nguyên.
+
+**Không đổi:** API, `client.ts` (cách gọi API, hạn 10 giây), router và đường dẫn, luật kiểm dữ liệu, backend, test backend.
 
 ## Không làm trong U2
 

@@ -54,6 +54,6 @@
     { "id": "BR1.4", "status": "N/A", "target": "ràng buộc dữ liệu requirements mục 2 (email bắt buộc), kiểm cùng AC2.2.3" },
     { "id": "BR1.5", "status": "N/A", "target": "ràng buộc dữ liệu requirements mục 2 (email ≤ 254)" },
     { "id": "BR2.6", "status": "N/A", "target": "luật kỹ thuật NFR3 / C3: hai thao tác chen nhau không ra 500" },
-    { "id": "BR3.4", "status": "N/A", "target": "luật migration C5, FR1.7 (không nhân viên mẫu, AC1.5.2 thuộc story của U3)" }
+    { "id": "BR3.4", "status": "N/A", "target": "luật migration C5, FR1.7 (không nhân viên mẫu). Đính chính Build and Test 03/11/2026: AC1.5.2 do U4 làm (migration CreateEmployees không chèn nhân viên; kiểm ở NFR1.2 của U4: GET /api/employees trả [] sau migration), không phải U3" }
   ]
 }

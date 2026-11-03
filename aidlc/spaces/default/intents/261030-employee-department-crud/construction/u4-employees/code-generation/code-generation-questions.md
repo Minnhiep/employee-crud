@@ -11,13 +11,13 @@ Approve the code plan for u4-employees?
 - Touches: `backend/EmployeeCrud.Api/Employees/`, `Migrations/`, `Departments/DepartmentService.cs`, `AppDbContext.cs`, `Program.cs` (1 dòng), `backend/EmployeeCrud.Api.Tests/Employees/`, `TestSuppor...
 - Tests: khoảng 35 unit test xUnit cho `EmployeeService` (kể cả Theory cho bộ ví dụ email) + 2 test thêm cho `DepartmentService`, độ phủ dòng mỗi service ≥ 80%; controller, migration, giao diện kiểm ...
 - > **Nguồn:** `functional-design/` (functional-spec W1–W5, rules BR1.1–BR4.9, entities, frontend-components, Q1–Q3), `nfr-requirements/` (gồm tech-stack-decisions NFR3.7, NFR3.8, NFR4.5–NFR4.7, NFR6...
-- Already changed before you approved (17 files): .playwright-mcp/console-2026-11-01T18-46-14-454Z.log, .playwright-mcp/console-2026-11-01T18-47-21-299Z.log, .playwright-mcp/console-2026-11-01T18-48-47-956Z.log, .playwright-mcp/console-2026-11-01T18-48-53-338Z.log, .playwright-mcp/console-2026-11-01T18-49-06-483Z.log, .playwright-mcp/page-2026-11-01T18-46-14-795Z.yml, .playwright-mcp/page-2026-11-01T18-46-25-407Z.yml, .playwright-mcp/page-2026-11-01T18-46-28-432Z.yml, .playwright-mcp/page-2026-11-01T18-46-38-374Z.yml, .playwright-mcp/page-2026-11-01T18-47-21-386Z.yml (and 7 more).
+- Already changed before you approved (10 files): .playwright-mcp/console-2026-11-02T19-16-00-473Z.log, .playwright-mcp/console-2026-11-02T20-03-16-098Z.log, .playwright-mcp/page-2026-11-02T20-03-16-479Z.yml, .playwright-mcp/u3-320.png, .playwright-mcp/u3-dialog.png, .playwright-mcp/u3-form-error.png, .playwright-mcp/u3-form.png, .playwright-mcp/u3-list-final.png, .playwright-mcp/u3-list-toast.png, .playwright-mcp/u3-list.png.
 
 Full plan: aidlc/spaces/default/intents/261030-employee-department-crud/construction/u4-employees/code-generation/code-generation-plan.md
 Test instructions: aidlc/spaces/default/intents/261030-employee-department-crud/construction/u4-employees/code-generation/unit-test-instructions.md
 
-[Approval Fingerprint]: sha256:v3:19943265ca288dae627e8cddcc2152f4edb1e632e0fe1b12d8d64c9bb4586578
-[Planned Source]: ebf1849a96f88fde64c869b589cfad7379cc44a7e8813384337542b8a98507cd
+[Approval Fingerprint]: sha256:v3:cd6242a5105e897d4d9b9e8fa6fc3a2e0e81bef6237442c5cc52b4439736a7e4
+[Planned Source]: 92140e07ea53a2e305748996636a75331b805dba441b91b90d0c74271b7d90ac
 
 - A. Approve Plan
 - B. Request Changes

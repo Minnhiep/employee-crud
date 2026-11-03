@@ -31,8 +31,8 @@ dotnet test backend/EmployeeCrud.Api.Tests/EmployeeCrud.Api.Tests.csproj --filte
 
 | Lớp test | Số test | Kiểm gì |
 |---|---|---|
-| `ErrorMapperTests` | 11 | Từng nhánh đổi lỗi: 404, 400, 409 có/không field, 23505 theo tên ràng buộc, 23505 tên lạ → 500, 23503 dự phòng → 409, `BadHttpRequestException` 400/413, lỗi lạ → 500 không lộ thông điệp |
-| `PipelineTests` | 8 | CORS trên phản hồi 500 và 404, Origin lạ không có header, 400 camelCase, JSON hỏng, 405, 415, thiếu chuỗi kết nối thì khởi động ném lỗi |
+| `ErrorMapperTests` | 12 | Từng nhánh đổi lỗi: 404, 400, 409 có/không field, 23505 theo tên ràng buộc, 23505 tên lạ → 500, 23503 dự phòng → 409, **23001 dự phòng → 409** (Loop-back 1), `BadHttpRequestException` 400/413, lỗi lạ → 500 không lộ thông điệp |
+| `PipelineTests` | 9 | CORS trên phản hồi 500 và 404, Origin lạ không có header, 400 camelCase, JSON hỏng, 405, 415, thiếu chuỗi kết nối thì khởi động ném lỗi, **400 từ controller gắn `[Produces("application/json")]` vẫn là `application/problem+json` có `type`, `traceId`** (Loop-back 1) |
 
 ## Giả lập (mock/stub)
 

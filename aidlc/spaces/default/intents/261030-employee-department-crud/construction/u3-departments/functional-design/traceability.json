@@ -37,7 +37,7 @@
     { "id": "AC5.2.1", "status": "N/A", "target": "delivered by u5-handover (danh sách API; U3 cung cấp JSON mẫu của C1)" },
     { "id": "AC5.2.2", "status": "OK", "target": "BR2.3" },
     { "id": "AC5.2.3", "status": "OK", "target": "BR2.2, BR1.4, BR2.5" },
-    { "id": "AC5.2.4", "status": "OK", "target": "BR2.3" },
+    { "id": "AC5.2.4", "status": "N/A", "target": "delivered by u1-backend-platform (trang OpenAPI ở Development, BR2.4 của U1) và u5-handover (đối chiếu đủ 10 thao tác); U3 chỉ góp 5 thao tác phòng ban có mã trạng thái (BR2.3). Đính chính Build and Test 03/11/2026, trước trỏ BR2.3" },
     { "id": "AC5.3.1", "status": "N/A", "target": "delivered by u5-handover (sơ đồ DB)" },
     { "id": "AC5.3.2", "status": "OK", "target": "BR3.1" },
     { "id": "AC5.3.3", "status": "OK", "target": "BR3.1" }

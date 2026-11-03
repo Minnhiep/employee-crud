@@ -86,6 +86,46 @@ Thêm `.playwright-mcp/` (log công cụ kiểm trình duyệt) vào cuối `.gi
 
 Điểm Minor chuyển cho U3/U4: đặt tên các bước kiểm tay K9+ cho component dùng chung (gọi API thật, hủy giữa chừng không hiện lỗi, bấm lỗi tóm tắt → focus vào ô, xóa xong focus không bị giật); số liệu `npm audit` trong kế hoạch (6) là lúc mới cài ESLint, số cuối cùng là 12 (mục 4).
 
+## 4c. Step 9: làm lại giao diện chuẩn doanh nghiệp (03/11/2026)
+
+Hiệp yêu cầu ở Build and Test (giao diện "như con nít, như AI làm"), chọn bố cục admin có thanh bên, tự viết CSS, chỉ đổi giao diện; khi duyệt kế hoạch dặn thêm: "chuẩn chỉnh, chuyên nghiệp như của công ty nhưng vẫn phải đúng hoàn toàn `docs/ke-hoach.md`", "như các doanh nghiệp lớn đang sử dụng".
+
+**File:** mới `components/Icon.tsx` (13 icon SVG tự vẽ + dấu logo), `components/PageHeader.tsx` (đường dẫn trang + `h1` + mô tả + nút chính, gọi `usePageTitle`), `components/ConfirmDialog.tsx` (thẻ `<dialog>` gốc, `showModal()`); sửa `AppLayout`, `NavMenu`, `StatusMessage`, `Toast`, `ErrorSummary`, `FormField`, `DataTable`, `NotFoundPage`, ba file CSS, `index.html` (thêm `theme-color`), `public/favicon.svg`.
+
+| Hạng mục | Trước | Sau |
+|---|---|---|
+| Khung | Menu ngang trên nền xám, nội dung trên nền trắng | Thanh bên trái xanh đậm `#12304A` (logo + menu có icon, mục đang mở có nền + vạch trái); nội dung trên nền `#F3F5F8`, mỗi khối là tấm trắng viền mảnh |
+| Biểu tượng | Ký tự "(!)", "✓" | Icon SVG nét 1.75px, `aria-hidden`, luôn đi kèm chữ |
+| Thông báo thành công | Dải xanh trong trang | Thẻ nổi góc trên phải, có icon và nút "Đóng thông báo", vẫn tự ẩn sau 5 giây, vẫn `role="status"` |
+| Trạng thái tải/lỗi/trống | Dòng chữ có nền | Khối giữa tấm: icon tròn, câu chính, câu hướng dẫn, nút hành động |
+| Ô nhập | Gợi ý trên ô, lỗi dưới ô | Nhãn, ô, rồi gợi ý dưới ô; khi có lỗi thì lỗi thay chỗ gợi ý (gợi ý vẫn đọc được bằng trình đọc màn hình) |
+| Câu chữ | "Vui lòng sửa các lỗi sau:" | "Chưa lưu được. Kiểm tra lại các trường sau:" |
+| Màu, chữ | Xanh `#1d4ed8`, chữ 16px, điều khiển cao 44px | Một màu hành động `#0F62C5`, xám trung tính; chữ 15px (bảng 14px), điều khiển 40px (32px trong dòng bảng); mọi cặp màu đã tính tương phản đạt WCAG AA |
+
+**Khác kế hoạch:**
+
+1. **Thay `favicon.svg` (logo Vite mặc định) bằng dấu logo mới**, thêm `<meta name="theme-color">`: kế hoạch chưa ghi; logo của công cụ tạo dự án là dấu hiệu "làm từ mẫu" Hiệp muốn bỏ.
+2. **Bỏ khung viền khi `h1`, `main` nhận focus bằng code** (trước chỉ bỏ khi không phải focus bàn phím, nên ảnh chụp vẫn thấy khung xanh quanh "Nhân viên"): hai phần tử này không bấm được, không nằm trong thứ tự Tab, nên không thuộc WCAG 2.4.7.
+3. **K9 (hộp xác nhận) chuyển sang kiểm ở U3**: chưa trang nào dùng `ConfirmDialog` cho tới khi U3, U4 làm lại trang.
+4. **Thanh bên dùng thẻ `<header>`** (không dùng `<aside>`): đó là phần đầu trang chứa logo và menu chính, giữ đủ landmark `header`/`nav`/`main` như danh sách WCAG.
+
+**Kiểm:** `npm --prefix frontend run verify` xanh (typecheck, lint 0 cảnh báo, Prettier, build JS 286,70 KB / nén 89,54 KB, CSS 14,87 KB; 96/96 test backend); `audit --omit=dev` 0 lỗ hổng; `package.json` vẫn chỉ 3 gói chạy. Playwright (Chromium, `npm run dev`): K1 đạt; K2 đạt khi mở thẳng `/employees` (mở bằng `/` thì trang tự chuyển và focus ở `h1`, hành vi có từ trước, `usePageTitle` không đổi); K3 đạt (0 lần tải lại HTML, `aria-current`); K4 focus `h1`; K5 đường dẫn "Nhân sự > Không tìm thấy trang" + nút về; K6 đạt; K7 viền focus 3px `#8ec5ff` trên thanh bên; K10 320px: thanh bên thành thanh trên cao 104px, không cuộn ngang (lần đầu cao 221px vì lưới kéo dãn hàng, đã sửa bằng `grid-template-rows`). Ảnh: `.playwright-mcp/u2-404.png`, `u2-form-old-page.png`, `u2-320b.png`.
+
+**Chuyển cho U3, U4:** trang dùng `PageHeader` (đường dẫn gốc "Nhân sự"), tấm `panel` + `toolbar` (đếm kết quả), `DataTable` (caption ẩn), nút dòng `btn btn--sm btn--ghost` / `btn--ghost-danger` có icon, `ConfirmDialog` thay `window.confirm`; form trong `panel` với `panel__header`, `form__grid` 2 cột, `form__actions` (Hủy rồi Lưu); ô họ tên dùng `person` + `avatar`, tên phòng ban dùng `badge`; `SearchBox` (U4) dùng `search__field` có icon kính lúp và nhãn ẩn. Giữ nguyên `data-testid`.
+
+## 4d. Sửa sau rà soát Step 9 (Hiệp duyệt U2 và yêu cầu sửa R-03, R-05, R-06, R-07, R-08; "chi tiết đến từng cái nhỏ nhất", 03/11/2026)
+
+| Điểm | Sửa | Kiểm lại |
+|---|---|---|
+| R-07 | `ConfirmDialog`: khi đang xóa, hai nút dùng `aria-disabled` thay cho `disabled` (nút giữ được focus), hàm xử lý tự bỏ qua khi `busy`; CSS `.btn[aria-disabled="true"]` mờ như nút khóa | typecheck, lint sạch; bấm bằng bàn phím kiểm ở K9 (U3) |
+| R-08 | `usePageTitle`: quyết định có đưa focus vào `h1` hay không **một lần** lúc trang mở (`useState` khởi tạo), bỏ qua lần mở đầu (`key = "default"`) và lần tự chuyển hướng kiểu thay thế (`REPLACE`, ví dụ `/` → `/employees`). Không tính lại mỗi lần vẽ, vì trong cùng trang Toast và nút Xóa cũng điều hướng kiểu thay thế; tính lại thì lần tìm kiếm sau đó sẽ kéo focus khỏi ô tìm (lỗi này cũng có ở bản cũ: lần tìm đầu tiên sau khi mở ứng dụng làm focus nhảy về `h1`) | Playwright: mở `/`, Tab đầu tiên tới "Bỏ qua, tới nội dung chính"; bấm "Phòng ban" thì focus ở `h1` "Phòng ban" |
+| R-06 | Kế hoạch Step 9: bỏ K9 khỏi dòng Playwright đã tick, thêm dòng K9 chưa tick ghi rõ kiểm ở U3 | Đọc lại hai tài liệu khớp nhau |
+| R-03 | Kế hoạch: `client.js` → `client.ts` (5 chỗ); số "moderate" ghi rõ 6 lúc mới cài ESLint, 12 sau `typescript-eslint`; "5081 đúng hai nơi" ghi rõ thêm một dòng comment | Đọc lại |
+| R-05 | `unit-test-instructions.md`: thêm K11 (gọi API thật), K12 (hủy giữa chừng không báo lỗi), K13 (bấm lỗi tóm tắt → focus vào ô), K14 (xóa xong focus về tiêu đề đúng một lần) cho U3, U4 chạy | Đọc lại |
+| R-09 | Đo tương phản bằng công thức WCAG trong trình duyệt (đọc biến CSS thật): **17/17 cặp đạt**; thấp nhất: viền ô nhập 3,66:1 (cần 3), chữ phụ trên nền ứng dụng 5,49:1 (cần 4,5), chữ phụ trên đầu cột bảng 5,65:1; viền focus trên thanh bên 7,48:1 | Kết quả Playwright ngày 03/11 |
+
+R-04 (địa chỉ API ở hai nơi) giữ nguyên như rà soát chấp nhận. Console trong lúc kiểm: 0 lỗi, 0 cảnh báo.
+
 ## 5. Cài đặt frontend (nháp cho README của U5)
 
 ```

@@ -91,6 +91,35 @@ Chạy ở thư mục `employee-crud/`. AI không chạy các bước này và k
    - Postman `GET http://localhost:5081/api/khong-ton-tai`: 404, `Content-Type: application/problem+json`, title "Không tìm thấy".
 7. Nếu lỗi: dán thông báo lỗi để em chỉ cách sửa. Hay gặp: sai mật khẩu (`28P01`), dịch vụ chưa chạy (`Connection refused`), chưa có database và tài khoản không có quyền tạo (`3D000`).
 
+## 5b. Loop-back 1 từ Build and Test (03/11/2026, Step 9)
+
+Build and Test lượt 1 (`construction/build-and-test/test-results.md`, BT-01, BT-02) thấy hai lỗi có gốc ở U1. Hiệp duyệt lại kế hoạch (Step 9) rồi mới sửa.
+
+| Lỗi | Gốc | Đã sửa |
+|---|---|---|
+| BT-01: 400 do kiểm DTO trả `application/json`, thiếu `type`, `traceId` (lệch C3) | `[Produces("application/json")]` trên controller U3, U4 là bộ lọc kết quả, ghi đè loại nội dung của `BadRequestObjectResult` (một `ObjectResult`) | `ValidationResponseFactory` trả `JsonResult` (không phải `ObjectResult`, bộ lọc không đè được), `Content-Type: application/problem+json`, thêm `type` RFC 9110 §15.5.1 và `traceId` như 404/409 |
+| BT-02: `ErrorMapper` gặp 23001 thì trả 500 | Chỉ nhận 23505, 23503; PostgreSQL báo 23001 khi khóa ngoại `ON DELETE RESTRICT` chặn xóa | Thêm hằng `RestrictViolation = "23001"`, nhánh dự phòng nhận 23503 hoặc 23001 → 409 "Không thể thực hiện" |
+
+**File đổi:** `Platform/Errors/ErrorMapper.cs`, `Platform/Errors/ValidationResponseFactory.cs`; test: `ErrorMapperTests.cs` (+1), `PipelineTests.cs` (+1), `TestOnlyController.cs` (+1 endpoint gắn `[Produces]`); tài liệu U5: `docs/danh-sach-api.md` (bảng quy ước, ví dụ lỗi 400 gọi thật, bỏ ghi chú "Lệch đã biết"). `traceability.json` không đổi: NFR3.3, BR1.2, BR1.5, AC4.1.2 đã trỏ đúng các file trên.
+
+**Khác kế hoạch:**
+
+1. **Viết test hồi quy 400 trước khi sửa** (kế hoạch ghi sửa rồi mới test): để chứng minh đúng gốc. Trên code cũ test đỏ: `Expected: "application/problem+json"`, `Actual: "application/json"`; sau khi sửa thì xanh.
+2. **Thêm `JsonSerializerOptions` riêng cho `JsonResult`** (Hiệp chọn "Sửa luôn"): kiểm thật lần đầu thấy chữ tiếng Việt bị mã thoát (`Dữ liệu`), vì `JsonResult` dùng bộ mã hóa mặc định, còn bộ ghi JSON của MVC (đường 400 cũ) và lỗi 404/409 thì để nguyên chữ. Dùng `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` như bộ ghi của MVC vẫn tự dùng; test 9 thêm câu kiểm chuỗi thô có "Dữ liệu không hợp lệ".
+3. `dotnet format` sửa kiểu xuống dòng (CRLF) ở các dòng mới, như lần đầu ở Step 7.
+
+**Kết quả kiểm:**
+
+| Kiểm | Kết quả |
+|---|---|
+| Test U1 (`--filter ...Platform`) | 21/21 (12 `ErrorMapperTests` + 9 `PipelineTests`) |
+| `npm --prefix frontend run verify` | Xanh, **96/96** test |
+| `dotnet format --verify-no-changes` | Sạch |
+| API thật, Origin 5173: `POST /api/departments` tên rỗng; `POST /api/employees` `departmentId: "abc"`; thiếu `email` | Cả ba: 400 `application/problem+json`, có `type`, `traceId`, header CORS, chữ tiếng Việt nguyên dạng |
+| Đối chứng 404, 409 | Không đổi |
+
+Không có test viết mà chưa chạy.
+
 ## 6. Chuyển cho các unit sau
 
 - **U2:** Vite đặt `server.strictPort: true` (nếu cổng 5173 bận thì báo lỗi, không tự nhảy sang 5174 làm CORS chặn). Địa chỉ API: `http://localhost:5081`.
