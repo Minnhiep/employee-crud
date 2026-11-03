@@ -10,7 +10,8 @@ API của ứng dụng quản lý nhân viên và phòng ban: 10 thao tác, nh�
 | Địa chỉ HTTPS (không bắt buộc) | `https://localhost:7205` (chạy `dotnet run --launch-profile https`) |
 | Định dạng gửi lên | `Content-Type: application/json`, tên trường viết kiểu camelCase (`fullName`, `departmentId`) |
 | Định dạng trả về khi thành công | `application/json; charset=utf-8` |
-| Định dạng trả về khi lỗi 400, 404, 409 | `application/problem+json` (chuẩn ProblemDetails, RFC 9457), luôn có `type`, `title`, `status`, `traceId` |
+| Định dạng trả về khi lỗi 400, 404, 405, 409, 415, 500 | `application/problem+json` (chuẩn ProblemDetails, RFC 9457), luôn có `type`, `title`, `status`, `traceId` |
+| Chuẩn hóa chữ | Tên phòng ban, họ tên, email và chuỗi tìm được chuẩn hóa trước khi kiểm và lưu: gộp nhiều khoảng trắng thành một, bỏ khoảng trắng hai đầu, đưa chữ có dấu về một dạng (NFC). Có ký tự điều khiển (ví dụ U+0000) hoặc ký tự vô hình (ví dụ U+200B) thì trả `400` "… chứa ký tự không hợp lệ" |
 | Ai được gọi từ trình duyệt | Chỉ trang `http://localhost:5173` (CORS). Postman không bị CORS chặn |
 | Đăng nhập | Không có |
 
@@ -21,9 +22,12 @@ API của ứng dụng quản lý nhân viên và phòng ban: 10 thao tác, nh�
 | 200 OK | Đọc hoặc sửa thành công |
 | 201 Created | Tạo thành công; header `Location` chứa địa chỉ của bản ghi mới |
 | 204 No Content | Xóa thành công; không có body |
-| 400 Bad Request | Dữ liệu gửi lên sai (thiếu, quá dài, sai định dạng, phòng ban không tồn tại) |
+| 400 Bad Request | Dữ liệu gửi lên sai (thiếu, quá dài, sai định dạng, chứa ký tự không hợp lệ, phòng ban không tồn tại) |
 | 404 Not Found | Không có bản ghi với `id` đó |
+| 405 Method Not Allowed | Đường dẫn có, nhưng không nhận phương thức đó (ví dụ `PATCH`) |
 | 409 Conflict | Vi phạm luật nghiệp vụ: trùng tên phòng ban, trùng email, xóa phòng ban còn nhân viên |
+| 415 Unsupported Media Type | Gửi body không phải JSON (thiếu hoặc sai `Content-Type`) |
+| 500 Internal Server Error | Lỗi phía máy chủ, ví dụ không kết nối được database. Lời báo là câu chung, không lộ chi tiết kỹ thuật; chi tiết nằm trong log, dò bằng `traceId` |
 
 Lời báo lỗi trong body viết bằng tiếng Việt để giao diện hiện thẳng cho người dùng.
 
@@ -156,6 +160,8 @@ Response `200` với `?search=mẫu`:
 
 Không ai khớp thì trả `200` với danh sách rỗng `[]`.
 
+Chuỗi tìm được chuẩn hóa như họ tên, email đã lưu, nên `?search=nguyễn%20%20văn` (hai dấu cách) vẫn tìm ra "Nguyễn Văn …". Chuỗi tìm có ký tự điều khiển hoặc ký tự vô hình (ví dụ `?search=%00`) cũng trả `200` với `[]`: họ tên, email đã bị chặn các ký tự đó khi lưu nên không ai khớp, và API không gửi chuỗi đó xuống database.
+
 ### POST /api/employees
 
 Thêm nhân viên. Ghi vào bảng `employees`.
@@ -246,6 +252,28 @@ Response `400`, `Content-Type: application/problem+json`:
 
 > Ví dụ này gọi lại ngày 03/11/2026, sau khi bước Build and Test sửa lỗi 400 cho khớp hợp đồng (trước đó lỗi 400 trả `application/json` và thiếu `type`).
 
+#### Lỗi 400 — chứa ký tự không hợp lệ
+
+Request: `POST /api/departments`, tên có dấu cách rộng 0 (U+200B, ký tự vô hình) giữa hai chữ:
+
+```json
+{ "name": "Kế\u200Btoán" }
+```
+
+Response `400`, `Content-Type: application/problem+json`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "Dữ liệu không hợp lệ",
+  "status": 400,
+  "errors": { "name": ["Tên phòng ban chứa ký tự không hợp lệ"] },
+  "traceId": "00-b0deb28a4248ad9b5fa34a09d24d78ca-4d56bb493157f681-00"
+}
+```
+
+Họ tên và email của nhân viên dùng cùng luật, lời báo là `"Họ tên chứa ký tự không hợp lệ"` (trường `fullName`) và `"Email chứa ký tự không hợp lệ"` (trường `email`). Vì sao chặn: ký tự vô hình làm hai tên trông giống hệt mà máy coi là khác (lách được luật không trùng), còn U+0000 bị PostgreSQL từ chối.
+
 ### Lỗi 404 Not Found
 
 #### Lỗi 404 — phòng ban không tồn tại
@@ -307,6 +335,55 @@ Response `409`, `Content-Type: application/problem+json`:
 ```
 
 API kiểm "còn nhân viên" trước khi xóa. Database còn chặn thêm một lớp bằng khóa ngoại (xem mục "Thử ràng buộc" trong [sơ đồ database](so-do-database.md)).
+
+### Lỗi 405 Method Not Allowed
+
+Request: `PATCH /api/departments` (API không có thao tác `PATCH`)
+
+Response `405`, `Content-Type: application/problem+json`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.6",
+  "title": "Phương thức không được hỗ trợ",
+  "status": 405,
+  "traceId": "00-0e7575e4f073e78c29de5d34247a404f-895bd32d17b6a2f3-00"
+}
+```
+
+### Lỗi 415 Unsupported Media Type
+
+Request: `POST /api/departments` với `Content-Type: text/plain`, body là chữ `Kế toán`
+
+Response `415`, `Content-Type: application/problem+json`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.16",
+  "title": "Kiểu dữ liệu không được hỗ trợ",
+  "status": 415,
+  "detail": "Hãy gửi JSON (Content-Type: application/json).",
+  "traceId": "00-4e110dc3c944db20ca1c8216f9118deb-f8dd84f38de7a9d3-00"
+}
+```
+
+### Lỗi 500 Internal Server Error
+
+Request: `GET /api/employees` lúc backend không kết nối được PostgreSQL (lấy ví dụ bằng một backend phụ trỏ tới cổng không có database)
+
+Response `500`, `Content-Type: application/problem+json`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+  "title": "Lỗi máy chủ",
+  "status": 500,
+  "detail": "Đã có lỗi xảy ra, vui lòng thử lại sau.",
+  "traceId": "00-069cef28e38312296dc53f20c7d2802d-b181ba50cba76b9e-00"
+}
+```
+
+Lời báo là câu chung, không lộ tên bảng, câu SQL hay chi tiết kết nối. Log của backend ghi **đúng một** dòng `fail:` cho lỗi này, kèm cùng `traceId`; tìm `traceId` trong log để biết nguyên nhân thật.
 
 ---
 

@@ -34,6 +34,8 @@ git clone <địa-chỉ-repo> employee-crud
 cd employee-crud
 ```
 
+`<địa-chỉ-repo>` là địa chỉ repo trên GitHub, sẽ điền khi bài được đẩy lên (hiện mã nguồn chỉ có trên máy làm bài).
+
 **Mọi lệnh bên dưới chạy từ thư mục gốc `employee-crud`**, trừ khi ghi rõ thư mục khác.
 
 ## 3. Đặt connection string bằng user-secrets
@@ -44,12 +46,22 @@ Dán cả khối dưới đây vào PowerShell, bấm Enter, rồi gõ mật kh�
 
 ```powershell
 $s = Read-Host "Mat khau PostgreSQL" -AsSecureString
-$p = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
-dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=employee_db;Username=postgres;Password=$p" --project backend/EmployeeCrud.Api
-Remove-Variable p, s
+$b = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($s)
+try {
+    $p = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($b)
+    dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=employee_db;Username=postgres;Password=$p" --project backend/EmployeeCrud.Api
+}
+finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b)
+    Remove-Variable p, s, b -ErrorAction SilentlyContinue
+}
 ```
 
-Vì sao không gõ thẳng mật khẩu vào lệnh: PowerShell ghi mọi lệnh đã gõ vào một file lịch sử trên máy, mật khẩu gõ thẳng sẽ nằm lại trong file đó. Nhập qua `Read-Host -AsSecureString` thì mật khẩu không vào lịch sử. Dòng `Remove-Variable` bỏ hai biến sau khi dùng xong, để các lệnh gõ sau trong cửa sổ đó không vô tình in hay dùng lại mật khẩu (nó không hứa xóa sạch mật khẩu khỏi bộ nhớ máy; đóng cửa sổ PowerShell là chắc nhất).
+Vì sao không gõ thẳng mật khẩu vào lệnh: PowerShell ghi mọi lệnh đã gõ vào một file lịch sử trên máy, mật khẩu gõ thẳng sẽ nằm lại trong file đó. Nhập qua `Read-Host -AsSecureString` thì mật khẩu không vào lịch sử.
+
+Vì sao có `try`/`finally` và `ZeroFreeBSTR`: `SecureStringToBSTR` tạo một bản sao mật khẩu dạng chữ thường ở vùng nhớ ngoài .NET; `ZeroFreeBSTR` ghi đè bản sao đó bằng số 0 rồi trả vùng nhớ lại cho máy (cách Microsoft hướng dẫn khi dùng `SecureString`). Khối `finally` chạy cả khi lệnh ở giữa bị lỗi. `Remove-Variable` bỏ các biến để lệnh gõ sau trong cửa sổ đó không vô tình in hay dùng lại mật khẩu. Biến `$p` vẫn là chuỗi .NET nên không xóa sạch được khỏi bộ nhớ; đóng cửa sổ PowerShell sau khi làm xong là chắc nhất.
+
+**Lưu ý về mật khẩu:** đừng dùng dấu `;` hay dấu nháy kép `"` trong mật khẩu PostgreSQL. Dấu `;` ngăn các phần trong chuỗi kết nối nên sẽ cắt mật khẩu làm đôi, dấu `"` làm hỏng cách PowerShell truyền tham số; lỗi hiện ra là "password authentication failed", rất khó đoán nguyên nhân. Mật khẩu có các dấu này thì nên đổi mật khẩu khác. Lưu ý này áp dụng cho cả mục 13.
 
 Kiểm lại (mật khẩu được che thành `***` khi in ra):
 
@@ -103,11 +115,11 @@ Mở **cửa sổ PowerShell thứ hai**:
 
 ```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-`npm install` chỉ cần chạy lần đầu (hoặc khi `package.json` đổi). Đợi dòng `Local: http://localhost:5173/`.
+`npm ci` cài **đúng** phiên bản các gói đã khóa trong `package-lock.json` (xóa `node_modules` cũ rồi cài lại), nên máy nào cũng giống máy làm bài. `npm install` thì có thể tự nâng phiên bản và sửa `package-lock.json`. Chỉ cần chạy `npm ci` lần đầu, hoặc khi `package-lock.json` đổi. Đợi dòng `Local: http://localhost:5173/`.
 
 ## 8. Địa chỉ
 
@@ -122,14 +134,18 @@ Trang tài liệu API chỉ có khi backend chạy ở môi trường Developmen
 
 Frontend phải chạy đúng cổng 5173: backend chỉ cho phép trang ở địa chỉ này gọi API (CORS). Địa chỉ backend mà frontend gọi nằm trong `frontend/.env.development` (`VITE_API_BASE_URL=http://localhost:5081`).
 
+Mở trang bằng `http://localhost:5173`, **không** dùng `http://127.0.0.1:5173`: với trình duyệt đó là hai địa chỉ khác nhau, backend chỉ cho phép `localhost` nên trang sẽ báo "Không kết nối được máy chủ".
+
 ## 9. Kiểm nhanh
 
 1. Mở <http://localhost:5173>, vào trang **Phòng ban**: thấy 4 phòng ban mẫu.
 2. Vào trang **Nhân viên**, bấm **Thêm nhân viên**, nhập họ tên, email, chọn phòng ban, lưu: nhân viên mới hiện trong danh sách.
 3. Sửa nhân viên đó, đổi email, lưu: danh sách cập nhật.
-4. Gõ một phần họ tên hoặc email vào ô tìm kiếm: chỉ hiện người khớp (không phân biệt hoa thường).
-5. Xóa nhân viên đó: biến mất khỏi danh sách.
+4. Gõ một phần họ tên hoặc email vào ô tìm kiếm: chỉ hiện người khớp (không phân biệt hoa thường). Gõ thừa khoảng trắng (ví dụ hai dấu cách giữa hai chữ) vẫn tìm ra, ô tìm tự gọn lại.
+5. Xóa nhân viên đó: hộp xác nhận ghi họ tên kèm email; xác nhận thì người đó biến mất khỏi danh sách.
 6. Thử xóa một phòng ban đang có nhân viên: ứng dụng báo không xóa được.
+
+Muốn có sẵn nhiều nhân viên để demo tìm kiếm: xem mục 12.
 
 ## 10. Chạy test và đo độ phủ
 
@@ -148,6 +164,10 @@ npm run coverage
 
 Mức sàn của dự án: ít nhất 80% số dòng của các lớp service. Kiểm đủ một lượt (kiểu TypeScript, lint, định dạng, build frontend và test backend): `npm run verify` trong thư mục `frontend`.
 
+**Con số độ phủ nói lên điều gì:** khi bảng tóm tắt ghi 100% cho `DepartmentService`, `EmployeeService`, đó là **100% số dòng C#** của các lớp service được unit test chạy qua. Unit test dùng database giả trong bộ nhớ (InMemory), nên các luật nằm ở PostgreSQL không đo được bằng con số này: chỉ mục không trùng theo `lower()`, khóa ngoại chặn xóa phòng ban còn nhân viên, thứ tự sắp xếp chữ tiếng Việt. Các luật đó được kiểm tay trên database thật (danh sách D1–D5 trong hồ sơ kiểm thử của phòng ban và nhân viên). "Tổng" trong bảng thấp hơn vì tính cả controller và migration, hai phần này kiểm tay theo quy ước của dự án.
+
+**Vì sao lệnh đo độ phủ backend nằm trong `frontend/package.json`:** để mọi lệnh kiểm nằm chung một chỗ, gõ cùng một kiểu `npm run …` (dự án không có CI). Hai lệnh làm hai việc khác nhau: `npm run verify` kiểm kiểu TypeScript, lint, định dạng, build frontend và chạy test backend (không đo độ phủ), dùng trước mỗi lần commit; `npm run coverage` chạy test backend kèm đo độ phủ và in bảng phần trăm.
+
 ## 11. Sự cố thường gặp
 
 Các lỗi dưới đây đã gặp thật khi làm bài trên Windows 11, không phải lỗi code.
@@ -155,9 +175,76 @@ Các lỗi dưới đây đã gặp thật khi làm bài trên Windows 11, khôn
 - **`dotnet run` / `dotnet test` báo "Application Control policy has blocked this file" (0x800711C7).** Windows Smart App Control chặn file `.dll` vừa build. Thử build lại trước (`dotnet build backend/EmployeeCrud.slnx`) rồi chạy lại lệnh; vẫn bị chặn thì báo người hướng dẫn. **Đừng vội tắt Smart App Control:** trên Windows 11, tắt đi có thể không bật lại được nếu không cài lại Windows (tùy phiên bản; chưa kiểm trên máy làm bài). Muốn tắt thì đọc hướng dẫn của Microsoft về Smart App Control trước và hỏi người quản lý máy.
 - **Build hoặc test báo không chép được file vì "being used by another process".** Backend vẫn đang chạy ở cửa sổ khác và giữ file `.exe`. Bấm `Ctrl+C` ở cửa sổ backend rồi chạy lại lệnh.
 - **Gõ `psql` báo không tìm thấy lệnh.** Bộ cài PostgreSQL không tự thêm `psql` vào PATH. Dùng pgAdmin 4 (Query Tool) hoặc "SQL Shell (psql)" trong menu Start thay vì đổi PATH.
+- **Trang báo "Không kết nối được máy chủ" dù backend đang chạy.** Kiểm thanh địa chỉ: phải là `http://localhost:5173`, không phải `http://127.0.0.1:5173` (xem mục 8).
 
-## 12. Tài liệu khác
+## 12. Dữ liệu mẫu để demo
+
+Database mới tạo chỉ có 4 phòng ban mẫu. File [docs/du-lieu-mau.sql](docs/du-lieu-mau.sql) thêm 10 nhân viên tên giả (email đuôi `@congty.example`) để demo danh sách và tìm kiếm.
+
+1. pgAdmin 4 → `employee_db` → chuột phải → **Query Tool** → mở file `docs/du-lieu-mau.sql` → **Execute** (F5).
+2. Kết quả câu đếm cuối file phải là `10`. Chạy lại lần nữa vẫn an toàn (email đã có thì bỏ qua).
+3. Gỡ dữ liệu mẫu: làm theo dòng hướng dẫn cuối file (chỉ xóa người có email `@congty.example`).
+
+## 13. Tài khoản database riêng cho ứng dụng (khuyên dùng)
+
+**Vì sao:** mục 3 cho ứng dụng dùng tài khoản `postgres`, tài khoản có quyền cao nhất (tạo, xóa cả database). Ứng dụng chỉ cần đọc và ghi hai bảng. Công ty thật cho mỗi ứng dụng một tài khoản chỉ đủ quyền nó cần (nguyên tắc quyền tối thiểu): lỡ lộ mật khẩu hay có lỗi bảo mật thì thiệt hại nhỏ hơn. Migration (tạo, sửa bảng) vẫn chạy bằng `postgres`. Làm mục này sau khi đã chạy migration ở mục 5.
+
+**Bước 1. Tạo tài khoản.** pgAdmin 4 → `employee_db` → Query Tool (đang đăng nhập bằng `postgres`), chạy:
+
+```sql
+CREATE ROLE employee_app LOGIN;
+GRANT CONNECT ON DATABASE employee_db TO employee_app;
+GRANT USAGE ON SCHEMA public TO employee_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON departments, employees TO employee_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO employee_app;
+```
+
+Tài khoản này không có quyền tạo, sửa hay xóa bảng. Dòng cuối cho dùng bộ đếm sinh `id`. Không cần quyền với bảng lịch sử migration `__EFMigrationsHistory`, vì ứng dụng **không tự chạy migration** khi khởi động (migration luôn chạy tay bằng lệnh ở bước 4). Nếu sau này thêm bước tự migrate lúc khởi động thì phải dùng tài khoản có quyền sửa bảng.
+
+**Bước 2. Đặt mật khẩu bằng hộp thoại của pgAdmin**, không gõ mật khẩu vào câu SQL (pgAdmin lưu lịch sử câu lệnh): Servers → PostgreSQL 18 → **Login/Group Roles** (bấm F5 nếu chưa thấy) → chuột phải `employee_app` → **Properties** → tab **Definition** → **Password** → **Save**.
+
+**Bước 3. Cho ứng dụng dùng tài khoản mới.** Chạy lại khối lệnh ở mục 3, đổi `Username=postgres` thành `Username=employee_app` và nhập mật khẩu vừa đặt.
+
+**Bước 4. Từ nay chạy migration bằng `postgres`**, vì `employee_app` không có quyền sửa bảng. Biến môi trường `ConnectionStrings__Default` được ưu tiên hơn user-secrets và chỉ sống trong cửa sổ PowerShell đang mở; khối `finally` xóa nó ngay sau khi chạy:
+
+```powershell
+$s = Read-Host "Mat khau postgres" -AsSecureString
+$b = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($s)
+try {
+    $env:ConnectionStrings__Default = "Host=localhost;Port=5432;Database=employee_db;Username=postgres;Password=" + [Runtime.InteropServices.Marshal]::PtrToStringBSTR($b)
+    dotnet ef database update --project backend/EmployeeCrud.Api
+}
+finally {
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b)
+    Remove-Item Env:ConnectionStrings__Default -ErrorAction SilentlyContinue
+    Remove-Variable s, b -ErrorAction SilentlyContinue
+}
+```
+
+**Kiểm:**
+- Chạy backend (mục 6) và làm "Kiểm nhanh" (mục 9): đọc, thêm, sửa, xóa đều được.
+- Trong Query Tool (đăng nhập `postgres`), thử quyền của tài khoản mới: `SET ROLE employee_app; CREATE TABLE thu_quyen (id int);` → phải báo `permission denied for schema public`. Sau đó chạy `RESET ROLE;` để trở về `postgres`. Nếu pgAdmin báo `current transaction is aborted` (giao dịch đã lỗi), chạy `ROLLBACK;` trước rồi mới `RESET ROLE;`.
+
+**Lưu ý:** sau này migration thêm bảng mới thì phải cấp quyền cho bảng đó (chạy lại dòng `GRANT SELECT, INSERT, UPDATE, DELETE ON <tên bảng> TO employee_app;` và dòng `GRANT … SEQUENCES`).
+
+## 14. Cấu hình log
+
+Trong `backend/EmployeeCrud.Api/appsettings.json`, bốn nhóm log của EF Core (`Database.Command`, `Database.Connection`, `Query`, `Update`) đặt mức `Critical`. **Đừng xóa bốn dòng này.**
+
+Vì sao: khi một câu SQL lỗi, EF Core tự ghi một dòng Error, rồi ứng dụng lại ghi thêm một dòng Error cho cùng lỗi đó. Đặt `Critical` để mỗi lỗi chỉ còn **một** dòng Error (do `ProblemDetailsExceptionHandler` ghi, kèm `traceId` giống trong body lỗi 500), và các lỗi đã xử lý thành 409 (ví dụ trùng email khi hai người lưu cùng lúc) không sinh dòng Error. Log gọn thì dò lỗi bằng `traceId` nhanh hơn.
+
+Muốn xem câu SQL khi học: đổi tạm `Microsoft.EntityFrameworkCore.Database.Command` trong `appsettings.Development.json` sang `Information`, xem xong đổi lại `Critical`.
+
+## 15. Hướng phát triển
+
+Bài làm đúng phạm vi `docs/ke-hoach.md`. Hai việc dưới đây công ty thật thường làm nhưng đề bài không yêu cầu, nên chưa làm:
+
+- **Xóa mềm:** thay vì xóa hẳn dòng, thêm cột `deleted_at` và ẩn các dòng đã đánh dấu; khôi phục được khi xóa nhầm. Bài này xóa hẳn, có hộp xác nhận ghi rõ tên (và email với nhân viên).
+- **Nhật ký thay đổi:** ghi lại ai sửa gì, lúc nào, giá trị trước và sau. Cần có đăng nhập mới biết "ai", mà đề bài không có đăng nhập.
+
+## 16. Tài liệu khác
 
 - [docs/so-do-database.md](docs/so-do-database.md): sơ đồ hai bảng, cột, ràng buộc, cách đối chiếu bằng pgAdmin.
-- [docs/danh-sach-api.md](docs/danh-sach-api.md): 10 thao tác API kèm JSON mẫu, ví dụ lỗi 400/404/409, cách gọi bằng Postman.
+- [docs/danh-sach-api.md](docs/danh-sach-api.md): 10 thao tác API kèm JSON mẫu, ví dụ lỗi 400/404/405/409/415/500, cách gọi bằng Postman.
+- [docs/du-lieu-mau.sql](docs/du-lieu-mau.sql): 10 nhân viên mẫu để demo (mục 12).
 - [docs/ke-hoach.md](docs/ke-hoach.md): đề bài thực tập.
