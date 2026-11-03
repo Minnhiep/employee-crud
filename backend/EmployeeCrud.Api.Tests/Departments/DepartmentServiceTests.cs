@@ -332,4 +332,93 @@ public class DepartmentServiceTests
 
         Assert.Equal(exists, result);
     }
+
+    // ---- Chuẩn hóa tên (Step 11, rà soát N-04, S-04) ----
+    // Viết bằng mã \u cho chữ có dấu và ký tự vô hình, để người đọc thấy rõ từng ký tự (ký tự vô hình gõ thẳng thì không nhìn thấy).
+    private const string KeToanNfc = "K\u1EBF to\u00E1n"; // "Kế toán": ế, á là một ký tự dựng sẵn (NFC)
+    private const string KeToanNfd = "Ke\u0302\u0301 toa\u0301n"; // trông y hệt, nhưng là e + dấu mũ + dấu sắc (NFD)
+
+    [Fact] // #22. Gồm dấu cách, tab, khoảng trắng không ngắt (U+00A0).
+    public async Task Create_CollapsesWhitespaceInsideName_AndSaves()
+    {
+        var result = await CreateService().CreateAsync(
+            new DepartmentRequest { Name = " Kinh \t doanh\u00A0  mi\u1EC1n   B\u1EAFc " });
+
+        Assert.Equal("Kinh doanh mi\u1EC1n B\u1EAFc", result.Name);
+        Assert.Equal(["Kinh doanh mi\u1EC1n B\u1EAFc"], await NamesInDatabaseAsync());
+    }
+
+    [Fact] // #23. Hai dấu cách ở giữa không còn lách được luật không trùng.
+    public async Task Create_WithExtraSpacesInsideExistingName_ThrowsConflict()
+    {
+        await TestDb.SeedAsync(_options, KeToanNfc);
+
+        var exception = await Record.ExceptionAsync(
+            () => CreateService().CreateAsync(new DepartmentRequest { Name = "K\u1EBF  to\u00E1n" }));
+
+        var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
+        Assert.Equal("name", error.Field);
+        Assert.Equal([KeToanNfc], await NamesInDatabaseAsync());
+    }
+
+    [Fact] // #24. Gõ kiểu tổ hợp thì lưu về dạng dựng sẵn, và lần gõ dựng sẵn sau đó bị coi là trùng.
+    public async Task Create_WithDecomposedName_SavesComposedForm_AndDetectsDuplicate()
+    {
+        var created = await CreateService().CreateAsync(new DepartmentRequest { Name = KeToanNfd });
+
+        var exception = await Record.ExceptionAsync(
+            () => CreateService().CreateAsync(new DepartmentRequest { Name = KeToanNfc }));
+
+        Assert.Equal(KeToanNfc, created.Name);
+        AssertDomainError(exception!, DomainErrorKind.Conflict);
+        Assert.Equal([KeToanNfc], await NamesInDatabaseAsync());
+    }
+
+    [Fact] // #25. Không dùng [InlineData]: nửa cặp surrogate không ghi được vào thuộc tính của test.
+    public async Task Create_WithControlInvisibleOrBrokenCharacters_ThrowsValidationAndSavesNothing()
+    {
+        string[] names =
+        [
+            "\0", // ký tự NUL: trước đây PostgreSQL từ chối, API trả 500
+            "K\u1EBF\u001Bto\u00E1n", // ESC
+            "K\u1EBF\u200Bto\u00E1n", // dấu cách rộng 0
+            "\u202Eto\u00E1n", // đảo chiều chữ (CVE-2021-42574)
+            "\uFEFFK\u1EBF to\u00E1n", // BOM ở đầu
+            "K\u1EBF\uD800to\u00E1n", // nửa cao đứng một mình
+            "K\u1EBF\uDC00to\u00E1n", // nửa thấp đứng một mình
+        ];
+
+        foreach (var name in names)
+        {
+            var exception = await Record.ExceptionAsync(
+                () => CreateService().CreateAsync(new DepartmentRequest { Name = name }));
+
+            var error = AssertDomainError(exception!, DomainErrorKind.Validation);
+            Assert.Equal("name", error.Field);
+            Assert.Equal("Tên phòng ban chứa ký tự không hợp lệ", error.Message);
+        }
+
+        Assert.Empty(await NamesInDatabaseAsync());
+    }
+
+    [Fact] // #26. Ký tự đủ hai nửa surrogate (ví dụ emoji) là chữ hợp lệ, giữ nguyên.
+    public async Task Create_WithCompleteSurrogatePair_Saves()
+    {
+        var result = await CreateService().CreateAsync(new DepartmentRequest { Name = "Ph\u00F2ng IT \U0001F680" });
+
+        Assert.Equal("Ph\u00F2ng IT \U0001F680", result.Name);
+    }
+
+    [Fact] // #27
+    public async Task Update_WithInvalidCharacter_ThrowsValidationAndKeepsOldName()
+    {
+        var seeded = await TestDb.SeedAsync(_options, KeToanNfc);
+
+        var exception = await Record.ExceptionAsync(
+            () => CreateService().UpdateAsync(seeded[0].Id, new DepartmentRequest { Name = "T\u00E0i\0ch\u00EDnh" }));
+
+        var error = AssertDomainError(exception!, DomainErrorKind.Validation);
+        Assert.Equal("Tên phòng ban chứa ký tự không hợp lệ", error.Message);
+        Assert.Equal([KeToanNfc], await NamesInDatabaseAsync());
+    }
 }

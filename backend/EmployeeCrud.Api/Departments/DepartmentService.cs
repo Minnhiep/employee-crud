@@ -1,5 +1,6 @@
 using EmployeeCrud.Api.Platform.Data;
 using EmployeeCrud.Api.Platform.Errors;
+using EmployeeCrud.Api.Platform.Text;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -15,6 +16,7 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
     public const string NameField = "name";
     public const string NameRequiredMessage = "Vui lòng nhập tên phòng ban";
     public const string NameTooLongMessage = "Tên phòng ban tối đa 100 ký tự";
+    public const string NameInvalidMessage = "Tên phòng ban chứa ký tự không hợp lệ";
     public const string CannotDeleteTitle = "Không thể xóa phòng ban";
 
     public async Task<IReadOnlyList<DepartmentDto>> GetAllAsync(CancellationToken cancellationToken = default) =>
@@ -99,10 +101,16 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
     public Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default) =>
         db.Departments.AnyAsync(d => d.Id == id, cancellationToken);
 
-    // BR1.1–BR1.3: bỏ khoảng trắng hai đầu rồi mới kiểm. Đây là nơi duy nhất kiểm độ dài.
+    // BR1.1–BR1.3: chuẩn hóa (gộp khoảng trắng, NFC, chặn ký tự điều khiển) rồi mới kiểm, nên độ dài và
+    // trùng tên được tính trên đúng tên sẽ lưu. Đây là nơi duy nhất kiểm độ dài.
+    // Thứ tự kiểm: ký tự không hợp lệ trước, rồi rỗng, rồi quá dài. Ví dụ tên chỉ có "\0" được báo
+    // "chứa ký tự không hợp lệ" (đúng nguyên nhân), không bị báo nhầm là "Vui lòng nhập tên phòng ban".
     private static string NormalizeName(string? rawName)
     {
-        var name = rawName?.Trim() ?? "";
+        if (!TextInput.TryNormalize(rawName, out var name))
+        {
+            throw DomainError.Validation(NameField, NameInvalidMessage);
+        }
 
         if (name.Length == 0)
         {

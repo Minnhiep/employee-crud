@@ -23,6 +23,8 @@ public class EmployeeServiceTests
     private EmployeeService CreateService() =>
         new(new AppDbContext(_options), new DepartmentService(new AppDbContext(_options)));
 
+    // Giả lập lỗi lúc lưu mà InMemory không tự sinh ra (khóa ngoại 23503, dòng vừa bị xóa ở nơi khác...):
+    // đọc vẫn chạy bình thường, chỉ SaveChangesAsync ném đúng lỗi được truyền vào.
     private EmployeeService CreateServiceThatFailsOnSave(Exception toThrow) =>
         new(new ThrowingAppDbContext(_options, toThrow), new DepartmentService(new AppDbContext(_options)));
 
@@ -484,5 +486,139 @@ public class EmployeeServiceTests
             () => service.CreateAsync(Request("Minh Le", "minh@congty.vn", departmentId)));
 
         Assert.Same(original, exception);
+    }
+
+    // ---- Chuẩn hóa họ tên, email và chuỗi tìm (Step 11, rà soát N-04, S-04, A-08) ----
+    // Viết bằng mã \u cho chữ có dấu và ký tự vô hình, để người đọc thấy rõ từng ký tự (ký tự vô hình gõ thẳng thì không nhìn thấy).
+
+    [Fact] // #33. Gồm tab, khoảng trắng không ngắt (U+00A0) và chữ gõ kiểu tổ hợp (ễ = e + dấu mũ + dấu ngã).
+    public async Task Create_NormalizesFullNameWhitespaceAndComposedForm()
+    {
+        var departmentId = await SeedDepartmentAsync();
+
+        var result = await CreateService().CreateAsync(
+            Request(" Nguye\u0302\u0303n \t V\u0103n\u00A0  An ", "an@congty.vn", departmentId));
+
+        Assert.Equal("Nguy\u1EC5n V\u0103n An", result.FullName);
+        Assert.Equal("Nguy\u1EC5n V\u0103n An", Assert.Single(await EmployeesInDatabaseAsync()).FullName);
+    }
+
+    [Fact] // #34. Không dùng [InlineData]: nửa cặp surrogate không ghi được vào thuộc tính của test.
+    public async Task Create_WithInvalidCharacterInFullName_ThrowsValidationAndSavesNothing()
+    {
+        var departmentId = await SeedDepartmentAsync();
+        string[] names =
+        [
+            "Minh\0Le", // NUL
+            "Minh\u200BLe", // dấu cách rộng 0
+            "\u202ELe Minh", // đảo chiều chữ (CVE-2021-42574)
+            "Minh\uD800Le", // nửa cặp surrogate đứng một mình
+        ];
+
+        foreach (var name in names)
+        {
+            var exception = await Record.ExceptionAsync(
+                () => CreateService().CreateAsync(Request(name, "minh@congty.vn", departmentId)));
+
+            AssertValidation(exception, "fullName", "Họ tên chứa ký tự không hợp lệ");
+        }
+
+        Assert.Empty(await EmployeesInDatabaseAsync());
+    }
+
+    [Fact] // #35. U+200B không phải khoảng trắng nên trước Step 11 lọt qua luật định dạng email.
+    public async Task Create_WithInvalidCharacterInEmail_ThrowsValidationAndSavesNothing()
+    {
+        var departmentId = await SeedDepartmentAsync();
+        string[] emails = ["minh\u200B@congty.vn", "minh\0@congty.vn"];
+
+        foreach (var email in emails)
+        {
+            var exception = await Record.ExceptionAsync(
+                () => CreateService().CreateAsync(Request("Minh Le", email, departmentId)));
+
+            AssertValidation(exception, "email", "Email chứa ký tự không hợp lệ");
+        }
+
+        Assert.Empty(await EmployeesInDatabaseAsync());
+    }
+
+    [Fact] // #36. Email có chữ có dấu gõ kiểu tổ hợp, trùng email dạng dựng sẵn đã có: không lách được BR1.7.
+    public async Task Create_WithDecomposedFormOfExistingEmail_ThrowsConflict()
+    {
+        var departmentId = await SeedDepartmentAsync();
+        await TestDb.SeedEmployeeAsync(_options, "Minh Le", "nguy\u1EC5n@congty.vn", departmentId);
+
+        var exception = await Record.ExceptionAsync(
+            () => CreateService().CreateAsync(Request("An Tran", "nguye\u0302\u0303n@congty.vn", departmentId)));
+
+        var error = AssertDomainError(exception, DomainErrorKind.Conflict);
+        Assert.Equal("email", error.Field);
+        Assert.Single(await EmployeesInDatabaseAsync());
+    }
+
+    [Fact] // #37. Dùng ngữ cảnh database đã đóng: nếu service còn gửi câu truy vấn thì test ném lỗi. Vậy test chứng minh
+    // chuỗi có ký tự lạ không bao giờ xuống tới database (PostgreSQL thật từ chối U+0000, trước đây API trả 500).
+    public async Task GetAll_WithInvalidCharacterInSearch_ReturnsEmptyWithoutQueryingDatabase()
+    {
+        var closedDb = new AppDbContext(_options);
+        await closedDb.DisposeAsync();
+        var service = new EmployeeService(closedDb, new DepartmentService(new AppDbContext(_options)));
+
+        Assert.Empty(await service.GetAllAsync("minh\0"));
+        Assert.Empty(await service.GetAllAsync("\u200Bminh"));
+    }
+
+    [Fact] // #38. Chuỗi tìm được chuẩn hóa như dữ liệu đã lưu: hai dấu cách, hoặc gõ kiểu tổ hợp, vẫn tìm ra.
+    public async Task GetAll_NormalizesSearchTermBeforeMatching()
+    {
+        var departmentId = await SeedDepartmentAsync();
+        await TestDb.SeedEmployeeAsync(_options, "Nguy\u1EC5n V\u0103n An", "an@congty.vn", departmentId);
+        await TestDb.SeedEmployeeAsync(_options, "Hoa Pham", "hoa@congty.vn", departmentId);
+
+        var withTwoSpaces = await CreateService().GetAllAsync("nguy\u1EC5n  v\u0103n");
+        var decomposed = await CreateService().GetAllAsync("nguye\u0302\u0303n");
+
+        Assert.Equal(["Nguy\u1EC5n V\u0103n An"], withTwoSpaces.Select(e => e.FullName));
+        Assert.Equal(["Nguy\u1EC5n V\u0103n An"], decomposed.Select(e => e.FullName));
+    }
+
+    [Fact] // #39 (A-08). Lỗi tranh chấp khi THÊM MỚI là bất thường: ném nguyên, không báo "Không tìm thấy nhân viên có mã 0".
+    public async Task Create_WhenConcurrencyErrorOnSave_RethrowsOriginalException()
+    {
+        var departmentId = await SeedDepartmentAsync();
+        var original = new DbUpdateConcurrencyException("0 dòng bị tác động");
+        var service = CreateServiceThatFailsOnSave(original);
+
+        var exception = await Record.ExceptionAsync(
+            () => service.CreateAsync(Request("Minh Le", "minh@congty.vn", departmentId)));
+
+        Assert.Same(original, exception);
+    }
+
+    [Fact] // #40
+    public async Task Update_WithInvalidCharacterInFullName_ThrowsValidationAndKeepsOldData()
+    {
+        var departmentId = await SeedDepartmentAsync();
+        var seeded = await TestDb.SeedEmployeeAsync(_options, "Minh Le", "minh@congty.vn", departmentId);
+
+        var exception = await Record.ExceptionAsync(
+            () => CreateService().UpdateAsync(seeded.Id, Request("Minh\0Le", "minh@congty.vn", departmentId)));
+
+        AssertValidation(exception, "fullName", "Họ tên chứa ký tự không hợp lệ");
+        Assert.Equal("Minh Le", Assert.Single(await EmployeesInDatabaseAsync()).FullName);
+    }
+
+    [Fact] // #41 (rà soát U4 R-08). Sửa với email chứa ký tự vô hình: báo đúng ô email, dữ liệu cũ giữ nguyên.
+    public async Task Update_WithInvalidCharacterInEmail_ThrowsValidationAndKeepsOldData()
+    {
+        var departmentId = await SeedDepartmentAsync();
+        var seeded = await TestDb.SeedEmployeeAsync(_options, "Minh Le", "minh@congty.vn", departmentId);
+
+        var exception = await Record.ExceptionAsync(
+            () => CreateService().UpdateAsync(seeded.Id, Request("Minh Le", "minh\u200B@congty.vn", departmentId)));
+
+        AssertValidation(exception, "email", "Email chứa ký tự không hợp lệ");
+        Assert.Equal("minh@congty.vn", Assert.Single(await EmployeesInDatabaseAsync()).Email);
     }
 }

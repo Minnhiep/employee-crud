@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using EmployeeCrud.Api.Departments;
 using EmployeeCrud.Api.Platform.Data;
 using EmployeeCrud.Api.Platform.Errors;
+using EmployeeCrud.Api.Platform.Text;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -21,8 +22,10 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
     public const string EmailField = "email";
     public const string DepartmentIdField = "departmentId";
 
+    public const string FullNameInvalidCharactersMessage = "Họ tên chứa ký tự không hợp lệ";
     public const string FullNameRequiredMessage = "Vui lòng nhập họ tên";
     public const string FullNameTooLongMessage = "Họ tên tối đa 100 ký tự";
+    public const string EmailInvalidCharactersMessage = "Email chứa ký tự không hợp lệ";
     public const string EmailRequiredMessage = "Vui lòng nhập email";
     public const string EmailTooLongMessage = "Email tối đa 254 ký tự";
     public const string EmailInvalidMessage = "Email không đúng định dạng";
@@ -32,8 +35,9 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
     // BR1.6: một luật định dạng email, chép GIỐNG HỆT ở frontend/src/pages/employees/validateEmployee.ts.
     // Đọc thành lời: trước "@" ít nhất một ký tự không phải khoảng trắng hay "@"; sau "@" ít nhất hai đoạn
     // ngăn bởi dấu chấm, mỗi đoạn không rỗng (nên dấu chấm không đứng đầu, cuối hay liền nhau).
-    // Điều kiện: email PHẢI được trim trước khi kiểm. .NET cho "$" khớp cả trước một dấu xuống dòng cuối chuỗi
-    // còn JavaScript thì không; vì đã trim nên không còn dấu xuống dòng cuối, hai bên cho cùng kết quả.
+    // Điều kiện: email PHẢI được chuẩn hóa (TextInput: bỏ hai đầu, gộp khoảng trắng) trước khi kiểm. .NET cho "$"
+    // khớp cả trước một dấu xuống dòng cuối chuỗi còn JavaScript thì không; đã chuẩn hóa thì không còn dấu xuống
+    // dòng nào, hai bên cho cùng kết quả.
     // static readonly: biểu thức là hằng dùng chung, không phải dữ liệu, nên an toàn khi service là Scoped.
     private static readonly Regex EmailPattern = new(
         @"^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$",
@@ -46,10 +50,18 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
 
     public async Task<IReadOnlyList<EmployeeDto>> GetAllAsync(string? search, CancellationToken cancellationToken = default)
     {
+        // BR2.2: chuẩn hóa chuỗi tìm giống họ tên, email lúc lưu (gộp khoảng trắng, NFC), nên gõ hai dấu cách
+        // hoặc gõ kiểu tổ hợp vẫn tìm ra. Có ký tự lạ (ví dụ U+0000) thì không ai khớp được, vì họ tên, email đã bị
+        // chặn ký tự đó khi lưu: trả rỗng luôn, không gửi xuống PostgreSQL (trước đây U+0000 làm API trả 500;
+        // Hiệp chọn trả rỗng thay vì 400).
+        if (!TextInput.TryNormalize(search, out var term))
+        {
+            return [];
+        }
+
         var query = db.Employees.AsNoTracking();
 
-        // BR2.2: bỏ khoảng trắng hai đầu; rỗng thì không lọc.
-        var term = search?.Trim() ?? "";
+        // Rỗng thì không lọc.
         if (term.Length > 0)
         {
             // Chuỗi tìm được hạ chữ ở .NET rồi gửi xuống dưới dạng tham số (@p); cột được hạ chữ ở SQL
@@ -69,6 +81,7 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
             .ToListAsync(cancellationToken);
     }
 
+    // Chỉ đọc để trả DTO (không sửa), nên AsNoTracking: EF khỏi tốn công theo dõi đối tượng.
     public async Task<EmployeeDto> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
         await db.Employees
             .AsNoTracking()
@@ -92,7 +105,7 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
             DepartmentId = input.DepartmentId,
         };
         db.Employees.Add(employee);
-        await SaveAsync(employee.Id, cancellationToken);
+        await SaveAsync(id: null, cancellationToken);
 
         // Đọc lại để có tên phòng ban trong DTO trả về.
         return await GetByIdAsync(employee.Id, cancellationToken);
@@ -114,9 +127,10 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         employee.Email = input.Email;
         employee.DepartmentId = input.DepartmentId;
 
-        // Giới hạn đã biết: nếu mọi giá trị giữ nguyên, EF không gửi câu UPDATE, nên trường hợp
-        // "vừa bị xóa ở nơi khác" sẽ trả 200 thay vì 404. Chấp nhận vì requirements mục 6 không xử lý
-        // xung đột khi hai người sửa cùng lúc (reliability-design §2).
+        // Nếu mọi giá trị giữ nguyên, EF không gửi câu UPDATE, nên SaveAsync không phát hiện được trường hợp
+        // "vừa bị xóa ở nơi khác". Kết quả vẫn là 404, nhưng do bước đọc lại GetByIdAsync ở dưới không thấy dòng
+        // (rà soát N-10: comment cũ ghi nhầm là 200). Hai người sửa cùng lúc thì người lưu sau thắng, vì
+        // requirements mục 6 không yêu cầu xử lý xung đột này (reliability-design §2).
         await SaveAsync(id, cancellationToken);
 
         return await GetByIdAsync(id, cancellationToken);
@@ -133,16 +147,19 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
 
     // Lưu và đổi các lỗi "chen nhau" thành lỗi nghiệp vụ (BR2.6). Lỗi khác ném nguyên để U1 trả 500.
     // Email trùng (23505 trên ux_employees_email) không bắt ở đây: ErrorMapper của U1 đã đổi thành 409.
-    private async Task SaveAsync(int id, CancellationToken cancellationToken)
+    // id là null khi thêm mới (rà soát A-08: trước đây truyền id 0, chưa có mã thật).
+    private async Task SaveAsync(int? id, CancellationToken cancellationToken)
     {
         try
         {
             await db.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException) when (id is int existingId)
         {
             // Dòng vừa bị xóa ở nơi khác sau khi ta đọc: câu UPDATE/DELETE không tác động dòng nào.
-            throw NotFound(id);
+            // Câu INSERT khi thêm mới không thể "không tìm thấy dòng", nên lúc thêm mới không vào nhánh này:
+            // lỗi đó là bất thường, được ném nguyên để U1 trả 500 và ghi log.
+            throw NotFound(existingId);
         }
         catch (DbUpdateException exception) when (IsDepartmentForeignKeyViolation(exception))
         {
@@ -155,11 +172,16 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         }
     }
 
-    // BR1.1–BR1.6, BR1.8: bỏ khoảng trắng hai đầu rồi kiểm; báo lỗi ĐẦU TIÊN theo thứ tự
-    // họ tên → email → phòng ban (DomainError chỉ chứa một trường; form React đã báo đủ các ô).
+    // BR1.1–BR1.6, BR1.8: chuẩn hóa (gộp khoảng trắng, NFC, chặn ký tự điều khiển và ký tự vô hình; cùng hàm với
+    // tên phòng ban ở U3) rồi kiểm; báo lỗi ĐẦU TIÊN theo thứ tự họ tên → email → phòng ban (DomainError chỉ chứa
+    // một trường; form React đã báo đủ các ô). Trong mỗi ô: ký tự không hợp lệ → rỗng → quá dài (→ định dạng).
     private static ValidInput Normalize(EmployeeRequest request)
     {
-        var fullName = request.FullName?.Trim() ?? "";
+        if (!TextInput.TryNormalize(request.FullName, out var fullName))
+        {
+            throw DomainError.Validation(FullNameField, FullNameInvalidCharactersMessage);
+        }
+
         if (fullName.Length == 0)
         {
             throw DomainError.Validation(FullNameField, FullNameRequiredMessage);
@@ -170,7 +192,13 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
             throw DomainError.Validation(FullNameField, FullNameTooLongMessage);
         }
 
-        var email = request.Email?.Trim() ?? "";
+        // Email cũng chuẩn hóa: U+200B không phải khoảng trắng nên lọt qua EmailPattern, và hai email trông giống hệt
+        // (một cái có ký tự vô hình, hoặc gõ kiểu tổ hợp) sẽ lách được luật không trùng (BR1.7).
+        if (!TextInput.TryNormalize(request.Email, out var email))
+        {
+            throw DomainError.Validation(EmailField, EmailInvalidCharactersMessage);
+        }
+
         if (email.Length == 0)
         {
             throw DomainError.Validation(EmailField, EmailRequiredMessage);
@@ -218,6 +246,7 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         }
     }
 
+    // Đọc CÓ theo dõi (không AsNoTracking) vì sửa và xóa cần EF ghi nhận thay đổi trên chính đối tượng này.
     private async Task<Employee> FindTrackedAsync(int id, CancellationToken cancellationToken) =>
         await db.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
         ?? throw NotFound(id);
@@ -232,6 +261,6 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
     private static DomainError NotFound(int id) =>
         DomainError.NotFound($"Không tìm thấy nhân viên có mã {id}.");
 
-    // Dữ liệu đã trim và đã qua kiểm, dùng chung cho thêm và sửa.
+    // Dữ liệu đã chuẩn hóa và đã qua kiểm, dùng chung cho thêm và sửa.
     private sealed record ValidInput(string FullName, string Email, int DepartmentId);
 }
