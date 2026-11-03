@@ -30,11 +30,11 @@ Không cần cài thêm công cụ nào ra toàn máy: công cụ migration (`do
 ## 2. Lấy mã nguồn
 
 ```powershell
-git clone <địa-chỉ-repo> employee-crud
+git clone https://github.com/Minnhiep/employee-crud.git employee-crud
 cd employee-crud
 ```
 
-`<địa-chỉ-repo>` là địa chỉ repo trên GitHub, sẽ điền khi bài được đẩy lên (hiện mã nguồn chỉ có trên máy làm bài).
+Repo đang để chế độ **Private**: chỉ người được chủ repo mời (GitHub → Settings → Collaborators) mới clone được. Lần clone đầu, Git sẽ mở cửa sổ đăng nhập GitHub.
 
 **Mọi lệnh bên dưới chạy từ thư mục gốc `employee-crud`**, trừ khi ghi rõ thư mục khác.
 
