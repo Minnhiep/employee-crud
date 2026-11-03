@@ -79,6 +79,31 @@ public class PipelineTests(PlatformWebAppFactory factory) : IClassFixture<Platfo
         Assert.Equal("Họ tên là bắt buộc", messages[0].GetString());
     }
 
+    // Build and Test (Loop-back 1): controller thật có [Produces("application/json")], từng làm 400
+    // trả application/json không có type, nên client.ts (chỉ đọc problem+json) mất lời báo theo ô.
+    [Fact]
+    public async Task MissingRequiredField_OnProducesJsonAction_StillReturnsProblemJsonWithType()
+    {
+        var response = await SendAsync(
+            HttpMethod.Post,
+            "/api/test-only/validate-produces-json",
+            content: JsonContent.Create(new { departmentId = 1 }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(ProblemJson, response.Content.Headers.ContentType?.MediaType);
+        Assert.True(response.Headers.Contains(AllowOriginHeader));
+
+        // Chữ tiếng Việt ghi nguyên dạng như 404/409, không thành mã thoát \uXXXX.
+        Assert.Contains("Dữ liệu không hợp lệ", await response.Content.ReadAsStringAsync());
+
+        var body = await ReadJsonAsync(response);
+        Assert.Equal("https://tools.ietf.org/html/rfc9110#section-15.5.1", body.GetProperty("type").GetString());
+        Assert.Equal("Dữ liệu không hợp lệ", body.GetProperty("title").GetString());
+        Assert.Equal(400, body.GetProperty("status").GetInt32());
+        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("traceId").GetString()));
+        Assert.Equal("Họ tên là bắt buộc", body.GetProperty("errors").GetProperty("fullName")[0].GetString());
+    }
+
     [Fact]
     public async Task MalformedJson_Returns400WithErrors()
     {

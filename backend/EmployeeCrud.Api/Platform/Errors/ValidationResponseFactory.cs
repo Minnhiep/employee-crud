@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +12,13 @@ namespace EmployeeCrud.Api.Platform.Errors;
 /// </summary>
 public static class ValidationResponseFactory
 {
+    // Ghi chữ tiếng Việt nguyên dạng, như bộ ghi JSON của MVC và lỗi 404/409 vẫn làm. Thiếu dòng này,
+    // JsonResult mã thoát mọi ký tự ngoài ASCII ("Dữ" thành "Dữ"). Chỉ đọc, không giữ dữ liệu.
+    private static readonly JsonSerializerOptions ProblemJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+
     public static IActionResult Create(ActionContext context)
     {
         var errors = new Dictionary<string, List<string>>();
@@ -54,13 +63,20 @@ public static class ValidationResponseFactory
 
         var problem = new ValidationProblemDetails(errors.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray()))
         {
+            // Cùng type và traceId như lỗi 404/409 do AddProblemDetails ghi (phong bì C3).
+            Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
             Status = StatusCodes.Status400BadRequest,
             Title = ErrorTitles.Invalid,
         };
+        problem.Extensions["traceId"] = Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
 
-        return new BadRequestObjectResult(problem)
+        // Dùng JsonResult, không dùng BadRequestObjectResult: [Produces("application/json")] trên controller
+        // là bộ lọc kết quả, nó ghi đè loại nội dung của mọi ObjectResult, làm 400 thành application/json.
+        // JsonResult không phải ObjectResult nên giữ đúng application/problem+json.
+        return new JsonResult(problem, ProblemJsonOptions)
         {
-            ContentTypes = { "application/problem+json" },
+            StatusCode = StatusCodes.Status400BadRequest,
+            ContentType = "application/problem+json",
         };
     }
 

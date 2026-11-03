@@ -10,8 +10,7 @@ API của ứng dụng quản lý nhân viên và phòng ban: 10 thao tác, nh�
 | Địa chỉ HTTPS (không bắt buộc) | `https://localhost:7205` (chạy `dotnet run --launch-profile https`) |
 | Định dạng gửi lên | `Content-Type: application/json`, tên trường viết kiểu camelCase (`fullName`, `departmentId`) |
 | Định dạng trả về khi thành công | `application/json; charset=utf-8` |
-| Định dạng trả về khi lỗi 404, 409 | `application/problem+json` (chuẩn ProblemDetails, RFC 9457) |
-| Định dạng trả về khi lỗi 400 | `application/json; charset=utf-8`, cùng hình dạng ProblemDetails (`title`, `status`, `errors`) nhưng thiếu `type` (xem ghi chú ở mục Lỗi 400) |
+| Định dạng trả về khi lỗi 400, 404, 409 | `application/problem+json` (chuẩn ProblemDetails, RFC 9457), luôn có `type`, `title`, `status`, `traceId` |
 | Ai được gọi từ trình duyệt | Chỉ trang `http://localhost:5173` (CORS). Postman không bị CORS chặn |
 | Đăng nhập | Không có |
 
@@ -231,19 +230,21 @@ Request: `POST /api/departments`
 { "name": "" }
 ```
 
-Response `400`, `Content-Type: application/json; charset=utf-8`:
+Response `400`, `Content-Type: application/problem+json`:
 
 ```json
 {
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
   "title": "Dữ liệu không hợp lệ",
   "status": 400,
-  "errors": { "name": ["Vui lòng nhập tên phòng ban"] }
+  "errors": { "name": ["Vui lòng nhập tên phòng ban"] },
+  "traceId": "00-52986c94a3e6c03153be9f8ac99ed21a-3a5162a5417adc26-00"
 }
 ```
 
-`errors` gom lỗi theo từng trường, để form React hiện lời báo ngay dưới ô nhập tương ứng.
+`errors` gom lỗi theo từng trường, để form React hiện lời báo ngay dưới ô nhập tương ứng (`frontend/src/api/client.ts` đọc body khi `Content-Type` là `application/problem+json`).
 
-> **Lệch đã biết:** theo hợp đồng API của dự án, lỗi 400 cũng phải trả `Content-Type: application/problem+json` và có trường `type` như lỗi 404, 409. Hiện tại API trả `application/json` và thiếu `type`; danh sách này ghi đúng hành vi hiện tại. Việc sửa cho khớp hợp đồng đã được chuyển cho bước kiểm thử cuối (Build and Test). Ảnh hưởng tới giao diện: `frontend/src/api/client.ts` chỉ đọc lời báo lỗi khi `Content-Type` là `application/problem+json`, nên với lỗi 400 này giao diện hiện câu báo chung thay vì lời báo theo từng ô. Bình thường người dùng ít gặp, vì form React đã tự kiểm dữ liệu trước khi gửi.
+> Ví dụ này gọi lại ngày 03/11/2026, sau khi bước Build and Test sửa lỗi 400 cho khớp hợp đồng (trước đó lỗi 400 trả `application/json` và thiếu `type`).
 
 ### Lỗi 404 Not Found
 

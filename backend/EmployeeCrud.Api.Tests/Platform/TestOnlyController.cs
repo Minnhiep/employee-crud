@@ -23,6 +23,12 @@ public sealed class TestOnlyController : ControllerBase
     [HttpPost("validate")]
     public IActionResult Validate(TestRequest request) => Ok(request);
 
+    // Giống controller thật của U3, U4: [Produces("application/json")] là bộ lọc kết quả,
+    // ghi đè loại nội dung của mọi ObjectResult (Build and Test, Loop-back 1).
+    [HttpPost("validate-produces-json")]
+    [Produces("application/json")]
+    public IActionResult ValidateWithProducesJson(TestRequest request) => Ok(request);
+
     public sealed class TestRequest
     {
         [Required(ErrorMessage = "Họ tên là bắt buộc")]

@@ -100,6 +100,17 @@ public class ErrorMapperTests
         Assert.False(string.IsNullOrWhiteSpace(problem.Detail));
     }
 
+    // Build and Test (Loop-back 1): PostgreSQL báo 23001 khi xóa phòng ban còn nhân viên (ON DELETE RESTRICT).
+    [Fact]
+    public void RestrictViolationNotHandledByService_Returns409Fallback()
+    {
+        var problem = ErrorMapper.Map(PostgresError("23001", DbConstraintNames.EmployeeDepartmentForeignKey));
+
+        Assert.Equal(409, problem.Status);
+        Assert.Equal("Không thể thực hiện", problem.Title);
+        Assert.False(string.IsNullOrWhiteSpace(problem.Detail));
+    }
+
     [Fact]
     public void BadHttpRequest400_Returns400WithBodyError()
     {

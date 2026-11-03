@@ -16,6 +16,10 @@ public static class ErrorMapper
     private const string UniqueViolation = "23505";
     private const string ForeignKeyViolation = "23503";
 
+    // Khóa ngoại khai báo ON DELETE RESTRICT: xóa dòng cha còn dòng con thì PostgreSQL báo 23001
+    // (restrict_violation), không phải 23503. Đã thấy thật khi xóa phòng ban còn nhân viên.
+    private const string RestrictViolation = "23001";
+
     public static ProblemDetails Map(Exception exception) => exception switch
     {
         DomainError domainError => MapDomainError(domainError),
@@ -75,7 +79,7 @@ public static class ErrorMapper
             };
         }
 
-        if (postgres.SqlState == ForeignKeyViolation)
+        if (postgres.SqlState is ForeignKeyViolation or RestrictViolation)
         {
             // Đường dự phòng: service U3/U4 lẽ ra đã bắt lỗi này và báo rõ hơn.
             // Ở đây không biết đang làm thao tác gì nên chỉ báo chung, không đoán.
