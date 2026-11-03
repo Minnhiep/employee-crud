@@ -4,10 +4,14 @@ using EmployeeCrud.Api.Platform;
 using EmployeeCrud.Api.Platform.Cors;
 using EmployeeCrud.Api.Platform.Data;
 using EmployeeCrud.Api.Platform.Errors;
+using EmployeeCrud.Api.Platform.Security;
 
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Không gửi header "Server: Kestrel": không cần cho người dùng, chỉ giúp người dò tìm biết máy chủ là gì.
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
 // ---- Đăng ký dịch vụ (Dependency Injection) ----
 
@@ -42,6 +46,8 @@ StartupChecks.EnsureConnectionString(app);
 
 // ---- Chuỗi xử lý request: thứ tự quan trọng ----
 
+// 0. Header bảo mật, gắn vào mọi phản hồi kể cả lỗi (xem SecurityHeaders).
+app.UseSecurityHeaders();
 // 1. CORS đứng ngoài cùng, để mọi phản hồi (kể cả lỗi) đều đi qua nó.
 app.UseCors(CorsSetup.PolicyName);
 // 2. Bắt mọi lỗi phía sau và đổi thành ProblemDetails.

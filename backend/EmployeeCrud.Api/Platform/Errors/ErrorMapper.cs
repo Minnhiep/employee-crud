@@ -12,13 +12,14 @@ namespace EmployeeCrud.Api.Platform.Errors;
 /// </summary>
 public static class ErrorMapper
 {
-    // Mã lỗi chuẩn của PostgreSQL.
-    private const string UniqueViolation = "23505";
-    private const string ForeignKeyViolation = "23503";
+    // Mã lỗi chuẩn của PostgreSQL, lấy từ hằng có sẵn của Npgsql (giống DepartmentService, EmployeeService):
+    // 23505 trùng giá trị duy nhất, 23503 vi phạm khóa ngoại.
+    private const string UniqueViolation = PostgresErrorCodes.UniqueViolation;
+    private const string ForeignKeyViolation = PostgresErrorCodes.ForeignKeyViolation;
 
     // Khóa ngoại khai báo ON DELETE RESTRICT: xóa dòng cha còn dòng con thì PostgreSQL báo 23001
     // (restrict_violation), không phải 23503. Đã thấy thật khi xóa phòng ban còn nhân viên.
-    private const string RestrictViolation = "23001";
+    private const string RestrictViolation = PostgresErrorCodes.RestrictViolation;
 
     public static ProblemDetails Map(Exception exception) => exception switch
     {
@@ -68,6 +69,8 @@ public static class ErrorMapper
     {
         if (postgres.SqlState == UniqueViolation)
         {
+            // Tên trường "name", "email" phải khớp khóa JSON mà DepartmentService, EmployeeService dùng.
+            // Gõ lại ở đây thay vì tham chiếu service, để tầng nền (Platform) không phụ thuộc ngược vào tầng nghiệp vụ.
             return postgres.ConstraintName switch
             {
                 DbConstraintNames.DepartmentNameUnique => WithErrors(

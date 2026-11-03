@@ -1,7 +1,67 @@
-@EmployeeCrud.Api_HostAddress = http://localhost:5081
+@baseUrl = http://localhost:5081
 
-# Đường dẫn không tồn tại: mong đợi 404 dạng ProblemDetails, title "Không tìm thấy"
-GET {{EmployeeCrud.Api_HostAddress}}/api/khong-ton-tai
+# Gọi thử 10 thao tác ngay trong VS Code (bấm "Send Request" phía trên mỗi khối), thay cho Postman khi cần nhanh.
+# Chạy backend trước: dotnet run --project backend/EmployeeCrud.Api
+# Đổi các số id (1, 2...) theo dữ liệu thật trên máy. Chi tiết và ví dụ phản hồi: docs/danh-sach-api.md
+
+### 1. Danh sách phòng ban (sắp theo tên)
+GET {{baseUrl}}/api/departments
 Accept: application/json
 
-###
+### 2. Một phòng ban theo mã
+GET {{baseUrl}}/api/departments/1
+Accept: application/json
+
+### 3. Thêm phòng ban (tên trùng, kể cả khác hoa thường, sẽ ra 409)
+POST {{baseUrl}}/api/departments
+Content-Type: application/json
+
+{
+  "name": "Phòng Thử Nghiệm"
+}
+
+### 4. Sửa tên phòng ban
+PUT {{baseUrl}}/api/departments/1
+Content-Type: application/json
+
+{
+  "name": "Nhân sự"
+}
+
+### 5. Xóa phòng ban (còn nhân viên thì ra 409, không xóa)
+DELETE {{baseUrl}}/api/departments/99999
+
+### 6. Danh sách nhân viên, có thể tìm theo họ tên hoặc email (không phân biệt hoa thường)
+GET {{baseUrl}}/api/employees?search=an
+Accept: application/json
+
+### 7. Một nhân viên theo mã
+GET {{baseUrl}}/api/employees/1
+Accept: application/json
+
+### 8. Thêm nhân viên (email trùng ra 409; phòng ban không có ra 400)
+POST {{baseUrl}}/api/employees
+Content-Type: application/json
+
+{
+  "fullName": "Nguyễn Văn Thử",
+  "email": "nguyen.van.thu@example.com",
+  "departmentId": 1
+}
+
+### 9. Sửa nhân viên (gửi đủ 3 trường)
+PUT {{baseUrl}}/api/employees/1
+Content-Type: application/json
+
+{
+  "fullName": "Đỗ Văn An",
+  "email": "do.an@congty.vn",
+  "departmentId": 3
+}
+
+### 10. Xóa nhân viên (không có mã này thì ra 404)
+DELETE {{baseUrl}}/api/employees/99999
+
+### Đường dẫn không tồn tại: 404 dạng ProblemDetails, title "Không tìm thấy"
+GET {{baseUrl}}/api/khong-ton-tai
+Accept: application/json

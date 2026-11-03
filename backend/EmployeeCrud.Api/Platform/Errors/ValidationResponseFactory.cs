@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Unicode;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,10 +14,11 @@ namespace EmployeeCrud.Api.Platform.Errors;
 public static class ValidationResponseFactory
 {
     // Ghi chữ tiếng Việt nguyên dạng, như bộ ghi JSON của MVC và lỗi 404/409 vẫn làm. Thiếu dòng này,
-    // JsonResult mã thoát mọi ký tự ngoài ASCII ("Dữ" thành "Dữ"). Chỉ đọc, không giữ dữ liệu.
+    // JsonResult mã thoát mọi ký tự ngoài ASCII ("Dữ" thành "Dữ"). Cho phép mọi bảng chữ nhưng vẫn
+    // mã thoát ký tự HTML như < > & ' " (an toàn hơn UnsafeRelaxedJsonEscaping). Chỉ đọc, không giữ dữ liệu.
     private static readonly JsonSerializerOptions ProblemJsonOptions = new(JsonSerializerDefaults.Web)
     {
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
     };
 
     public static IActionResult Create(ActionContext context)

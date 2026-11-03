@@ -32,6 +32,14 @@ obj/
 *.user
 .vs/
 .env
+# File bí mật hay gặp (chứng chỉ, khóa, file cấu hình riêng): lỡ commit là phải đổi mật khẩu và viết lại lịch sử Git
+.env.*
+!frontend/.env.development
+*.pfx
+*.p12
+*.pem
+*.key
+secrets.json
 node_modules/
 dist/
 TestResults/

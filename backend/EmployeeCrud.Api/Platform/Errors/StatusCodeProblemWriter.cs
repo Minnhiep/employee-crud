@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,10 +25,14 @@ public static class StatusCodeProblemWriter
             _ => (ErrorTitles.BadRequest, (string?)null),
         };
 
+        // Cùng cách tính với ProblemDetailsExceptionHandler, để mọi phản hồi lỗi đều có traceId dò được trong log.
+        var traceId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
+
         var logger = httpContext.RequestServices
             .GetRequiredService<ILoggerFactory>()
             .CreateLogger(typeof(StatusCodeProblemWriter));
-        logger.LogInformation("{Status} {Method} {Path}", status, httpContext.Request.Method, httpContext.Request.Path);
+        logger.LogInformation("{Status} {Method} {Path} (traceId {TraceId})",
+            status, httpContext.Request.Method, httpContext.Request.Path, traceId);
 
         var problem = new ProblemDetails
         {
@@ -34,6 +40,7 @@ public static class StatusCodeProblemWriter
             Title = title,
             Status = status,
             Detail = detail,
+            Extensions = { ["traceId"] = traceId },
         };
 
         // Ghi thẳng JSON thay vì qua IProblemDetailsService: với request đã vào tới controller (ví dụ 415),

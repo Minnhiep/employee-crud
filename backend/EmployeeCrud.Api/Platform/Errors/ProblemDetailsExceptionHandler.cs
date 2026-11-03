@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using EmployeeCrud.Api.Platform.Cors;
 
 using Microsoft.AspNetCore.Cors.Infrastructure;
@@ -22,16 +24,20 @@ public sealed class ProblemDetailsExceptionHandler(
         var problem = ErrorMapper.Map(exception);
         var status = problem.Status ?? StatusCodes.Status500InternalServerError;
         var request = httpContext.Request;
+        // Cùng giá trị với "traceId" mà AddProblemDetails ghi vào phản hồi, để từ phản hồi lỗi tìm được đúng dòng log.
+        var traceId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
 
-        // Log đặt ở đây (không thêm middleware log riêng) để chuỗi xử lý giữ đúng 5 bước.
+        // Log đặt ở đây (không thêm middleware log riêng) để chuỗi xử lý gọn.
         // Không ghi body hay chuỗi kết nối (BR3.2).
         if (status >= StatusCodes.Status500InternalServerError)
         {
-            logger.LogError(exception, "Lỗi không xử lý: {Method} {Path}", request.Method, request.Path);
+            logger.LogError(exception, "Lỗi không xử lý: {Method} {Path} (traceId {TraceId})",
+                request.Method, request.Path, traceId);
         }
         else
         {
-            logger.LogInformation("{Status} {Method} {Path}", status, request.Method, request.Path);
+            logger.LogInformation("{Status} {Method} {Path} (traceId {TraceId})",
+                status, request.Method, request.Path, traceId);
         }
 
         // Trước khi gọi tới đây, bộ bắt lỗi đã xóa sạch header của phản hồi, kể cả header CORS.
