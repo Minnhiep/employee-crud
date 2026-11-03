@@ -21,6 +21,12 @@ function EmployeeEditRoute() {
   return <EmployeeFormPage key={`edit-${id}`} mode="edit" />;
 }
 
+/** Cùng cách với form sửa nhân viên (rà soát tổng thể A-13): đổi id thì form phòng ban được tạo mới. */
+function DepartmentEditRoute() {
+  const { id } = useParams();
+  return <DepartmentFormPage key={`edit-${id}`} mode="edit" />;
+}
+
 /**
  * Bảng đường dẫn của ứng dụng. Chuyển trang ngay trong trình duyệt, không tải lại cả trang.
  */
@@ -45,7 +51,7 @@ export default function App() {
           />
           <Route
             path="departments/:id/edit"
-            element={<DepartmentFormPage key="edit" mode="edit" />}
+            element={<DepartmentEditRoute />}
           />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
-import { ApiError } from "../../api/client";
+import { ApiError, isAborted, messageOf } from "../../api/client";
 import { deleteEmployee, getEmployees } from "../../api/employees";
 import type { Employee } from "../../api/employees";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -13,9 +13,9 @@ import { StatusMessage } from "../../components/StatusMessage";
 import { Toast } from "../../components/Toast";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { useSubmitGuard } from "../../hooks/useSubmitGuard";
+import { normalizeText } from "../../utils/normalizeText";
 
 const TITLE = "Nhân viên";
-const GENERIC_MESSAGE = "Đã có lỗi xảy ra, vui lòng thử lại sau.";
 
 /** Kết quả của một lần tải, ghi kèm "khóa" của lần tải đó để biết nó còn đúng với địa chỉ hiện tại không. */
 type LoadResult = {
@@ -60,16 +60,6 @@ const columns: DataTableColumn<Employee>[] = [
     render: (employee) => employee.departmentName,
   },
 ];
-
-function messageOf(error: unknown): string {
-  return error instanceof ApiError && error.message
-    ? error.message
-    : GENERIC_MESSAGE;
-}
-
-function isAborted(error: unknown): boolean {
-  return error instanceof ApiError && error.kind === "aborted";
-}
 
 /**
  * Trang danh sách nhân viên (US2.1, US2.4, US3.1): đủ trạng thái tải / lỗi / trống / không khớp / có dữ liệu (BR4.1),
@@ -133,14 +123,19 @@ export function EmployeesPage() {
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
-  function handleSearch(value: string) {
-    if (value === search) {
+  // Trả lại chuỗi thật sự được tìm để ô tìm hiện đúng chuỗi đó (SearchBox).
+  function handleSearch(value: string): string {
+    // Chuẩn hóa như API (gộp khoảng trắng, NFC) để địa chỉ trang ghi đúng chuỗi được tìm.
+    // Có ký tự lạ thì giữ chuỗi đã bỏ hai đầu: API trả danh sách rỗng, trang hiện "không tìm thấy" (Hiệp chọn).
+    const term = normalizeText(value) ?? value.trim();
+    if (term === search) {
       // Bấm Tìm lại đúng chuỗi cũ: địa chỉ không đổi, nên chủ động tải lại.
       reload();
-      return;
+      return term;
     }
     // Ghi lên địa chỉ (rỗng thì bỏ tham số); mỗi lần tìm là một mục trong lịch sử, nên Back quay lại được.
-    setSearchParams(value ? { search: value } : {});
+    setSearchParams(term ? { search: term } : {});
+    return term;
   }
 
   function clearSearch() {
@@ -293,6 +288,8 @@ export function EmployeesPage() {
                   <Link
                     className="btn btn--sm btn--ghost"
                     to={`/employees/${employee.id}/edit`}
+                    // Gửi kèm chuỗi tìm để Lưu/Hủy quay về đúng danh sách đang tìm (rà soát N-07).
+                    state={search ? { search } : undefined}
                     aria-label={`Sửa nhân viên ${employee.fullName}`}
                     data-testid={`employee-edit-${employee.id}`}
                   >
@@ -329,9 +326,11 @@ export function EmployeesPage() {
         onCancel={() => setPendingDelete(null)}
         confirmTestId="employee-delete-confirm"
       >
+        {/* Ghi kèm email vì hai người có thể trùng họ tên; email thì không trùng (rà soát N-05). */}
         <p>
-          Nhân viên <strong>{pendingDelete?.fullName}</strong> sẽ bị xóa vĩnh
-          viễn. Thao tác này không thể hoàn tác.
+          Nhân viên <strong>{pendingDelete?.fullName}</strong> (
+          {pendingDelete?.email}) sẽ bị xóa vĩnh viễn. Thao tác này không thể
+          hoàn tác.
         </p>
       </ConfirmDialog>
     </>

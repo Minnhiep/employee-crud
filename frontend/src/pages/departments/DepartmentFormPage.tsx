@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ApiError } from "../../api/client";
+import {
+  ApiError,
+  GENERIC_MESSAGE,
+  isAborted,
+  messageOf,
+} from "../../api/client";
 import type { FieldErrors } from "../../api/client";
 import {
   createDepartment,
@@ -15,12 +20,9 @@ import { StatusMessage } from "../../components/StatusMessage";
 import { splitErrors } from "../../components/splitErrors";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { useSubmitGuard } from "../../hooks/useSubmitGuard";
-import {
-  DEPARTMENT_NAME_MAX_LENGTH,
-  validateDepartment,
-} from "./validateDepartment";
+import { normalizeText } from "../../utils/normalizeText";
+import { validateDepartment } from "./validateDepartment";
 
-const GENERIC_MESSAGE = "Đã có lỗi xảy ra, vui lòng thử lại sau.";
 const FIELD_NAMES = ["name"] as const;
 const FIELD_LABELS = { name: "Tên phòng ban" };
 
@@ -81,16 +83,14 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
         setLoadStatus("ready");
       },
       (error: unknown) => {
-        if (error instanceof ApiError && error.kind === "aborted") {
+        if (isAborted(error)) {
           return;
         }
         if (error instanceof ApiError && error.status === 404) {
           setLoadStatus("not-found");
           return;
         }
-        setLoadError(
-          error instanceof ApiError ? error.message : GENERIC_MESSAGE,
-        );
+        setLoadError(messageOf(error));
         setLoadStatus("error");
       },
     );
@@ -122,7 +122,7 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
   }
 
   function showSaveError(error: unknown) {
-    if (error instanceof ApiError && error.kind === "aborted") {
+    if (isAborted(error)) {
       return;
     }
     if (!(error instanceof ApiError)) {
@@ -137,12 +137,10 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
       );
       setFieldErrors(apiFieldErrors);
       const hasAnyFieldError = Object.keys(error.errors).length > 0;
-      setSummaryMessages(
-        hasAnyFieldError ? otherMessages : [error.message || GENERIC_MESSAGE],
-      );
+      setSummaryMessages(hasAnyFieldError ? otherMessages : [messageOf(error)]);
     } else {
       // Lỗi mạng hoặc lỗi máy chủ.
-      setSummaryMessages([error.message || GENERIC_MESSAGE]);
+      setSummaryMessages([messageOf(error)]);
     }
     setSummaryFocusRequest((request) => request + 1);
   }
@@ -160,7 +158,8 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
       return;
     }
 
-    const request = { name: name.trim() };
+    // Gửi đúng tên sẽ được lưu (đã gộp khoảng trắng, NFC). Đã qua validateDepartment nên không ra null.
+    const request = { name: normalizeText(name) ?? name };
     await run(async () => {
       try {
         const saved = isEdit
@@ -256,7 +255,8 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
                     <input
                       {...controlProps}
                       type="text"
-                      maxLength={DEPARTMENT_NAME_MAX_LENGTH}
+                      // Không đặt maxLength: trình duyệt sẽ cắt bớt phần dán thừa mà không báo (rà soát N-03).
+                      // Để nguyên, validateDepartment báo "tối đa 100 ký tự" cạnh ô.
                       autoComplete="off"
                       placeholder="Ví dụ: Kế toán"
                       value={name}

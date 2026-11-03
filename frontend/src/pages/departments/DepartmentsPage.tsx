@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { ApiError } from "../../api/client";
+import { ApiError, isAborted, messageOf } from "../../api/client";
 import { deleteDepartment, getDepartments } from "../../api/departments";
 import type { Department } from "../../api/departments";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -14,9 +14,14 @@ import { usePageTitle } from "../../hooks/usePageTitle";
 import { useSubmitGuard } from "../../hooks/useSubmitGuard";
 
 const TITLE = "Phòng ban";
-const GENERIC_MESSAGE = "Đã có lỗi xảy ra, vui lòng thử lại sau.";
 
-type LoadStatus = "loading" | "error" | "ready";
+/** Kết quả của một lần tải, ghi kèm "khóa" của lần tải đó để biết nó còn là lần tải mới nhất không. */
+type LoadResult = {
+  key: number;
+  status: "ready" | "error";
+  departments: Department[];
+  error: string;
+};
 
 const columns: DataTableColumn<Department>[] = [
   {
@@ -28,16 +33,6 @@ const columns: DataTableColumn<Department>[] = [
   },
 ];
 
-function messageOf(error: unknown): string {
-  return error instanceof ApiError && error.message
-    ? error.message
-    : GENERIC_MESSAGE;
-}
-
-function isAborted(error: unknown): boolean {
-  return error instanceof ApiError && error.kind === "aborted";
-}
-
 /**
  * Trang danh sách phòng ban (US1.1, US1.4): bốn trạng thái tải / lỗi / trống / có dữ liệu (BR4.1),
  * và xóa có xác nhận bằng hộp thoại ngay trên bảng (BR4.5).
@@ -48,17 +43,15 @@ export function DepartmentsPage() {
   const location = useLocation();
   const { isSubmitting, run } = useSubmitGuard();
 
-  const [status, setStatus] = useState<LoadStatus>("loading");
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [loadError, setLoadError] = useState("");
+  // Tăng số này để tải lại (bấm "Thử lại", sau khi xóa). Cùng kiểu với trang nhân viên (rà soát tổng thể A-05).
+  const [reloadKey, setReloadKey] = useState(0);
+  const [result, setResult] = useState<LoadResult | null>(null);
   // Lỗi khi xóa (409, lỗi mạng...) hiện ở đầu thân trang; bảng vẫn giữ nguyên.
   const [actionError, setActionError] = useState("");
   // Phòng ban đang chờ xác nhận xóa; khác null thì hộp xác nhận mở.
   const [pendingDelete, setPendingDelete] = useState<Department | null>(null);
   // Tăng số này để đưa focus về tiêu đề SAU khi hộp xác nhận đã đóng (dòng vừa xóa không còn để nhận focus).
   const [headingFocusRequest, setHeadingFocusRequest] = useState(0);
-  // Lời gọi tải lại (bấm "Thử lại", sau khi xóa): giữ lại để hủy nếu có lời gọi mới hoặc rời trang.
-  const reloadControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (headingFocusRequest > 0) {
@@ -66,45 +59,36 @@ export function DepartmentsPage() {
     }
   }, [headingFocusRequest, headingRef]);
 
-  // Hai hàm nhận kết quả tải; chỉ được gọi khi API đã trả lời (trong .then), không gọi ngay trong effect.
-  const showDepartments = useCallback((data: Department[]) => {
-    setDepartments(data);
-    setStatus("ready");
-  }, []);
-
-  const showLoadError = useCallback((error: unknown) => {
-    // Trang tự hủy (rời trang, có lần tải mới hơn) thì không phải lỗi.
-    if (isAborted(error)) {
-      return;
-    }
-    setLoadError(messageOf(error));
-    setStatus("error");
-  }, []);
-
-  // Tải lần đầu khi mở trang; rời trang thì hủy lời gọi còn dang dở.
+  // Tải khi mở trang và mỗi khi reloadKey đổi. Lời gọi cũ bị hủy khi có lời gọi mới hoặc rời trang,
+  // nên kết quả cũ không bao giờ đè lên kết quả mới. State chỉ được đặt khi API đã trả lời.
   useEffect(() => {
     const controller = new AbortController();
     getDepartments({ signal: controller.signal }).then(
-      showDepartments,
-      showLoadError,
+      (departments) =>
+        setResult({ key: reloadKey, status: "ready", departments, error: "" }),
+      (error: unknown) => {
+        // Trang tự hủy (rời trang, có lần tải mới hơn) thì không phải lỗi.
+        if (isAborted(error)) {
+          return;
+        }
+        setResult({
+          key: reloadKey,
+          status: "error",
+          departments: [],
+          error: messageOf(error),
+        });
+      },
     );
-    return () => {
-      controller.abort();
-      reloadControllerRef.current?.abort();
-    };
-  }, [showDepartments, showLoadError]);
+    return () => controller.abort();
+  }, [reloadKey]);
 
-  // Tải lại khi bấm "Thử lại" hoặc sau khi xóa (gọi từ sự kiện, không từ effect).
-  const reload = useCallback(() => {
-    reloadControllerRef.current?.abort();
-    const controller = new AbortController();
-    reloadControllerRef.current = controller;
-    setStatus("loading");
-    getDepartments({ signal: controller.signal }).then(
-      showDepartments,
-      showLoadError,
-    );
-  }, [showDepartments, showLoadError]);
+  // Kết quả đang giữ là của lần tải trước (vừa bấm tải lại) thì coi như đang tải.
+  const current = result?.key === reloadKey ? result : null;
+  const status = current?.status ?? "loading";
+  const departments = current?.departments ?? [];
+  const loadError = current?.error ?? "";
+
+  const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
   async function confirmDelete() {
     const department = pendingDelete;

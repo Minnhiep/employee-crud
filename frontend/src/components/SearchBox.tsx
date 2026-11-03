@@ -5,8 +5,8 @@ import { Icon } from "./Icon";
 type SearchBoxProps = {
   /** Chuỗi tìm đang có trên địa chỉ (?search=), dùng làm giá trị của ô. */
   initialValue: string;
-  /** Gọi khi bấm "Tìm" hoặc Enter, nhận chuỗi đã bỏ khoảng trắng hai đầu. */
-  onSearch: (value: string) => void;
+  /** Gọi khi bấm "Tìm" hoặc Enter, nhận chuỗi đã bỏ khoảng trắng hai đầu; trả lại chuỗi thật sự được tìm (đã chuẩn hóa). */
+  onSearch: (value: string) => string;
   /** Để trang đưa focus về ô, ví dụ sau khi bấm "Xóa tìm kiếm". */
   inputRef?: Ref<HTMLInputElement>;
 };
@@ -33,7 +33,9 @@ export function SearchBox({
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSearch(value.trim());
+    // Ô luôn hiện đúng chuỗi được tìm, kể cả khi chuỗi đó trùng chuỗi đang có trên địa chỉ: lúc đó initialValue
+    // không đổi nên khối đồng bộ ở trên không chạy (rà soát U4 R-07, ví dụ gõ lại "a  b" khi đang tìm "a b").
+    setValue(onSearch(value.trim()));
   }
 
   return (

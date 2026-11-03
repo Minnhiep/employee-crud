@@ -13,8 +13,11 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5081";
 
 const TIMEOUT_MS = 10_000;
+// Chỉ dùng khi thật sự không nói chuyện được với máy chủ: mất mạng, sai cổng, CORS chặn, quá 10 giây.
 const NETWORK_MESSAGE = "Không kết nối được máy chủ, vui lòng thử lại";
-const GENERIC_MESSAGE = "Đã có lỗi xảy ra, vui lòng thử lại sau.";
+// Câu chung khi máy chủ vẫn trả lời nhưng lỗi (5xx không có lời báo, dữ liệu hỏng) hoặc lỗi ngoài dự kiến.
+// Xuất ra để các trang dùng chung một câu, sửa một chỗ là đổi khắp nơi.
+export const GENERIC_MESSAGE = "Đã có lỗi xảy ra, vui lòng thử lại sau.";
 
 /**
  * - "network": không gọi được máy chủ hoặc quá 10 giây.
@@ -110,6 +113,15 @@ async function request<T>(
   body: unknown,
   { signal }: RequestOptions = {},
 ): Promise<T> {
+  // Đổi body sang JSON trước khối try của fetch: JSON.stringify hỏng (ví dụ dữ liệu có vòng tham chiếu)
+  // cũng ném TypeError, nếu nằm trong khối đó sẽ bị báo nhầm thành lỗi mạng.
+  let payload: string | undefined;
+  try {
+    payload = body === undefined ? undefined : JSON.stringify(body);
+  } catch (error) {
+    throw unexpectedError(error);
+  }
+
   // Hai lý do để dừng một lời gọi: quá 10 giây (lỗi mạng), hoặc trang tự hủy (không phải lỗi).
   const timeoutController = new AbortController();
   const timer = setTimeout(() => timeoutController.abort(), TIMEOUT_MS);
@@ -123,7 +135,7 @@ async function request<T>(
       // Chỉ gửi Content-Type khi có body: GET không cần, và tránh lời hỏi trước (preflight) thừa.
       headers:
         body === undefined ? undefined : { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: payload,
       signal: combinedSignal,
     });
 
@@ -149,11 +161,12 @@ async function readSuccess<T>(response: Response): Promise<T> {
   } catch (error) {
     // Chỉ lỗi "body không phải JSON hợp lệ" mới là lỗi máy chủ. Lỗi hủy (trang rời đi, quá 10 giây)
     // được ném lại nguyên vẹn để toApiError phân loại đúng thành "aborted" hoặc "network".
+    // Máy chủ vẫn trả lời được nên báo câu chung, không báo "không kết nối được" (sai nguyên nhân).
     if (error instanceof SyntaxError) {
       throw new ApiError({
         kind: "server",
         status: response.status,
-        message: NETWORK_MESSAGE,
+        message: GENERIC_MESSAGE,
       });
     }
     throw error;
@@ -162,15 +175,14 @@ async function readSuccess<T>(response: Response): Promise<T> {
 
 async function toHttpError(response: Response): Promise<ApiError> {
   const problem = await readProblem(response);
-  const isServerError = response.status >= 500;
-  const kind: ApiErrorKind = isServerError ? "server" : "client";
-  const fallbackMessage = isServerError ? NETWORK_MESSAGE : GENERIC_MESSAGE;
+  const kind: ApiErrorKind = response.status >= 500 ? "server" : "client";
 
   if (!problem) {
+    // Có phản hồi (kể cả 5xx) tức là máy chủ vẫn kết nối được: dùng câu chung, không báo lỗi mạng.
     return new ApiError({
       kind,
       status: response.status,
-      message: fallbackMessage,
+      message: GENERIC_MESSAGE,
     });
   }
 
@@ -181,7 +193,7 @@ async function toHttpError(response: Response): Promise<ApiError> {
     title: problem.title ?? "",
     detail: problem.detail ?? "",
     errors: problem.errors ?? {},
-    message: problem.detail || problem.title || fallbackMessage,
+    message: problem.detail || problem.title || GENERIC_MESSAGE,
   });
 }
 
@@ -222,7 +234,23 @@ function toApiError(
     // fetch bị từ chối: backend tắt, sai cổng, hoặc trình duyệt chặn vì CORS.
     return new ApiError({ kind: "network", message: NETWORK_MESSAGE });
   }
-  // Lỗi lập trình ngoài dự kiến: ghi ra console cho người phát triển, người dùng chỉ thấy câu chung.
+  return unexpectedError(error);
+}
+
+// Lỗi lập trình ngoài dự kiến: ghi ra console cho người phát triển, người dùng chỉ thấy câu chung.
+function unexpectedError(error: unknown): ApiError {
   console.error(error);
-  return new ApiError({ kind: "server", message: NETWORK_MESSAGE });
+  return new ApiError({ kind: "server", message: GENERIC_MESSAGE });
+}
+
+/** Trang tự hủy lời gọi (rời trang, có lần tải mới hơn): không phải lỗi, trang bỏ qua. */
+export function isAborted(error: unknown): boolean {
+  return error instanceof ApiError && error.kind === "aborted";
+}
+
+/** Lời báo để hiện cho người dùng: lời báo tiếng Việt của API nếu có, không thì câu chung. */
+export function messageOf(error: unknown): string {
+  return error instanceof ApiError && error.message
+    ? error.message
+    : GENERIC_MESSAGE;
 }

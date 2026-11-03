@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import { ApiError } from "../../api/client";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
+import {
+  ApiError,
+  GENERIC_MESSAGE,
+  isAborted,
+  messageOf,
+} from "../../api/client";
 import type { FieldErrors } from "../../api/client";
 import { getDepartments } from "../../api/departments";
 import type { Department } from "../../api/departments";
@@ -18,14 +23,10 @@ import { StatusMessage } from "../../components/StatusMessage";
 import { splitErrors } from "../../components/splitErrors";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { useSubmitGuard } from "../../hooks/useSubmitGuard";
-import {
-  EMAIL_MAX_LENGTH,
-  FULL_NAME_MAX_LENGTH,
-  validateEmployee,
-} from "./validateEmployee";
+import { normalizeText } from "../../utils/normalizeText";
+import { validateEmployee } from "./validateEmployee";
 import type { EmployeeField, EmployeeFormValues } from "./validateEmployee";
 
-const GENERIC_MESSAGE = "Đã có lỗi xảy ra, vui lòng thử lại sau.";
 const FIELD_NAMES = ["fullName", "email", "departmentId"] as const;
 const FIELD_LABELS = {
   fullName: "Họ tên",
@@ -45,8 +46,22 @@ type EmployeeFormPageProps = {
   mode: "create" | "edit";
 };
 
-function isAborted(error: unknown): boolean {
-  return error instanceof ApiError && error.kind === "aborted";
+/**
+ * Địa chỉ danh sách để quay về sau khi Lưu, Hủy (rà soát N-07): giữ chuỗi tìm mà trang danh sách gửi kèm khi bấm Sửa.
+ * Đọc từ state của đường dẫn (không có khi gõ thẳng địa chỉ hay F5, khi đó về /employees như cũ) và dựng lại bằng
+ * URLSearchParams, nên một giá trị lạ chỉ thành tham số tìm, không đổi được đường dẫn.
+ */
+function listPathFrom(state: unknown): string {
+  const search =
+    typeof state === "object" &&
+    state !== null &&
+    "search" in state &&
+    typeof state.search === "string"
+      ? state.search
+      : "";
+  return search
+    ? `/employees?${new URLSearchParams({ search }).toString()}`
+    : "/employees";
 }
 
 /** Đặt (hoặc bỏ) lỗi của đúng một ô, giữ nguyên lỗi các ô khác. */
@@ -75,6 +90,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
   const headingRef = usePageTitle(title);
   const navigate = useNavigate();
   const { isSubmitting, run } = useSubmitGuard();
+  const listPath = listPathFrom(useLocation().state);
 
   const params = useParams();
   const id = Number(params.id);
@@ -138,9 +154,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
           setLoadStatus("not-found");
           return;
         }
-        setLoadError(
-          error instanceof ApiError ? error.message : GENERIC_MESSAGE,
-        );
+        setLoadError(messageOf(error));
         setLoadStatus("error");
       },
     );
@@ -214,12 +228,10 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
       );
       setFieldErrors(apiFieldErrors);
       const hasAnyFieldError = Object.keys(error.errors).length > 0;
-      setSummaryMessages(
-        hasAnyFieldError ? otherMessages : [error.message || GENERIC_MESSAGE],
-      );
+      setSummaryMessages(hasAnyFieldError ? otherMessages : [messageOf(error)]);
     } else {
       // Lỗi mạng hoặc lỗi máy chủ.
-      setSummaryMessages([error.message || GENERIC_MESSAGE]);
+      setSummaryMessages([messageOf(error)]);
     }
     setSummaryFocusRequest((request) => request + 1);
   }
@@ -237,9 +249,10 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
       return;
     }
 
+    // Gửi đúng giá trị sẽ được lưu (đã gộp khoảng trắng, NFC). Đã qua validateEmployee nên không ra null.
     const request = {
-      fullName: values.fullName.trim(),
-      email: values.email.trim(),
+      fullName: normalizeText(values.fullName) ?? values.fullName,
+      email: normalizeText(values.email) ?? values.email,
       departmentId: Number(values.departmentId),
     };
     await run(async () => {
@@ -250,7 +263,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
         const message = isEdit
           ? `Đã cập nhật nhân viên "${saved.fullName}"`
           : `Đã thêm nhân viên "${saved.fullName}"`;
-        void navigate("/employees", { state: { message } });
+        void navigate(listPath, { state: { message } });
       } catch (error) {
         showSaveError(error);
       }
@@ -270,7 +283,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
         headingRef={headingRef}
         breadcrumbs={[
           { label: "Nhân sự" },
-          { label: "Nhân viên", to: "/employees" },
+          { label: "Nhân viên", to: listPath },
           { label: isEdit ? "Sửa" : "Thêm mới" },
         ]}
         description={
@@ -295,7 +308,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                 description="Nhân viên có thể đã bị xóa, hoặc đường dẫn không đúng."
                 action={{
                   label: "Về danh sách nhân viên",
-                  to: "/employees",
+                  to: listPath,
                   icon: "arrowLeft",
                 }}
               />
@@ -349,7 +362,8 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                     <input
                       {...controlProps}
                       type="text"
-                      maxLength={FULL_NAME_MAX_LENGTH}
+                      // Không đặt maxLength: trình duyệt sẽ cắt bớt phần dán thừa mà không báo (rà soát N-03).
+                      // Để nguyên, validateEmployee báo "tối đa 100 ký tự" cạnh ô.
                       autoComplete="off"
                       placeholder="Ví dụ: Nguyễn Văn An"
                       value={values.fullName}
@@ -373,7 +387,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                     <input
                       {...controlProps}
                       type="email"
-                      maxLength={EMAIL_MAX_LENGTH}
+                      // Không đặt maxLength, cùng lý do với ô họ tên (rà soát N-03).
                       autoComplete="off"
                       placeholder="ten@congty.vn"
                       value={values.email}
@@ -469,7 +483,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
             <div className="panel__footer">
               <Link
                 className="btn btn--secondary"
-                to="/employees"
+                to={listPath}
                 data-testid="employee-cancel"
               >
                 Hủy
