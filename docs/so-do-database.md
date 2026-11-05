@@ -45,12 +45,12 @@ erDiagram
 |---|---|---|---|---|
 | `id` | `integer` | Không | Khóa chính `PK_employees`, tự tăng (identity) | Mã nhân viên |
 | `full_name` | `character varying(100)` | Không | | Họ tên, tối đa 100 ký tự |
-| `email` | `character varying(254)` | Không | Không trùng (chỉ mục `ux_employees_email` trên `lower(email)`) | Email, lưu đúng như người dùng gõ, tối đa 254 ký tự |
+| `email` | `character varying(254)` | Không | Không trùng (chỉ mục `ux_employees_email` trên `lower(email)`) | Email, tối đa 254 ký tự. Được chuẩn hóa trước khi lưu (bỏ khoảng trắng hai đầu, gộp khoảng trắng, NFC), nhưng giữ nguyên chữ hoa thường như người dùng gõ |
 | `department_id` | `integer` | Không | Khóa ngoại `fk_employees_department` → `departments.id`; có chỉ mục `ix_employees_department_id` | Phòng ban của nhân viên |
 
 ## Ràng buộc database tự chặn
 
-Ứng dụng đã kiểm các luật này ở form React và ở API. Database chặn thêm một lớp nữa, để dù có ai chèn dữ liệu bằng câu lệnh tay thì dữ liệu vẫn đúng.
+Ứng dụng đã kiểm dữ liệu ở form React và ở API. Database chặn thêm một lớp nữa, nhưng chỉ cho các luật ở bảng dưới, cộng với `NOT NULL` và độ dài cột. Các luật còn lại (chuỗi rỗng, định dạng email, ký tự không hợp lệ) chỉ nằm ở form và API: ai chèn dữ liệu bằng câu lệnh tay thì database không chặn, nên phải tự giữ dữ liệu sạch.
 
 | Tên | Loại | Chặn điều gì |
 |---|---|---|
@@ -72,7 +72,7 @@ Migration `CreateDepartments` chèn sẵn 4 phòng ban. `id` do database tự c�
 | Kỹ thuật |
 | Kinh doanh |
 
-Bảng `employees` lúc đầu trống.
+Bảng `employees` lúc đầu trống. Muốn có dữ liệu để demo, chạy [`du-lieu-mau.sql`](du-lieu-mau.sql) (README mục 12): thêm 4 phòng ban và 80 nhân viên tên giả.
 
 ## Đối chiếu bằng pgAdmin
 

@@ -2,6 +2,8 @@
 
 > Phần trong kế hoạch: *Tạo database và bảng; kiểu dữ liệu; khóa chính, khóa ngoại; SELECT, INSERT, UPDATE, DELETE, JOIN; khái niệm index và transaction.*
 > Vị trí trong luồng: **bước 7** ở [00-tong-quan-luong.md](00-tong-quan-luong.md).
+>
+> **Lưu ý: đây là bản nháp học, viết trước khi làm bài.** Bài thật khác ở: bảng do migration EF Core tạo, không chạy tay câu `CREATE TABLE` dưới đây; `email` dài tối đa 254 ký tự, không phải 255; không có cột `created_at`; chống trùng tên và email bằng chỉ mục trên `lower(...)`, không dùng `UNIQUE` thường; xóa phòng ban còn nhân viên báo lỗi `RESTRICT`, mã `23001`. Đúng với bài thật: [sơ đồ database](../so-do-database.md).
 
 ## 1. Nói đơn giản
 
@@ -55,7 +57,7 @@ Bài thật sẽ để **EF Core migration** tạo bảng (xem [03-aspnet-core.m
 - `ALWAYS`: không cho tự gán id.
 - `BY DEFAULT`: cho gán id khi cần. EF Core (Npgsql) mặc định tạo kiểu này.
 
-Nguồn: [PostgreSQL Data Types](https://www.postgresql.org/docs/current/datatype.html) (link quen thuộc, hôm nay em chưa mở lại).
+Nguồn: [PostgreSQL Data Types](https://www.postgresql.org/docs/current/datatype.html) (link quen thuộc, chưa mở lại khi viết).
 
 ## 4. Khóa chính, khóa ngoại và các ràng buộc
 
@@ -179,7 +181,7 @@ departments                      employees
    Một phòng ban có nhiều nhân viên (1 - nhiều); mỗi nhân viên thuộc đúng một phòng ban.
 ```
 
-pgAdmin có công cụ **ERD** để vẽ sơ đồ từ database thật. Tùy bản cài, em chưa kiểm trên máy bạn.
+pgAdmin có công cụ **ERD** để vẽ sơ đồ từ database thật. Tùy bản cài, chưa kiểm trên mọi máy.
 
 ## 10. Câu hỏi tự kiểm
 
@@ -195,4 +197,4 @@ pgAdmin có công cụ **ERD** để vẽ sơ đồ từ database thật. Tùy b
 
 - [PostgreSQL Tutorial: The SQL Language](https://www.postgresql.org/docs/current/tutorial-sql.html), tutorial trong kế hoạch.
 - [PostgreSQL Versioning Policy](https://www.postgresql.org/support/versioning/): đã tra ngày 30/10/2026.
-- [PostgreSQL Documentation (current)](https://www.postgresql.org/docs/current/): link quen thuộc, hôm nay em chưa mở lại.
+- [PostgreSQL Documentation (current)](https://www.postgresql.org/docs/current/): link quen thuộc, chưa mở lại khi viết.

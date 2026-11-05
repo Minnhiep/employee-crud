@@ -162,11 +162,11 @@ cd frontend
 npm run coverage
 ```
 
-Mức sàn của dự án: ít nhất 80% số dòng của các lớp service. Kiểm đủ một lượt (kiểu TypeScript, lint, định dạng, build frontend và test backend): `npm run verify` trong thư mục `frontend`.
+Mức sàn của dự án: ít nhất 80% số dòng của các lớp service. Kiểm đủ một lượt (kiểu TypeScript, lint, định dạng TypeScript, build frontend, định dạng C# bằng `dotnet format` và test backend): `npm run verify` trong thư mục `frontend`.
 
 **Con số độ phủ nói lên điều gì:** khi bảng tóm tắt ghi 100% cho `DepartmentService`, `EmployeeService`, đó là **100% số dòng C#** của các lớp service được unit test chạy qua. Unit test dùng database giả trong bộ nhớ (InMemory), nên các luật nằm ở PostgreSQL không đo được bằng con số này: chỉ mục không trùng theo `lower()`, khóa ngoại chặn xóa phòng ban còn nhân viên, thứ tự sắp xếp chữ tiếng Việt. Các luật đó được kiểm tay trên database thật (danh sách D1–D5 trong hồ sơ kiểm thử của phòng ban và nhân viên). "Tổng" trong bảng thấp hơn vì tính cả controller và migration, hai phần này kiểm tay theo quy ước của dự án.
 
-**Vì sao lệnh đo độ phủ backend nằm trong `frontend/package.json`:** để mọi lệnh kiểm nằm chung một chỗ, gõ cùng một kiểu `npm run …` (dự án không có CI). Hai lệnh làm hai việc khác nhau: `npm run verify` kiểm kiểu TypeScript, lint, định dạng, build frontend và chạy test backend (không đo độ phủ), dùng trước mỗi lần commit; `npm run coverage` chạy test backend kèm đo độ phủ và in bảng phần trăm.
+**Vì sao lệnh đo độ phủ backend nằm trong `frontend/package.json`:** để mọi lệnh kiểm nằm chung một chỗ, gõ cùng một kiểu `npm run …` (dự án không có CI). Hai lệnh làm hai việc khác nhau: `npm run verify` kiểm kiểu TypeScript, lint, định dạng TypeScript, build frontend, kiểm định dạng C# (`dotnet format --verify-no-changes`, chỉ kiểm, không tự sửa file) và chạy test backend (không đo độ phủ), dùng trước mỗi lần commit; `npm run coverage` chạy test backend kèm đo độ phủ và in bảng phần trăm.
 
 ## 11. Sự cố thường gặp
 

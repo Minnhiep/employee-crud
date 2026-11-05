@@ -2,6 +2,8 @@
 
 > Phần trong kế hoạch: *GitHub: clone, branch, commit, pull, merge; cài đặt và chạy dự án trên máy cá nhân.*
 > Dùng suốt 10 ngày. Kết quả bàn giao đầu tiên của kế hoạch là **"Source code trên Git"**.
+>
+> **Lưu ý: đây là bản nháp học, viết trước khi làm bài.** Bài thật khác ở: thư mục backend là `backend/EmployeeCrud.Api/`, không phải `backend/EmployeeApi/`, có thêm project test `backend/EmployeeCrud.Api.Tests/`; thư mục frontend là `frontend/`, không phải `frontend/employee-ui/`. Đúng với bài thật: [README](../../README.md).
 
 ## 1. Nói đơn giản
 
@@ -130,4 +132,4 @@ Tránh `git push --force` lên nhánh dùng chung: lệnh này **ghi đè lịch
 
 ## Nguồn
 
-- [Pro Git book](https://git-scm.com/book/en/v2), [GitHub Docs](https://docs.github.com/en/get-started): link quen thuộc, hôm nay em chưa mở lại.
+- [Pro Git book](https://git-scm.com/book/en/v2), [GitHub Docs](https://docs.github.com/en/get-started): link quen thuộc, chưa mở lại khi viết.
