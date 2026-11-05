@@ -12,6 +12,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { StatusMessage } from "../../components/StatusMessage";
 import { Toast } from "../../components/Toast";
 import { usePageTitle } from "../../hooks/usePageTitle";
+import { parseId } from "../../utils/parseId";
 import { useDepartmentDelete } from "./useDepartmentDelete";
 
 /** Kết quả của một lần tải (phòng ban và nhân viên của phòng), ghi kèm khóa để bỏ kết quả cũ. */
@@ -41,17 +42,17 @@ const employeeColumns: DataTableColumn<Employee>[] = [
 ];
 
 /**
- * Trang chi tiết phòng ban `/departments/:id` (US6.2, BR6.2): tên, số nhân viên và bảng nhân viên của phòng.
- * Gọi hai API song song (ADR-007): GET phòng ban (có employeeCount) và GET nhân viên lọc theo phòng.
+ * Trang chi tiết phòng ban `/departments/:id`: tên, số nhân viên và bảng nhân viên của phòng.
+ * Gọi hai API song song: GET phòng ban (có employeeCount) và GET nhân viên lọc theo phòng.
  * Từ đây sửa, xóa phòng ban, sửa từng nhân viên hoặc thêm nhân viên đã chọn sẵn phòng này.
  */
 export function DepartmentDetailPage() {
   const navigate = useNavigate();
   const params = useParams();
-  // Chỉ nhận chữ số viết thường (không nhận "1e3", "0x10" mà Number() vẫn đọc ra số): địa chỉ như
-  // /departments/abc không phải mã hợp lệ, coi như không tìm thấy, không gọi API.
-  const hasValidId = /^[1-9][0-9]{0,8}$/.test(params.id ?? "");
-  const id = hasValidId ? Number(params.id) : 0;
+  // Địa chỉ như /departments/abc không phải mã hợp lệ, coi như không tìm thấy, không gọi API.
+  const parsedId = parseId(params.id);
+  const hasValidId = parsedId !== null;
+  const id = parsedId ?? 0;
   const detailPath = `/departments/${id}`;
 
   const [reloadKey, setReloadKey] = useState(0);
@@ -105,17 +106,26 @@ export function DepartmentDetailPage() {
       : (department?.name ?? "Chi tiết phòng ban");
   const headingRef = usePageTitle(title);
 
+  // Tăng số này để đưa focus về tiêu đề SAU khi hộp xác nhận đã đóng: lúc hộp còn mở, phần ngoài hộp không nhận focus.
+  const [headingFocusRequest, setHeadingFocusRequest] = useState(0);
+
+  useEffect(() => {
+    if (headingFocusRequest > 0) {
+      headingRef.current?.focus();
+    }
+  }, [headingFocusRequest, headingRef]);
+
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
   const { requestDelete, isSubmitting, dialogs } = useDepartmentDelete({
     onDeleted: (deleted) => {
-      // Phòng đã mất nên trang này không còn gì để hiện: về danh sách phòng ban kèm lời báo (AC6.2.5).
+      // Phòng đã mất nên trang này không còn gì để hiện: về danh sách phòng ban kèm lời báo.
       void navigate("/departments", {
         state: { message: `Đã xóa phòng ban "${deleted.name}"` },
       });
     },
     onError: (_department, error) => {
-      // 404: phòng vừa bị xóa ở nơi khác; 409: có người vừa được thêm vào (AC6.4.3). Tải lại để số đúng.
+      // 404: phòng vừa bị xóa ở nơi khác; 409: có người vừa được thêm vào. Tải lại để số đúng.
       if (
         error instanceof ApiError &&
         (error.status === 404 || error.status === 409)
@@ -125,11 +135,11 @@ export function DepartmentDetailPage() {
       if (!(error instanceof ApiError && error.status === 404)) {
         setActionError(messageOf(error));
       }
-      headingRef.current?.focus();
+      setHeadingFocusRequest((request) => request + 1);
     },
   });
 
-  // Gửi kèm đường quay về: Lưu/Hủy ở form nhân viên đưa người dùng lại đúng trang chi tiết này (AC6.2.3).
+  // Gửi kèm đường quay về: Lưu/Hủy ở form nhân viên và form sửa phòng ban đưa người dùng lại đúng trang chi tiết này.
   const returnState = { returnTo: detailPath };
 
   return (
@@ -154,6 +164,7 @@ export function DepartmentDetailPage() {
               <Link
                 className="btn btn--secondary"
                 to={`/departments/${department.id}/edit`}
+                state={returnState}
                 data-testid="department-detail-edit"
               >
                 <Icon name="edit" />
@@ -177,7 +188,7 @@ export function DepartmentDetailPage() {
         }
       />
 
-      {/* Lời báo "Đã thêm / Đã cập nhật nhân viên…" khi form nhân viên quay về trang này (AC6.2.3). */}
+      {/* Lời báo "Đã thêm / Đã cập nhật…" khi form nhân viên hoặc form sửa phòng ban quay về trang này. */}
       <Toast />
 
       <div className="page-body">

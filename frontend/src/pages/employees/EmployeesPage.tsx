@@ -16,6 +16,7 @@ import { Toast } from "../../components/Toast";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { useSubmitGuard } from "../../hooks/useSubmitGuard";
 import { normalizeText } from "../../utils/normalizeText";
+import { parseId } from "../../utils/parseId";
 
 const TITLE = "Nhân viên";
 
@@ -35,20 +36,33 @@ type DepartmentsLoad =
 /** Chữ cái đầu của từ đầu và từ cuối trong họ tên, ví dụ "Đỗ Văn An" → "ĐA"; tên một từ thì một chữ. */
 function initialsOf(fullName: string): string {
   const words = fullName.trim().split(/\s+/);
-  const first = words.at(0)?.charAt(0) ?? "";
-  const last = words.length > 1 ? (words.at(-1)?.charAt(0) ?? "") : "";
+  const first = firstCharacterOf(words.at(0));
+  const last = words.length > 1 ? firstCharacterOf(words.at(-1)) : "";
   return (first + last).toLocaleUpperCase("vi");
 }
 
+/** Array.from đi theo từng ký tự thật, nên lấy nguyên emoji; charAt(0) chỉ lấy một nửa và hiện ô vỡ. */
+function firstCharacterOf(word: string | undefined): string {
+  return Array.from(word ?? "").at(0) ?? "";
+}
+
 /**
- * Đọc ?departmentId= trên địa chỉ: chỉ nhận số nguyên dương viết bằng chữ số (cùng luật với API, BR5.3).
+ * Chuẩn hóa chuỗi tìm như API (gộp khoảng trắng, NFC), dùng cho cả chuỗi gõ ở ô tìm lẫn chuỗi đọc từ địa chỉ.
+ * Có ký tự lạ thì giữ chuỗi đã bỏ hai đầu: API trả danh sách rỗng, trang hiện "không tìm thấy".
+ */
+function normalizeSearch(raw: string): string {
+  return normalizeText(raw) ?? raw.trim();
+}
+
+/**
+ * Đọc ?departmentId= trên địa chỉ: chỉ nhận số nguyên dương viết bằng chữ số (cùng luật với API).
  * Trả về null khi không có, "invalid" khi có nhưng sai dạng (trang bỏ tham số đó đi).
  */
 function parseDepartmentId(raw: string | null): number | null | "invalid" {
   if (raw === null || raw === "") {
     return null;
   }
-  return /^[1-9][0-9]{0,8}$/.test(raw) ? Number(raw) : "invalid";
+  return parseId(raw) ?? "invalid";
 }
 
 const columns: DataTableColumn<Employee>[] = [
@@ -80,9 +94,9 @@ const columns: DataTableColumn<Employee>[] = [
 ];
 
 /**
- * Trang danh sách nhân viên (US2.1, US2.4, US3.1, US6.3): đủ trạng thái tải / lỗi / trống / không khớp / có dữ liệu
- * (BR4.1), tìm theo họ tên hoặc email bằng nút Tìm hoặc Enter (BR4.2), lọc theo phòng ban (BR6.3),
- * xóa có xác nhận bằng hộp thoại ngay trên bảng (BR4.7).
+ * Trang danh sách nhân viên: đủ trạng thái tải / lỗi / trống / không khớp / có dữ liệu,
+ * tìm theo họ tên hoặc email bằng nút Tìm hoặc Enter, lọc theo phòng ban,
+ * xóa có xác nhận bằng hộp thoại ngay trên bảng.
  */
 export function EmployeesPage() {
   const headingRef = usePageTitle(TITLE);
@@ -93,7 +107,7 @@ export function EmployeesPage() {
 
   // Chuỗi tìm và phòng lọc lấy từ địa chỉ, không lưu state riêng: địa chỉ là nguồn đúng duy nhất, nên Back/F5 tự đúng.
   const [searchParams, setSearchParams] = useSearchParams();
-  const search = searchParams.get("search")?.trim() ?? "";
+  const search = normalizeSearch(searchParams.get("search") ?? "");
   const rawDepartmentId = searchParams.get("departmentId");
   const parsedDepartmentId = parseDepartmentId(rawDepartmentId);
   const departmentId =
@@ -103,12 +117,13 @@ export function EmployeesPage() {
   const [departmentsLoad, setDepartmentsLoad] = useState<DepartmentsLoad>({
     status: "loading",
   });
+  const [departmentsReloadKey, setDepartmentsReloadKey] = useState(0);
   const departments =
     departmentsLoad.status === "ready" ? departmentsLoad.departments : [];
   const selectedDepartment = departments.find(
     (department) => department.id === departmentId,
   );
-  // Phòng trên địa chỉ sai dạng, hoặc đã tải xong danh sách phòng mà không có phòng đó (đã bị xóa, AC6.3.4).
+  // Phòng trên địa chỉ sai dạng, hoặc đã tải xong danh sách phòng mà không có phòng đó (đã bị xóa).
   const isStaleDepartment =
     parsedDepartmentId === "invalid" ||
     (departmentId !== null &&
@@ -150,10 +165,10 @@ export function EmployeesPage() {
       },
     );
     return () => controller.abort();
-  }, []);
+  }, [departmentsReloadKey]);
 
   // Phòng không còn: bỏ tham số khỏi địa chỉ (thay thế, không thêm mục lịch sử) để danh sách hiện tất cả,
-  // gửi kèm cờ để câu báo vẫn hiện sau khi tham số đã mất (AC6.3.4).
+  // gửi kèm cờ để câu báo vẫn hiện sau khi tham số đã mất.
   useEffect(() => {
     if (!isStaleDepartment) {
       return;
@@ -169,7 +184,7 @@ export function EmployeesPage() {
   }, [isStaleDepartment, setSearchParams]);
 
   // Tải mỗi khi chuỗi tìm, phòng lọc hoặc reloadKey đổi. Lời gọi cũ bị hủy khi có lời gọi mới hoặc rời trang,
-  // nên kết quả cũ không bao giờ đè lên kết quả mới (NFR5.5). State chỉ được đặt khi API đã trả lời.
+  // nên kết quả cũ không bao giờ đè lên kết quả mới. State chỉ được đặt khi API đã trả lời.
   useEffect(() => {
     const controller = new AbortController();
     getEmployees(search, departmentId, { signal: controller.signal }).then(
@@ -212,9 +227,8 @@ export function EmployeesPage() {
 
   // Trả lại chuỗi thật sự được tìm để ô tìm hiện đúng chuỗi đó (SearchBox).
   function handleSearch(value: string): string {
-    // Chuẩn hóa như API (gộp khoảng trắng, NFC) để địa chỉ trang ghi đúng chuỗi được tìm.
-    // Có ký tự lạ thì giữ chuỗi đã bỏ hai đầu: API trả danh sách rỗng, trang hiện "không tìm thấy" (Hiệp chọn).
-    const term = normalizeText(value) ?? value.trim();
+    // Chuẩn hóa trước để địa chỉ trang ghi đúng chuỗi được tìm.
+    const term = normalizeSearch(value);
     if (term === search) {
       // Bấm Tìm lại đúng chuỗi cũ: địa chỉ không đổi, nên chủ động tải lại.
       reload();
@@ -232,6 +246,18 @@ export function EmployeesPage() {
   function clearFilters() {
     applyFilters("", null);
     // Nút "Xóa bộ lọc" biến mất ngay sau khi bấm, nên đưa focus về ô tìm để người dùng bàn phím gõ tiếp.
+    searchInputRef.current?.focus();
+  }
+
+  function retryDepartments() {
+    setDepartmentsLoad({ status: "loading" });
+    setDepartmentsReloadKey((key) => key + 1);
+  }
+
+  // Ô lọc bị khóa khi tải phòng ban lỗi nên cần lối thoát riêng. Giữ chuỗi tìm, khác "Xóa bộ lọc" xóa cả hai.
+  function clearDepartmentFilter() {
+    applyFilters(search, null);
+    // Nút biến mất ngay sau khi bấm: đưa focus về ô tìm, như clearFilters.
     searchInputRef.current?.focus();
   }
 
@@ -275,7 +301,6 @@ export function EmployeesPage() {
     : "phòng đã chọn";
 
   // Dòng đếm luôn có sẵn trong trang (kể cả lúc rỗng) vì aria-live chỉ chắc chắn được đọc khi vùng đã có từ trước.
-  // Câu theo mockups 8b-3.
   let countText = "";
   if (status === "ready" && search && departmentId !== null) {
     countText = `Tìm thấy ${employees.length} nhân viên ở ${departmentLabel}`;
@@ -287,7 +312,7 @@ export function EmployeesPage() {
     countText = `${employees.length} nhân viên`;
   }
 
-  // Sửa từ danh sách đang tìm hoặc đang lọc: gửi kèm để Lưu/Hủy quay về đúng chỗ (rà soát N-07, FR8.3).
+  // Sửa từ danh sách đang tìm hoặc đang lọc: gửi kèm để Lưu/Hủy quay về đúng chỗ.
   const editState =
     search || departmentId !== null
       ? { search, departmentId: departmentId ?? undefined }
@@ -308,7 +333,7 @@ export function EmployeesPage() {
                 ? `/employees/new?departmentId=${departmentId}`
                 : "/employees/new"
             }
-            // Như nút Sửa: Lưu/Hủy quay về đúng danh sách đang tìm, đang lọc (rà soát U4 lượt 1).
+            // Như nút Sửa: Lưu/Hủy quay về đúng danh sách đang tìm, đang lọc.
             state={editState}
             data-testid="employee-add"
           >
@@ -389,6 +414,30 @@ export function EmployeesPage() {
                 ))}
               </select>
             </div>
+            {departmentsLoad.status === "error" && (
+              <div className="toolbar__actions">
+                <button
+                  type="button"
+                  className="btn btn--sm btn--secondary"
+                  onClick={retryDepartments}
+                  data-testid="employees-departments-retry"
+                >
+                  <Icon name="refresh" />
+                  Thử lại
+                </button>
+                {departmentId !== null && (
+                  <button
+                    type="button"
+                    className="btn btn--sm btn--secondary"
+                    onClick={clearDepartmentFilter}
+                    data-testid="employees-clear-department"
+                  >
+                    <Icon name="close" />
+                    Bỏ lọc phòng ban
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div data-testid="employees-status">
@@ -505,7 +554,7 @@ export function EmployeesPage() {
         onCancel={() => setPendingDelete(null)}
         confirmTestId="employee-delete-confirm"
       >
-        {/* Ghi kèm email vì hai người có thể trùng họ tên; email thì không trùng (rà soát N-05). */}
+        {/* Ghi kèm email vì hai người có thể trùng họ tên; email thì không trùng. */}
         <p>
           Nhân viên <strong>{pendingDelete?.fullName}</strong> (
           {pendingDelete?.email}) sẽ bị xóa vĩnh viễn. Thao tác này không thể

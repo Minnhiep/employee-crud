@@ -11,7 +11,7 @@ export type StatusAction =
   | {
       label: string;
       to: string;
-      /** Gửi kèm khi chuyển trang, ví dụ bộ lọc để form quay về đúng danh sách (Loop-back 3). */
+      /** Gửi kèm khi chuyển trang, ví dụ bộ lọc để form quay về đúng danh sách. */
       state?: unknown;
       icon?: IconName;
       testId?: string;
@@ -32,7 +32,7 @@ const ICONS: Record<"error" | "empty", IconName> = {
 };
 
 /**
- * Một chỗ duy nhất hiện ba trạng thái không phải dữ liệu (US4.2), đặt trong tấm nội dung:
+ * Một chỗ duy nhất hiện ba trạng thái không phải dữ liệu, đặt trong tấm nội dung:
  * - kind="loading": đang tải, role="status" để trình đọc màn hình đọc nhẹ nhàng.
  * - kind="error":   lỗi, role="alert" để được đọc ngay; thường kèm nút "Thử lại".
  * - kind="empty":   danh sách rỗng, không phải lỗi; thường kèm nút thêm mới.

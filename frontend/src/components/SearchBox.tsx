@@ -7,15 +7,15 @@ type SearchBoxProps = {
   initialValue: string;
   /** Gọi khi bấm "Tìm" hoặc Enter, nhận chuỗi đã bỏ khoảng trắng hai đầu; trả lại chuỗi thật sự được tìm (đã chuẩn hóa). */
   onSearch: (value: string) => string;
-  /** Để trang đưa focus về ô, ví dụ sau khi bấm "Xóa tìm kiếm". */
+  /** Để trang đưa focus về ô, ví dụ sau khi bấm "Xóa bộ lọc". */
   inputRef?: Ref<HTMLInputElement>;
 };
 
 /**
- * Form tìm kiếm dùng chung (interaction-spec 2.4). Gõ chưa làm gì; chỉ tìm khi bấm "Tìm" hoặc Enter.
+ * Form tìm kiếm dùng chung. Gõ chưa làm gì; chỉ tìm khi bấm "Tìm" hoặc Enter.
  *
  * Ô không bị khóa khi trang đang tải và không bị tạo lại sau mỗi lần tìm, để focus bàn phím ở lại trong ô
- * (WCAG 2.4.3). Bấm Tìm lần nữa lúc đang tải vẫn an toàn: trang hủy lời gọi cũ trước khi gọi lời mới (NFR5.5).
+ * (WCAG 2.4.3). Bấm Tìm lần nữa lúc đang tải vẫn an toàn: trang hủy lời gọi cũ trước khi gọi lời mới.
  */
 export function SearchBox({
   initialValue,
@@ -23,7 +23,7 @@ export function SearchBox({
   inputRef,
 }: SearchBoxProps) {
   const [value, setValue] = useState(initialValue);
-  // Chuỗi trên địa chỉ đổi mà không do ô này (Back/Forward, "Xóa tìm kiếm") thì ô lấy theo.
+  // Chuỗi trên địa chỉ đổi mà không do ô này (Back/Forward, "Xóa bộ lọc") thì ô lấy theo.
   // Đặt lại state ngay trong lúc vẽ là cách React khuyên dùng cho việc "đổi state theo prop", thay cho effect.
   const [syncedValue, setSyncedValue] = useState(initialValue);
   if (initialValue !== syncedValue) {
@@ -34,7 +34,7 @@ export function SearchBox({
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     // Ô luôn hiện đúng chuỗi được tìm, kể cả khi chuỗi đó trùng chuỗi đang có trên địa chỉ: lúc đó initialValue
-    // không đổi nên khối đồng bộ ở trên không chạy (rà soát U4 R-07, ví dụ gõ lại "a  b" khi đang tìm "a b").
+    // không đổi nên khối đồng bộ ở trên không chạy (ví dụ gõ lại "a  b" khi đang tìm "a b").
     setValue(onSearch(value.trim()));
   }
 

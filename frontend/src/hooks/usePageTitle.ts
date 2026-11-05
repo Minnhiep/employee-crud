@@ -18,7 +18,7 @@ export function usePageTitle(title: string) {
   // "Bỏ qua" (WCAG 2.4.1):
   // - lần mở ứng dụng đầu tiên: React Router đặt key của địa chỉ là "default";
   // - trang tự chuyển hướng kiểu thay thế (REPLACE), ví dụ mở "/" thì tự sang "/employees":
-  //   người dùng chưa bấm gì nên vẫn coi là lần mở đầu (rà soát U2, R-08).
+  //   người dùng chưa bấm gì nên vẫn coi là lần mở đầu.
   // Chuyển trang do người dùng bấm (PUSH) hoặc nút Quay lại/Tới (POP) thì đưa focus vào h1.
   // Không tính lại ở mỗi lần vẽ: trong cùng trang, Toast và nút Xóa cũng điều hướng kiểu REPLACE,
   // nếu tính lại thì lần tìm kiếm sau đó (PUSH) sẽ kéo focus khỏi ô tìm.

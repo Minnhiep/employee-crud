@@ -11,6 +11,7 @@
   --color-surface-muted: #f7f8fa; /* đầu cột bảng, chân tấm, dòng rê chuột */
   --color-sidebar: #12304a; /* thanh bên */
   --color-sidebar-text: #c9d6e3; /* 9.2:1 trên thanh bên */
+  --color-sidebar-text-strong: #ffffff; /* tên ứng dụng, mục menu đang chọn hoặc rê chuột */
   --color-sidebar-active: rgb(255 255 255 / 10%);
   --color-sidebar-divider: rgb(255 255 255 / 12%);
   --color-sidebar-marker: #5ea2ef;
@@ -32,10 +33,13 @@
   --color-danger: #b42318; /* 6.6:1 trên nền trắng */
   --color-danger-hover: #912018;
   --color-danger-subtle: #fef3f2;
+  --color-danger-border: rgb(180 35 24 / 25%); /* viền khung lỗi */
   --color-success: #067647;
   --color-success-subtle: #ecfdf3;
   --color-focus: #0f62c5;
   --color-focus-on-dark: #8ec5ff; /* viền focus trên thanh bên xanh đậm: 7.5:1 */
+  --color-brand-accent: #8ec5ff; /* người thứ hai trong logo */
+  --color-backdrop: rgb(18 48 74 / 45%); /* lớp phủ phía sau hộp thoại */
 
   /* Chữ: dùng rem để phóng to 200% không vỡ giao diện. Phông hệ thống, không tải phông ngoài. */
   --font-family:

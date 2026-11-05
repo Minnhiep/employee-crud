@@ -6,7 +6,7 @@ export const FULL_NAME_MAX_LENGTH = 100;
 export const EMAIL_MAX_LENGTH = 254;
 
 /**
- * BR1.6: một luật định dạng email, chép GIỐNG HỆT EmployeeService.EmailPattern ở backend.
+ * Một luật định dạng email, chép GIỐNG HỆT EmployeeService.EmailPattern ở backend.
  * Đọc thành lời: trước "@" ít nhất một ký tự không phải khoảng trắng hay "@"; sau "@" ít nhất hai đoạn
  * ngăn bởi dấu chấm, mỗi đoạn không rỗng (nên dấu chấm không đứng đầu, cuối hay liền nhau).
  * Điều kiện: email PHẢI được chuẩn hóa (normalizeText: bỏ hai đầu, gộp khoảng trắng) trước khi kiểm. "$" và "\s"
@@ -25,7 +25,7 @@ export type EmployeeFormValues = {
 export type EmployeeField = keyof EmployeeFormValues;
 
 /**
- * Kiểm cả ba ô trên trình duyệt, cùng luật, cùng thứ tự và cùng lời báo với API (BR1.1–BR1.6, BR1.8),
+ * Kiểm cả ba ô trên trình duyệt, cùng luật, cùng thứ tự và cùng lời báo với API,
  * để báo lỗi ngay mà không cần gọi máy chủ. API vẫn kiểm lại, vì không được tin dữ liệu từ form.
  * Khác API: form báo đủ lỗi của mọi ô một lần (API chỉ báo lỗi đầu tiên).
  */

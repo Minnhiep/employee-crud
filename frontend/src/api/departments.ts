@@ -1,11 +1,11 @@
 import { apiDelete, apiGet, apiPost, apiPut } from "./client";
 import type { RequestOptions } from "./client";
 
-/** Phòng ban API trả về (hợp đồng C1). */
+/** Phòng ban API trả về. */
 export type Department = {
   id: number;
   name: string;
-  /** Số nhân viên lúc đọc (FR8.1); backend đếm, frontend không tự đếm. */
+  /** Số nhân viên lúc đọc; backend đếm, frontend không tự đếm. */
   employeeCount: number;
 };
 

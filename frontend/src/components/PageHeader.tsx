@@ -3,8 +3,11 @@ import type { ReactNode, Ref } from "react";
 import { Link } from "react-router";
 import { Icon } from "./Icon";
 
-/** Một mục trên đường dẫn trang; mục có `to` là liên kết, mục cuối là trang hiện tại. */
-export type Breadcrumb = { label: string; to?: string };
+/**
+ * Một mục trên đường dẫn trang; mục có `to` là liên kết, mục cuối là trang hiện tại.
+ * `disabled`: tạm khóa liên kết (form đang lưu) nhưng vẫn Tab tới được, trình đọc màn hình đọc là đang khóa.
+ */
+export type Breadcrumb = { label: string; to?: string; disabled?: boolean };
 
 type PageHeaderProps = {
   /** Tên trang, hiện ở h1. */
@@ -42,11 +45,21 @@ export function PageHeader({
             {breadcrumbs.map((item, index) => {
               const isLast = index === breadcrumbs.length - 1;
               return (
-                // Ghép vị trí vào key: đường dẫn có thể trùng chữ, ví dụ "Nhân sự > Phòng ban > Nhân sự" (FR8.2).
+                // Ghép vị trí vào key: đường dẫn có thể trùng chữ, ví dụ "Nhân sự > Phòng ban > Nhân sự".
                 <Fragment key={`${index}-${item.label}`}>
                   <li className="breadcrumb__item">
                     {item.to && !isLast ? (
-                      <Link to={item.to}>{item.label}</Link>
+                      <Link
+                        to={item.to}
+                        aria-disabled={item.disabled}
+                        onClick={(event) => {
+                          if (item.disabled) {
+                            event.preventDefault();
+                          }
+                        }}
+                      >
+                        {item.label}
+                      </Link>
                     ) : (
                       <span aria-current={isLast ? "page" : undefined}>
                         {item.label}

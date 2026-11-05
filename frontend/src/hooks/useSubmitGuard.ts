@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 
 /**
- * Chặn gửi hai lần khi bấm Lưu (hoặc xác nhận Xóa) thật nhanh (US4.4).
+ * Chặn gửi hai lần khi bấm Lưu (hoặc xác nhận Xóa) thật nhanh.
  *
  * const { isSubmitting, run } = useSubmitGuard()
  * <button disabled={isSubmitting} onClick={() => run(() => apiPost(...))}>

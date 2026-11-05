@@ -18,12 +18,12 @@ function moveFocusOutOf(container: HTMLElement | null) {
 export type ToastLocationState = { message?: string } | null;
 
 /**
- * Thông báo thành công nổi ở góc dưới bên phải (US4.5), tự ẩn sau 5 giây, có nút đóng.
+ * Thông báo thành công nổi ở góc dưới bên phải, tự ẩn sau 5 giây, có nút đóng.
  * Đặt ở góc dưới để không che nút chính ở dải đầu trang (ví dụ "Thêm phòng ban").
  *
  * Cách dùng ở trang khác:
  *   navigate('/employees', { state: { message: 'Đã thêm nhân viên' } })
- * Sau khi xóa ngay trên trang danh sách (U3, U4):
+ * Sau khi xóa ngay trên trang danh sách:
  *   1. gọi lại hàm tải danh sách để dòng vừa xóa biến mất;
  *   2. navigate(location.pathname + location.search, { replace: true, state: { message: 'Đã xóa ...' } })
  *      chỉ để mang lời báo. Hiệu ứng tải danh sách không được phụ thuộc location.state.

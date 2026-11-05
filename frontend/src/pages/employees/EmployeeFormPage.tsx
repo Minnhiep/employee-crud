@@ -30,6 +30,7 @@ import { splitErrors } from "../../components/splitErrors";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { useSubmitGuard } from "../../hooks/useSubmitGuard";
 import { normalizeText } from "../../utils/normalizeText";
+import { parseId } from "../../utils/parseId";
 import { validateEmployee } from "./validateEmployee";
 import type { EmployeeField, EmployeeFormValues } from "./validateEmployee";
 
@@ -45,19 +46,22 @@ const EMPTY_VALUES: EmployeeFormValues = {
   departmentId: "",
 };
 
+const DEPARTMENT_PATH_PREFIX = "/departments/";
+
 type LoadStatus = "loading" | "ready" | "not-found" | "error";
-type DepartmentsStatus = "loading" | "ready" | "error";
+// "reloading": nạp lại khi form đã hiện, khác "loading" ở chỗ không được gỡ form khỏi màn hình.
+type DepartmentsStatus = "loading" | "reloading" | "ready" | "error";
 
 type EmployeeFormPageProps = {
   mode: "create" | "edit";
 };
 
 /**
- * Địa chỉ để quay về sau khi Lưu, Hủy, đọc từ state mà trang trước gửi kèm (không có khi gõ thẳng địa chỉ hay F5,
- * khi đó về /employees như cũ):
- * - `returnTo` từ trang chi tiết phòng ban (FR8.2): chỉ nhận đúng dạng /departments/<số>, để state lạ không đưa
+ * Địa chỉ để quay về sau khi Lưu, Hủy, đọc từ state mà trang trước gửi kèm (không có khi gõ thẳng địa chỉ,
+ * khi đó về /employees):
+ * - `returnTo` từ trang chi tiết phòng ban: chỉ nhận đúng dạng /departments/<số>, để state lạ không đưa
  *   người dùng tới một địa chỉ tùy ý;
- * - `search`, `departmentId` từ trang danh sách đang tìm hoặc lọc (rà soát N-07, FR8.3): dựng lại bằng
+ * - `search`, `departmentId` từ trang danh sách đang tìm hoặc lọc: dựng lại bằng
  *   URLSearchParams, nên giá trị lạ chỉ thành tham số, không đổi được đường dẫn.
  */
 function listPathFrom(state: unknown): string {
@@ -67,7 +71,8 @@ function listPathFrom(state: unknown): string {
   if (
     "returnTo" in state &&
     typeof state.returnTo === "string" &&
-    /^\/departments\/[1-9][0-9]*$/.test(state.returnTo)
+    state.returnTo.startsWith(DEPARTMENT_PATH_PREFIX) &&
+    parseId(state.returnTo.slice(DEPARTMENT_PATH_PREFIX.length)) !== null
   ) {
     return state.returnTo;
   }
@@ -87,11 +92,6 @@ function listPathFrom(state: unknown): string {
   return query ? `/employees?${query}` : "/employees";
 }
 
-/** ?departmentId= của form thêm (đi từ trang chi tiết phòng ban hoặc từ danh sách đang lọc, AC6.2.3). */
-function presetDepartmentIdFrom(raw: string | null): number | null {
-  return raw !== null && /^[1-9][0-9]{0,8}$/.test(raw) ? Number(raw) : null;
-}
-
 /** Đặt (hoặc bỏ) lỗi của đúng một ô, giữ nguyên lỗi các ô khác. */
 function withFieldError(
   current: FieldErrors,
@@ -108,27 +108,27 @@ function withFieldError(
 }
 
 /**
- * Form thêm và sửa nhân viên (US2.2, US2.3).
- * Kiểm trên trình duyệt như API (BR4.3), ô Phòng ban nạp từ API (BR4.4), khóa nút Lưu khi chờ (BR4.8),
- * lưu xong về danh sách kèm lời báo (BR4.6).
+ * Form thêm và sửa nhân viên.
+ * Kiểm trên trình duyệt như API, ô Phòng ban nạp từ API, khóa nút Lưu khi chờ,
+ * lưu xong quay về kèm lời báo.
  */
 export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
   const isEdit = mode === "edit";
-  const title = isEdit ? "Sửa nhân viên" : "Thêm nhân viên";
-  const headingRef = usePageTitle(title);
   const navigate = useNavigate();
   const { isSubmitting, run } = useSubmitGuard();
   const listPath = listPathFrom(useLocation().state);
   const [searchParams] = useSearchParams();
+  // ?departmentId= khi đi từ trang chi tiết phòng ban hoặc danh sách đang lọc.
   // Chỉ form thêm mới chọn sẵn phòng; form sửa luôn lấy phòng của nhân viên đang sửa.
   const presetDepartmentId = isEdit
     ? null
-    : presetDepartmentIdFrom(searchParams.get("departmentId"));
+    : parseId(searchParams.get("departmentId"));
 
   const params = useParams();
-  const id = Number(params.id);
   // Địa chỉ như /employees/abc/edit: không phải mã hợp lệ, coi như không tìm thấy, không gọi API.
-  const hasValidId = Number.isInteger(id) && id > 0;
+  const parsedId = parseId(params.id);
+  const hasValidId = parsedId !== null;
+  const id = parsedId ?? 0;
 
   const [values, setValues] = useState<EmployeeFormValues>(EMPTY_VALUES);
   // Họ tên lúc mở form sửa, để mô tả ghi rõ đang sửa ai; không đổi theo lúc gõ.
@@ -138,6 +138,11 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
   );
   const [loadError, setLoadError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+
+  const baseTitle = isEdit ? "Sửa nhân viên" : "Thêm nhân viên";
+  const title =
+    loadStatus === "not-found" ? "Không tìm thấy nhân viên" : baseTitle;
+  const headingRef = usePageTitle(title);
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentsStatus, setDepartmentsStatus] =
@@ -162,8 +167,18 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
     }
   }, [summaryFocusRequest]);
 
-  // Chế độ sửa: tải nhân viên để điền sẵn ba ô (BR4.5). Chạy song song với việc nạp phòng ban bên dưới,
-  // nên thời gian chờ bằng lời gọi lâu hơn chứ không phải tổng hai lời gọi (NFR5.5).
+  // Đánh dấu form đã rời trang, để lời gọi lưu đang chờ biết không được chuyển trang nữa.
+  // Đặt lại false khi gắn vì StrictMode gắn, gỡ rồi gắn lại form một lần lúc phát triển.
+  const hasLeftFormRef = useRef(false);
+  useEffect(() => {
+    hasLeftFormRef.current = false;
+    return () => {
+      hasLeftFormRef.current = true;
+    };
+  }, []);
+
+  // Chế độ sửa: tải nhân viên để điền sẵn ba ô. Chạy song song với việc nạp phòng ban bên dưới,
+  // nên thời gian chờ bằng lời gọi lâu hơn chứ không phải tổng hai lời gọi.
   useEffect(() => {
     if (!isEdit || !hasValidId) {
       return;
@@ -194,7 +209,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
     return () => controller.abort();
   }, [isEdit, hasValidId, id, reloadKey]);
 
-  // Nạp danh sách phòng ban cho ô chọn (BR4.4), dùng API của U3.
+  // Nạp danh sách phòng ban cho ô chọn.
   useEffect(() => {
     const controller = new AbortController();
     getDepartments({ signal: controller.signal }).then(
@@ -213,6 +228,16 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
               : current,
           );
         }
+        // Phòng đang chọn không còn thì bỏ chọn: nếu giữ, ô hiện dòng đầu nhưng bấm Lưu vẫn gửi mã phòng đã mất.
+        // Đặt sau bước chọn sẵn để không tự chọn thay người dùng một phòng khác.
+        setValues((current) =>
+          current.departmentId === "" ||
+          data.some(
+            (department) => String(department.id) === current.departmentId,
+          )
+            ? current
+            : { ...current, departmentId: "" },
+        );
       },
       (error: unknown) => {
         if (isAborted(error)) {
@@ -229,8 +254,8 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
     setReloadKey((key) => key + 1);
   }
 
-  function retryDepartments() {
-    setDepartmentsStatus("loading");
+  function reloadDepartments() {
+    setDepartmentsStatus("reloading");
     setDepartmentsReloadKey((key) => key + 1);
   }
 
@@ -250,7 +275,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
     setTouched((current) => ({ ...current, [field]: true }));
     const localError = validateEmployee(values)[field];
     // Chỉ thay lỗi khi kiểm trên trình duyệt thấy sai. Lỗi của API (ví dụ "Email đã được sử dụng") được giữ tới khi
-    // người dùng sửa ô. Vì sao (bài học U3): lưu lỗi thì focus chuyển sang khung tóm tắt, ô bị blur;
+    // người dùng sửa ô. Vì sao: lưu lỗi thì focus chuyển sang khung tóm tắt, ô bị blur;
     // nếu xóa lỗi ở đây thì lỗi API vừa nhận biến mất ngay và người dùng không thấy gì.
     if (localError) {
       setFieldErrors((current) => withFieldError(current, field, localError));
@@ -274,6 +299,11 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
       setFieldErrors(apiFieldErrors);
       const hasAnyFieldError = Object.keys(error.errors).length > 0;
       setSummaryMessages(hasAnyFieldError ? otherMessages : [messageOf(error)]);
+      // API chê phòng ban nghĩa là danh sách trên form có thể đã cũ: nạp lại để chọn được ngay, không cần tải lại trang.
+      // Nhận biết theo khóa, không theo câu chữ, để sửa lời báo ở API không làm hỏng chỗ này.
+      if ("departmentId" in error.errors) {
+        reloadDepartments();
+      }
     } else {
       // Lỗi mạng hoặc lỗi máy chủ.
       setSummaryMessages([messageOf(error)]);
@@ -289,7 +319,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
     const errors = validateEmployee(values);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
-      // Có lỗi thì không gửi request; đưa focus vào khung tóm tắt (AC4.1.1).
+      // Có lỗi thì không gửi request; đưa focus vào khung tóm tắt.
       setSummaryFocusRequest((request) => request + 1);
       return;
     }
@@ -305,21 +335,42 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
         const saved = isEdit
           ? await updateEmployee(id, request)
           : await createEmployee(request);
+        // Đã rời form bằng menu hoặc nút Back: bản ghi đã lưu, không kéo người dùng khỏi trang đang xem.
+        if (hasLeftFormRef.current) {
+          return;
+        }
         const message = isEdit
           ? `Đã cập nhật nhân viên "${saved.fullName}"`
           : `Đã thêm nhân viên "${saved.fullName}"`;
         void navigate(listPath, { state: { message } });
       } catch (error) {
+        // Form không còn trên màn hình để hiện lỗi, và ứng dụng không có vùng thông báo chung: chỉ ghi lại.
+        if (hasLeftFormRef.current) {
+          console.error("Không lưu được nhân viên sau khi đã rời form", error);
+          return;
+        }
         showSaveError(error);
       }
     });
   }
 
   // Sửa: chờ cả nhân viên lẫn phòng ban xong mới hiện form (để ô Phòng ban chọn sẵn đúng phòng).
+  // Đã biết không có nhân viên để sửa thì thôi chờ phòng ban, để trang chỉ hiện đúng một trạng thái.
   const isLoading =
-    loadStatus === "loading" || (isEdit && departmentsStatus === "loading");
+    loadStatus === "loading" ||
+    (loadStatus === "ready" && isEdit && departmentsStatus === "loading");
   const noDepartments =
     departmentsStatus === "ready" && departments.length === 0;
+
+  // Câu về trường bắt buộc chỉ có nghĩa khi form hiện trên trang.
+  let description: string | undefined;
+  if (loadStatus === "error") {
+    description = "Cập nhật thông tin nhân viên.";
+  } else if (loadStatus !== "not-found") {
+    description = isEdit
+      ? `Cập nhật thông tin ${loadedName ? `của ${loadedName}` : "nhân viên"}. Trường có dấu * là bắt buộc.`
+      : "Nhập thông tin nhân viên mới. Trường có dấu * là bắt buộc.";
+  }
 
   return (
     <>
@@ -328,14 +379,10 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
         headingRef={headingRef}
         breadcrumbs={[
           { label: "Nhân sự" },
-          { label: "Nhân viên", to: listPath },
+          { label: "Nhân viên", to: listPath, disabled: isSubmitting },
           { label: isEdit ? "Sửa" : "Thêm mới" },
         ]}
-        description={
-          isEdit
-            ? `Cập nhật thông tin ${loadedName ? `của ${loadedName}` : "nhân viên"}. Trường có dấu * là bắt buộc.`
-            : "Nhập thông tin nhân viên mới. Trường có dấu * là bắt buộc."
-        }
+        description={description}
       />
 
       <div className="page-body">
@@ -407,7 +454,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                     <input
                       {...controlProps}
                       type="text"
-                      // Không đặt maxLength: trình duyệt sẽ cắt bớt phần dán thừa mà không báo (rà soát N-03).
+                      // Không đặt maxLength: trình duyệt sẽ cắt bớt phần dán thừa mà không báo.
                       // Để nguyên, validateEmployee báo "tối đa 100 ký tự" cạnh ô.
                       autoComplete="off"
                       placeholder="Ví dụ: Nguyễn Văn An"
@@ -432,7 +479,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                     <input
                       {...controlProps}
                       type="email"
-                      // Không đặt maxLength, cùng lý do với ô họ tên (rà soát N-03).
+                      // Không đặt maxLength, cùng lý do với ô họ tên.
                       autoComplete="off"
                       placeholder="ten@congty.vn"
                       value={values.email}
@@ -490,7 +537,8 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                     )}
                   </FormField>
 
-                  {departmentsStatus === "loading" && (
+                  {(departmentsStatus === "loading" ||
+                    departmentsStatus === "reloading") && (
                     <p className="field__hint" role="status">
                       Đang tải danh sách phòng ban…
                     </p>
@@ -505,7 +553,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                       <button
                         type="button"
                         className="btn btn--sm btn--secondary"
-                        onClick={retryDepartments}
+                        onClick={reloadDepartments}
                         data-testid="employee-departments-retry"
                       >
                         <Icon name="refresh" />
@@ -529,6 +577,14 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
               <Link
                 className="btn btn--secondary"
                 to={listPath}
+                // Request đã gửi thì Hủy không dừng được: bấm chỉ làm người dùng tưởng chưa lưu, nên khóa lại.
+                // Dùng aria-disabled như ConfirmDialog: vẫn Tab tới được, không mất vị trí bàn phím.
+                aria-disabled={isSubmitting}
+                onClick={(event) => {
+                  if (isSubmitting) {
+                    event.preventDefault();
+                  }
+                }}
                 data-testid="employee-cancel"
               >
                 Hủy
@@ -536,8 +592,13 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
               <button
                 type="submit"
                 className="btn btn--primary"
-                // Nạp phòng ban lỗi thì không cho lưu (BR4.4); đang lưu thì khóa để bấm đúp chỉ gửi một lần (BR4.8).
-                disabled={isSubmitting || departmentsStatus === "error"}
+                // Nạp phòng ban lỗi hoặc đang nạp lại thì chưa biết phòng đã chọn còn không nên chưa cho lưu;
+                // đang lưu thì khóa để bấm đúp chỉ gửi một lần.
+                disabled={
+                  isSubmitting ||
+                  departmentsStatus === "error" ||
+                  departmentsStatus === "reloading"
+                }
                 data-testid="employee-save"
               >
                 {isSubmitting ? "Đang lưu…" : "Lưu nhân viên"}

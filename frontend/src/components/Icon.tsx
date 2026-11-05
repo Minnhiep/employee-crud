@@ -1,5 +1,5 @@
 /**
- * Bộ icon SVG tự vẽ (lưới 24x24, nét 1.75px), không thêm gói icon (NFR5.4).
+ * Bộ icon SVG tự vẽ (lưới 24x24, nét 1.75px), không thêm gói icon.
  * Icon chỉ để nhìn: luôn đi kèm chữ, nên ẩn khỏi trình đọc màn hình (aria-hidden), WCAG 1.1.1.
  * Màu lấy theo chữ xung quanh (currentColor), cỡ mặc định bằng 1.25 lần cỡ chữ.
  */
@@ -107,11 +107,17 @@ export function BrandMark() {
       aria-hidden="true"
       focusable="false"
     >
-      <rect width="32" height="32" rx="8" fill="#0f62c5" />
-      <circle cx="13" cy="12" r="4" fill="#ffffff" />
-      <path d="M6 24.5c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5" fill="#ffffff" />
-      <circle cx="22" cy="13" r="3" fill="#8ec5ff" />
-      <path d="M21 18.2c3 .4 5 2.8 5 5.8h-4.2" fill="#8ec5ff" />
+      <rect width="32" height="32" rx="8" fill="var(--color-primary)" />
+      <circle cx="13" cy="12" r="4" fill="var(--color-on-primary)" />
+      <path
+        d="M6 24.5c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5"
+        fill="var(--color-on-primary)"
+      />
+      <circle cx="22" cy="13" r="3" fill="var(--color-brand-accent)" />
+      <path
+        d="M21 18.2c3 .4 5 2.8 5 5.8h-4.2"
+        fill="var(--color-brand-accent)"
+      />
     </svg>
   );
 }

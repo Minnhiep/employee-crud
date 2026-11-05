@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import {
   ApiError,
   GENERIC_MESSAGE,
@@ -21,10 +21,12 @@ import { splitErrors } from "../../components/splitErrors";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { useSubmitGuard } from "../../hooks/useSubmitGuard";
 import { normalizeText } from "../../utils/normalizeText";
+import { parseId } from "../../utils/parseId";
 import { validateDepartment } from "./validateDepartment";
 
 const FIELD_NAMES = ["name"] as const;
 const FIELD_LABELS = { name: "Tên phòng ban" };
+const LIST_PATH = "/departments";
 
 type LoadStatus = "loading" | "ready" | "not-found" | "error";
 
@@ -33,20 +35,35 @@ type DepartmentFormPageProps = {
 };
 
 /**
- * Form thêm và sửa phòng ban (US1.2, US1.3).
- * Kiểm trên trình duyệt như API (BR4.2), khóa nút Lưu khi chờ (BR4.6), lưu xong về danh sách kèm lời báo (BR4.4).
+ * Địa chỉ để quay về sau khi Lưu, Hủy. Chỉ nhận đúng trang chi tiết của phòng đang sửa,
+ * để state lạ không đưa người dùng tới một địa chỉ tùy ý; không có state thì về danh sách.
+ */
+function returnPathFrom(state: unknown, id: number): string {
+  const detailPath = `${LIST_PATH}/${id}`;
+  return typeof state === "object" &&
+    state !== null &&
+    "returnTo" in state &&
+    state.returnTo === detailPath
+    ? detailPath
+    : LIST_PATH;
+}
+
+/**
+ * Form thêm và sửa phòng ban.
+ * Kiểm trên trình duyệt như API, khóa nút Lưu khi chờ, lưu xong quay về kèm lời báo.
  */
 export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
   const isEdit = mode === "edit";
-  const title = isEdit ? "Sửa phòng ban" : "Thêm phòng ban";
-  const headingRef = usePageTitle(title);
   const navigate = useNavigate();
   const { isSubmitting, run } = useSubmitGuard();
+  const locationState: unknown = useLocation().state;
 
   const params = useParams();
-  const id = Number(params.id);
   // Địa chỉ như /departments/abc/edit: không phải mã hợp lệ, coi như không tìm thấy, không gọi API.
-  const hasValidId = Number.isInteger(id) && id > 0;
+  const parsedId = parseId(params.id);
+  const hasValidId = parsedId !== null;
+  const id = parsedId ?? 0;
+  const returnPath = returnPathFrom(locationState, id);
 
   const [name, setName] = useState("");
   // Tên lúc mở form sửa, để mô tả ghi rõ đang sửa phòng nào; không đổi theo lúc gõ.
@@ -56,6 +73,12 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
   );
   const [loadError, setLoadError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+
+  const baseTitle = isEdit ? "Sửa phòng ban" : "Thêm phòng ban";
+  const title =
+    loadStatus === "not-found" ? "Không tìm thấy phòng ban" : baseTitle;
+  const headingRef = usePageTitle(title);
+
   const [touched, setTouched] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [summaryMessages, setSummaryMessages] = useState<string[]>([]);
@@ -70,7 +93,17 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
     }
   }, [summaryFocusRequest]);
 
-  // Chế độ sửa: tải phòng ban để điền sẵn tên (BR4.3).
+  // Đánh dấu form đã rời trang, để lời gọi lưu đang chờ biết không được chuyển trang nữa.
+  // Đặt lại false khi gắn vì StrictMode gắn, gỡ rồi gắn lại form một lần lúc phát triển.
+  const hasLeftFormRef = useRef(false);
+  useEffect(() => {
+    hasLeftFormRef.current = false;
+    return () => {
+      hasLeftFormRef.current = true;
+    };
+  }, []);
+
+  // Chế độ sửa: tải phòng ban để điền sẵn tên.
   useEffect(() => {
     if (!isEdit || !hasValidId) {
       return;
@@ -153,7 +186,7 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
     const errors = validateDepartment(name);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
-      // Có lỗi thì không gửi request; đưa focus vào khung tóm tắt (AC4.1.1).
+      // Có lỗi thì không gửi request; đưa focus vào khung tóm tắt.
       setSummaryFocusRequest((request) => request + 1);
       return;
     }
@@ -165,14 +198,33 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
         const saved = isEdit
           ? await updateDepartment(id, request)
           : await createDepartment(request);
+        // Đã rời form bằng menu hoặc nút Back: bản ghi đã lưu, không kéo người dùng khỏi trang đang xem.
+        if (hasLeftFormRef.current) {
+          return;
+        }
         const message = isEdit
           ? `Đã cập nhật phòng ban "${saved.name}"`
           : `Đã thêm phòng ban "${saved.name}"`;
-        void navigate("/departments", { state: { message } });
+        void navigate(returnPath, { state: { message } });
       } catch (error) {
+        // Form không còn trên màn hình để hiện lỗi, và ứng dụng không có vùng thông báo chung: chỉ ghi lại.
+        if (hasLeftFormRef.current) {
+          console.error("Không lưu được phòng ban sau khi đã rời form", error);
+          return;
+        }
         showSaveError(error);
       }
     });
+  }
+
+  // Câu về trường bắt buộc chỉ có nghĩa khi form hiện trên trang.
+  let description: string | undefined;
+  if (loadStatus === "error") {
+    description = "Cập nhật tên phòng ban.";
+  } else if (loadStatus !== "not-found") {
+    description = isEdit
+      ? `Cập nhật tên phòng ban${loadedName ? ` ${loadedName}` : ""}. Trường có dấu * là bắt buộc.`
+      : "Nhập thông tin phòng ban mới. Trường có dấu * là bắt buộc.";
   }
 
   return (
@@ -182,14 +234,10 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
         headingRef={headingRef}
         breadcrumbs={[
           { label: "Nhân sự" },
-          { label: "Phòng ban", to: "/departments" },
+          { label: "Phòng ban", to: LIST_PATH, disabled: isSubmitting },
           { label: isEdit ? "Sửa" : "Thêm mới" },
         ]}
-        description={
-          isEdit
-            ? `Cập nhật tên phòng ban${loadedName ? ` ${loadedName}` : ""}. Trường có dấu * là bắt buộc.`
-            : "Nhập thông tin phòng ban mới. Trường có dấu * là bắt buộc."
-        }
+        description={description}
       />
 
       <div className="page-body">
@@ -205,7 +253,7 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
                 description="Phòng ban có thể đã bị xóa, hoặc đường dẫn không đúng."
                 action={{
                   label: "Về danh sách phòng ban",
-                  to: "/departments",
+                  to: LIST_PATH,
                   icon: "arrowLeft",
                 }}
               />
@@ -255,7 +303,7 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
                     <input
                       {...controlProps}
                       type="text"
-                      // Không đặt maxLength: trình duyệt sẽ cắt bớt phần dán thừa mà không báo (rà soát N-03).
+                      // Không đặt maxLength: trình duyệt sẽ cắt bớt phần dán thừa mà không báo.
                       // Để nguyên, validateDepartment báo "tối đa 100 ký tự" cạnh ô.
                       autoComplete="off"
                       placeholder="Ví dụ: Kế toán"
@@ -273,7 +321,15 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
             <div className="panel__footer">
               <Link
                 className="btn btn--secondary"
-                to="/departments"
+                to={returnPath}
+                // Request đã gửi thì Hủy không dừng được: bấm chỉ làm người dùng tưởng chưa lưu, nên khóa lại.
+                // Dùng aria-disabled như ConfirmDialog: vẫn Tab tới được, không mất vị trí bàn phím.
+                aria-disabled={isSubmitting}
+                onClick={(event) => {
+                  if (isSubmitting) {
+                    event.preventDefault();
+                  }
+                }}
                 data-testid="department-cancel"
               >
                 Hủy
