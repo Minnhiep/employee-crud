@@ -11,14 +11,13 @@ using Npgsql;
 namespace EmployeeCrud.Api.Tests.Employees;
 
 /// <summary>
-/// Unit test cho luật nghiệp vụ nhân viên (BR1, BR2.1–BR2.6, NFR3.6). Số thứ tự (#) khớp bảng ca test
-/// trong unit-test-instructions.md §5.1.
+/// Unit test cho luật nghiệp vụ nhân viên. Số thứ tự (#) chỉ để gọi tên từng ca test cho gọn.
 /// </summary>
 public class EmployeeServiceTests
 {
     private readonly DbContextOptions<AppDbContext> _options = TestDb.CreateOptions();
 
-    // EmployeeService hỏi phòng ban qua DepartmentService thật trên cùng database InMemory (đường gọi C4),
+    // EmployeeService hỏi phòng ban qua DepartmentService thật trên cùng database InMemory,
     // mỗi service một AppDbContext riêng, giống mỗi request một ngữ cảnh.
     private EmployeeService CreateService() =>
         new(new AppDbContext(_options), new DepartmentService(new AppDbContext(_options)));
@@ -191,7 +190,7 @@ public class EmployeeServiceTests
 
     // ---- Thêm ----
 
-    [Fact] // #11. Bỏ khoảng trắng hai đầu; email giữ nguyên chữ hoa như đã gõ (Q1).
+    [Fact] // #11. Bỏ khoảng trắng hai đầu; email giữ nguyên chữ hoa như đã gõ.
     public async Task Create_TrimsValues_AndKeepsEmailCaseAsTyped()
     {
         var departmentId = await SeedDepartmentAsync("Kế toán");
@@ -265,7 +264,19 @@ public class EmployeeServiceTests
         AssertValidation(exception, "email", "Email tối đa 254 ký tự");
     }
 
-    [Theory] // #16. Bộ ví dụ hợp lệ của BR1.6 (giống form). "a@b.vn\n" hợp lệ vì được trim trước khi kiểm.
+    [Fact] // Sát mức trần: 244 + 10 = 254 ký tự vẫn nhận, chỉ từ 255 mới từ chối.
+    public async Task Create_WhenEmailIsExactlyMaxLength_Saves()
+    {
+        var departmentId = await SeedDepartmentAsync();
+        var email = new string('a', 244) + "@congty.vn";
+
+        var result = await CreateService().CreateAsync(Request("Minh Le", email, departmentId));
+
+        Assert.Equal(254, result.Email.Length);
+        Assert.Equal(email, result.Email);
+    }
+
+    [Theory] // #16. Bộ ví dụ hợp lệ (giống form). "a@b.vn\n" hợp lệ vì được trim trước khi kiểm.
     [InlineData("a@congty.vn")]
     [InlineData("an.nguyen@cong-ty.com.vn")]
     [InlineData("a@b.vn\n")]
@@ -278,7 +289,7 @@ public class EmployeeServiceTests
         Assert.Equal(email.Trim(), result.Email);
     }
 
-    [Theory] // #17. Bộ ví dụ không hợp lệ của BR1.6 (giống form).
+    [Theory] // #17. Bộ ví dụ không hợp lệ (giống form).
     [InlineData("abc")]
     [InlineData("a@b")]
     [InlineData("a @b.vn")]
@@ -475,7 +486,7 @@ public class EmployeeServiceTests
         AssertDomainError(exception, DomainErrorKind.NotFound);
     }
 
-    [Fact] // #32. Lỗi database khác: không nuốt, ném nguyên để U1 trả 500 và ghi log.
+    [Fact] // #32. Lỗi database khác: không nuốt, ném nguyên để ErrorMapper trả 500 và ghi log.
     public async Task Create_WhenOtherDatabaseError_RethrowsOriginalException()
     {
         var departmentId = await SeedDepartmentAsync();
@@ -488,7 +499,7 @@ public class EmployeeServiceTests
         Assert.Same(original, exception);
     }
 
-    // ---- Chuẩn hóa họ tên, email và chuỗi tìm (Step 11, rà soát N-04, S-04, A-08) ----
+    // ---- Chuẩn hóa họ tên, email và chuỗi tìm ----
     // Viết bằng mã \u cho chữ có dấu và ký tự vô hình, để người đọc thấy rõ từng ký tự (ký tự vô hình gõ thẳng thì không nhìn thấy).
 
     [Fact] // #33. Gồm tab, khoảng trắng không ngắt (U+00A0) và chữ gõ kiểu tổ hợp (ễ = e + dấu mũ + dấu ngã).
@@ -526,7 +537,7 @@ public class EmployeeServiceTests
         Assert.Empty(await EmployeesInDatabaseAsync());
     }
 
-    [Fact] // #35. U+200B không phải khoảng trắng nên trước Step 11 lọt qua luật định dạng email.
+    [Fact] // #35. U+200B không phải khoảng trắng nên luật định dạng email không tự chặn được.
     public async Task Create_WithInvalidCharacterInEmail_ThrowsValidationAndSavesNothing()
     {
         var departmentId = await SeedDepartmentAsync();
@@ -543,7 +554,7 @@ public class EmployeeServiceTests
         Assert.Empty(await EmployeesInDatabaseAsync());
     }
 
-    [Fact] // #36. Email có chữ có dấu gõ kiểu tổ hợp, trùng email dạng dựng sẵn đã có: không lách được BR1.7.
+    [Fact] // #36. Email có chữ có dấu gõ kiểu tổ hợp, trùng email dạng dựng sẵn đã có: không lách được luật không trùng.
     public async Task Create_WithDecomposedFormOfExistingEmail_ThrowsConflict()
     {
         var departmentId = await SeedDepartmentAsync();
@@ -558,7 +569,7 @@ public class EmployeeServiceTests
     }
 
     [Fact] // #37. Dùng ngữ cảnh database đã đóng: nếu service còn gửi câu truy vấn thì test ném lỗi. Vậy test chứng minh
-    // chuỗi có ký tự lạ không bao giờ xuống tới database (PostgreSQL thật từ chối U+0000, trước đây API trả 500).
+    // chuỗi có ký tự lạ không bao giờ xuống tới database (PostgreSQL thật từ chối U+0000, API sẽ trả 500).
     public async Task GetAll_WithInvalidCharacterInSearch_ReturnsEmptyWithoutQueryingDatabase()
     {
         var closedDb = new AppDbContext(_options);
@@ -583,7 +594,7 @@ public class EmployeeServiceTests
         Assert.Equal(["Nguy\u1EC5n V\u0103n An"], decomposed.Select(e => e.FullName));
     }
 
-    [Fact] // #39 (A-08). Lỗi tranh chấp khi THÊM MỚI là bất thường: ném nguyên, không báo "Không tìm thấy nhân viên có mã 0".
+    [Fact] // #39. Lỗi tranh chấp khi THÊM MỚI là bất thường: ném nguyên, không báo "Không tìm thấy nhân viên có mã 0".
     public async Task Create_WhenConcurrencyErrorOnSave_RethrowsOriginalException()
     {
         var departmentId = await SeedDepartmentAsync();
@@ -609,7 +620,7 @@ public class EmployeeServiceTests
         Assert.Equal("Minh Le", Assert.Single(await EmployeesInDatabaseAsync()).FullName);
     }
 
-    [Fact] // #41 (rà soát U4 R-08). Sửa với email chứa ký tự vô hình: báo đúng ô email, dữ liệu cũ giữ nguyên.
+    [Fact] // #41. Sửa với email chứa ký tự vô hình: báo đúng ô email, dữ liệu cũ giữ nguyên.
     public async Task Update_WithInvalidCharacterInEmail_ThrowsValidationAndKeepsOldData()
     {
         var departmentId = await SeedDepartmentAsync();
@@ -622,7 +633,7 @@ public class EmployeeServiceTests
         Assert.Equal("minh@congty.vn", Assert.Single(await EmployeesInDatabaseAsync()).Email);
     }
 
-    // ---- Lọc theo phòng ban (Change Request FR8.3, BR5.3) ----
+    // ---- Lọc theo phòng ban ----
 
     // Hai phòng: Kế toán có Minh, Hoa; Kỹ thuật có An. Trả về id của hai phòng.
     private async Task<(int Accounting, int Engineering)> SeedTwoDepartmentsAsync()
@@ -707,5 +718,66 @@ public class EmployeeServiceTests
             () => CreateService().GetAllAsync(searchWithControlCharacter, "abc"));
 
         AssertValidation(exception, "departmentId", "Phòng ban lọc không hợp lệ");
+    }
+
+    // ---- Ký tự noncharacter ----
+
+    // Đầu và cuối mỗi nhóm noncharacter, gồm cả mã ở mặt phẳng phụ. Để lọt U+FFFE tới bước chuẩn hóa thì API trả 500.
+    private static readonly string[] Noncharacters =
+        [.. new[] { 0xFFFE, 0xFFFF, 0xFDD0, 0xFDEF, 0x1FFFE, 0x10FFFF }.Select(char.ConvertFromUtf32)];
+
+    [Fact]
+    public async Task Create_WithNoncharacterInFullName_ThrowsValidationAndSavesNothing()
+    {
+        var departmentId = await SeedDepartmentAsync();
+
+        foreach (var noncharacter in Noncharacters)
+        {
+            var exception = await Record.ExceptionAsync(
+                () => CreateService().CreateAsync(Request($"Minh{noncharacter}Le", "minh@congty.vn", departmentId)));
+
+            AssertValidation(exception, "fullName", "Họ tên chứa ký tự không hợp lệ");
+        }
+
+        Assert.Empty(await EmployeesInDatabaseAsync());
+    }
+
+    [Fact]
+    public async Task Create_WithNoncharacterInEmail_ThrowsValidationAndSavesNothing()
+    {
+        var departmentId = await SeedDepartmentAsync();
+
+        foreach (var noncharacter in Noncharacters)
+        {
+            var exception = await Record.ExceptionAsync(
+                () => CreateService().CreateAsync(Request("Minh Le", $"minh{noncharacter}@congty.vn", departmentId)));
+
+            AssertValidation(exception, "email", "Email chứa ký tự không hợp lệ");
+        }
+
+        Assert.Empty(await EmployeesInDatabaseAsync());
+    }
+
+    [Fact] // Ngữ cảnh database đã đóng: test chứng minh chuỗi có noncharacter không xuống tới database, trả rỗng ngay.
+    public async Task GetAll_WithNoncharacterInSearch_ReturnsEmptyWithoutQueryingDatabase()
+    {
+        var closedDb = new AppDbContext(_options);
+        await closedDb.DisposeAsync();
+        var service = new EmployeeService(closedDb, new DepartmentService(new AppDbContext(_options)));
+
+        foreach (var noncharacter in Noncharacters)
+        {
+            Assert.Empty(await service.GetAllAsync($"a{noncharacter}b"));
+        }
+    }
+
+    [Fact] // Luật mới không được chặn nhầm chữ Việt và emoji (emoji cũng nằm ở mặt phẳng phụ như U+1FFFE).
+    public async Task Create_WithVietnameseNameAndEmoji_Saves()
+    {
+        var departmentId = await SeedDepartmentAsync();
+
+        var result = await CreateService().CreateAsync(Request("Nguyễn Văn An \U0001F600", "an@congty.vn", departmentId));
+
+        Assert.Equal("Nguyễn Văn An \U0001F600", result.FullName);
     }
 }

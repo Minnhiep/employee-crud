@@ -1,6 +1,6 @@
 namespace EmployeeCrud.Api.Platform;
 
-/// <summary>Kiểm cấu hình bắt buộc lúc khởi động (BR2.1, NFR1.1).</summary>
+/// <summary>Kiểm cấu hình bắt buộc lúc khởi động.</summary>
 public static class StartupChecks
 {
     // Khớp khóa "ConnectionStrings:Default" trong user-secrets; đổi tên ở đây thì phải đổi cả lệnh trong README.
@@ -22,14 +22,14 @@ public static class StartupChecks
     public static void EnsureConnectionString(WebApplication app)
     {
         // Chỉ kiểm chuỗi kết nối có hay không, không mở kết nối thử: backend vẫn khởi động được khi PostgreSQL tắt,
-        // EF Core chỉ kết nối lúc có request cần dữ liệu (NFR1.4).
+        // EF Core chỉ kết nối lúc có request cần dữ liệu.
         var connectionString = app.Configuration.GetConnectionString(ConnectionStringName);
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
             return;
         }
 
-        // Chỉ in câu hướng dẫn, không in giá trị cấu hình nào (BR3.2).
+        // Chỉ in câu hướng dẫn, không in giá trị cấu hình nào.
         app.Logger.LogCritical(MissingConnectionStringMessage);
         throw new InvalidOperationException(MissingConnectionStringMessage);
     }

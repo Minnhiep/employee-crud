@@ -9,12 +9,12 @@ namespace EmployeeCrud.Api.Platform.Errors;
 
 /// <summary>
 /// Thay phản hồi 400 mặc định của ASP.NET Core (title tiếng Anh, khóa PascalCase như "Name")
-/// bằng phản hồi theo phong bì C3: title tiếng Việt, khóa camelCase khớp tên trường JSON (BR1.2, BR1.7).
+/// bằng phản hồi ProblemDetails: title tiếng Việt, khóa camelCase khớp tên trường JSON.
 /// </summary>
 public static class ValidationResponseFactory
 {
     // Ghi chữ tiếng Việt nguyên dạng, như bộ ghi JSON của MVC và lỗi 404/409 vẫn làm. Thiếu dòng này,
-    // JsonResult mã thoát mọi ký tự ngoài ASCII ("Dữ" thành "Dữ"). Cho phép mọi bảng chữ nhưng vẫn
+    // JsonResult mã thoát mọi ký tự ngoài ASCII (chữ "ữ" thành sáu ký tự: gạch chéo ngược, u, rồi mã 1EEF). Cho phép mọi bảng chữ nhưng vẫn
     // mã thoát ký tự HTML như < > & ' " (an toàn hơn UnsafeRelaxedJsonEscaping). Chỉ đọc, không giữ dữ liệu.
     private static readonly JsonSerializerOptions ProblemJsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -47,7 +47,7 @@ public static class ValidationResponseFactory
                     ? ErrorTitles.InvalidJsonMessage
                     // Lỗi đọc JSON của framework là câu tiếng Anh kỹ thuật, nên thay bằng câu tiếng Việt.
                     : isJsonError
-                        ? "Giá trị không đúng kiểu dữ liệu"
+                        ? ErrorTitles.InvalidValueTypeMessage
                         : error.ErrorMessage;
 
                 if (!errors.TryGetValue(field, out var messages))
@@ -65,7 +65,7 @@ public static class ValidationResponseFactory
 
         var problem = new ValidationProblemDetails(errors.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray()))
         {
-            // Cùng type và traceId như lỗi 404/409 do AddProblemDetails ghi (phong bì C3).
+            // Cùng type và traceId như lỗi 404/409 do AddProblemDetails ghi.
             Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
             Status = StatusCodes.Status400BadRequest,
             Title = ErrorTitles.Invalid,

@@ -6,9 +6,9 @@ using Npgsql;
 namespace EmployeeCrud.Api.Platform.Errors;
 
 /// <summary>
-/// Đổi một lỗi (exception) thành phản hồi ProblemDetails theo phong bì C3.
+/// Đổi một lỗi (exception) thành phản hồi ProblemDetails.
 /// Đây là hàm thuần: không đọc request, không ghi phản hồi, nên test được từng nhánh mà không cần chạy web.
-/// Mã trả về luôn là 4xx hoặc 5xx (NFR3.3): không bao giờ biến lỗi thành thành công.
+/// Mã trả về luôn là 4xx hoặc 5xx: không bao giờ biến lỗi thành thành công.
 /// </summary>
 public static class ErrorMapper
 {
@@ -31,7 +31,6 @@ public static class ErrorMapper
 
     private static ProblemDetails MapDomainError(DomainError error) => error.Kind switch
     {
-        // BR1.1
         DomainErrorKind.NotFound => new ProblemDetails
         {
             Status = StatusCodes.Status404NotFound,
@@ -39,14 +38,14 @@ public static class ErrorMapper
             Detail = error.Message,
         },
 
-        // BR1.2: lỗi kiểm dữ liệu luôn gắn với một trường.
+        // Lỗi kiểm dữ liệu luôn gắn với một trường.
         DomainErrorKind.Validation => WithErrors(
             StatusCodes.Status400BadRequest,
             ErrorTitles.Invalid,
             error.Field ?? ErrorTitles.BodyKey,
             error.Message),
 
-        // BR1.3: có trường thì báo theo trường (để form tô đỏ đúng ô), không có thì báo chung bằng detail.
+        // Có trường thì báo theo trường (để form tô đỏ đúng ô), không có thì báo chung bằng detail.
         DomainErrorKind.Conflict when error.Field is not null => WithErrors(
             StatusCodes.Status409Conflict,
             error.Title ?? ErrorTitles.Duplicate,
@@ -63,20 +62,18 @@ public static class ErrorMapper
         _ => ServerError(),
     };
 
-    // BR1.4, BR1.5: nhận ra lỗi database theo mã lỗi + tên ràng buộc.
+    // Nhận ra lỗi database theo mã lỗi + tên ràng buộc.
     // Trường hợp này xảy ra khi hai request chen nhau vượt qua bước kiểm trong service.
     private static ProblemDetails MapPostgres(PostgresException postgres)
     {
         if (postgres.SqlState == UniqueViolation)
         {
-            // Tên trường "name", "email" phải khớp khóa JSON mà DepartmentService, EmployeeService dùng.
-            // Gõ lại ở đây thay vì tham chiếu service, để tầng nền (Platform) không phụ thuộc ngược vào tầng nghiệp vụ.
             return postgres.ConstraintName switch
             {
                 DbConstraintNames.DepartmentNameUnique => WithErrors(
-                    StatusCodes.Status409Conflict, ErrorTitles.Duplicate, "name", ErrorTitles.DepartmentNameTaken),
+                    StatusCodes.Status409Conflict, ErrorTitles.Duplicate, ErrorTitles.NameKey, ErrorTitles.DepartmentNameTaken),
                 DbConstraintNames.EmployeeEmailUnique => WithErrors(
-                    StatusCodes.Status409Conflict, ErrorTitles.Duplicate, "email", ErrorTitles.EmailTaken),
+                    StatusCodes.Status409Conflict, ErrorTitles.Duplicate, ErrorTitles.EmailKey, ErrorTitles.EmailTaken),
                 // Ràng buộc lạ là lỗi ngoài dự kiến: trả 500 và để log ghi chi tiết.
                 _ => ServerError(),
             };
@@ -84,7 +81,7 @@ public static class ErrorMapper
 
         if (postgres.SqlState is ForeignKeyViolation or RestrictViolation)
         {
-            // Đường dự phòng: service U3/U4 lẽ ra đã bắt lỗi này và báo rõ hơn.
+            // Đường dự phòng: DepartmentService, EmployeeService lẽ ra đã bắt lỗi này và báo rõ hơn.
             // Ở đây không biết đang làm thao tác gì nên chỉ báo chung, không đoán.
             return new ProblemDetails
             {
@@ -115,7 +112,7 @@ public static class ErrorMapper
         };
     }
 
-    // BR1.6: không đưa thông điệp gốc ra ngoài (có thể chứa câu SQL, tên bảng...); chi tiết chỉ nằm trong log.
+    // Không đưa thông điệp gốc ra ngoài (có thể chứa câu SQL, tên bảng...); chi tiết chỉ nằm trong log.
     private static ProblemDetails ServerError() => new()
     {
         Status = StatusCodes.Status500InternalServerError,

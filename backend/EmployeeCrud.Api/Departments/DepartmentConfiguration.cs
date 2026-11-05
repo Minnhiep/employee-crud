@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace EmployeeCrud.Api.Departments;
 
 /// <summary>
-/// Cấu hình bảng <c>departments</c>: tên bảng và cột viết thường snake_case khai tay (team.md, không dùng gói đổi tên tự động).
+/// Cấu hình bảng <c>departments</c>: tên bảng và cột viết thường snake_case khai tay (không dùng gói đổi tên tự động).
 /// AppDbContext tự nạp lớp này nhờ ApplyConfigurationsFromAssembly.
 /// </summary>
 public class DepartmentConfiguration : IEntityTypeConfiguration<Department>

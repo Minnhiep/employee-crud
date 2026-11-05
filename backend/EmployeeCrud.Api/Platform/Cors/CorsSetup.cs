@@ -2,7 +2,7 @@ namespace EmployeeCrud.Api.Platform.Cors;
 
 /// <summary>
 /// CORS: trình duyệt chỉ cho trang web ở origin khác gọi API khi API trả header cho phép.
-/// Ở đây chỉ cho đúng địa chỉ dev của Vite (cấu hình Cors:AllowedOrigins), không dùng "*" (BR2.3, NFR7.1).
+/// Ở đây chỉ cho đúng địa chỉ dev của Vite (cấu hình Cors:AllowedOrigins), không dùng "*".
 /// </summary>
 public static class CorsSetup
 {

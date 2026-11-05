@@ -4,8 +4,8 @@ using System.Text;
 namespace EmployeeCrud.Api.Platform.Text;
 
 /// <summary>
-/// Chuẩn hóa chữ người dùng nhập (tên phòng ban ở U3, họ tên và email ở U4) trước khi kiểm và lưu,
-/// để mọi nơi cùng một luật (rà soát tổng thể N-04, S-04). Form React có bản tương ứng: utils/normalizeText.ts.
+/// Chuẩn hóa chữ người dùng nhập (tên phòng ban, họ tên và email) trước khi kiểm và lưu,
+/// để mọi nơi cùng một luật. Form React có bản tương ứng: utils/normalizeText.ts.
 /// Căn cứ: RFC 8264 §4.3.3 (cấm ký tự điều khiển và ký tự vô hình), RFC 8266 §2.1 (gộp khoảng trắng),
 /// W3C Character Model §2.2.1 (dùng NFC, không dùng NFKC vì làm đổi nghĩa chữ).
 /// </summary>
@@ -13,8 +13,8 @@ public static class TextInput
 {
     /// <summary>
     /// Gộp mọi chuỗi khoảng trắng thành một dấu cách, bỏ khoảng trắng hai đầu, đưa chữ có dấu về dạng dựng sẵn (NFC).
-    /// Trả false khi còn ký tự điều khiển (ví dụ \0), ký tự định dạng vô hình (ví dụ U+200B, U+202E)
-    /// hoặc ký tự Unicode hỏng (nửa cặp surrogate).
+    /// Trả false khi còn ký tự điều khiển (ví dụ \0), ký tự định dạng vô hình (ví dụ U+200B, U+202E),
+    /// ký tự Unicode hỏng (nửa cặp surrogate) hoặc noncharacter (ví dụ U+FFFE).
     /// </summary>
     public static bool TryNormalize(string? raw, out string normalized)
     {
@@ -53,6 +53,13 @@ public static class TextInput
                 return false;
             }
 
+            // Noncharacter không phải chữ để trao đổi, và U+FFFE làm string.Normalize ở cuối hàm ném lỗi thành 500.
+            // Kiểm ở đây, trên mã ký tự thật, để mã nằm ở mặt phẳng phụ như U+1FFFE cũng bị chặn.
+            if (IsNoncharacter(char.ConvertToUtf32(raw, i)))
+            {
+                return false;
+            }
+
             // Ký tự định dạng vô hình (Unicode loại Cf): dấu cách rộng 0 làm "Kế\u200Btoán" trông như "Kếtoán"
             // mà lách được luật không trùng; ký tự đảo chiều U+202E làm chữ hiện ra khác chữ thật (CVE-2021-42574).
             // Đọc theo (raw, i) để ký tự gồm hai nửa surrogate được xét đúng một lần.
@@ -80,4 +87,9 @@ public static class TextInput
         normalized = builder.ToString().Normalize(NormalizationForm.FormC);
         return true;
     }
+
+    // 66 mã Unicode dành riêng cho nội bộ phần mềm: U+FDD0–U+FDEF và hai mã cuối của mỗi mặt phẳng
+    // (…FFFE, …FFFF). Phép & giữ lại bốn chữ số hex cuối và bỏ bit cuối cùng, nên FFFE và FFFF ra cùng một kết quả.
+    private static bool IsNoncharacter(int codePoint) =>
+        codePoint is >= 0xFDD0 and <= 0xFDEF || (codePoint & 0xFFFE) == 0xFFFE;
 }

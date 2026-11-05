@@ -26,11 +26,11 @@ namespace EmployeeCrud.Api.Migrations
                 });
 
             // Viết tay: EF Core không sinh được chỉ mục trên biểu thức lower(name).
-            // Chỉ mục này để database tự chặn tên trùng không phân biệt hoa thường (BR3.1),
-            // và tên ux_departments_name phải khớp DbConstraintNames để U1 đổi lỗi 23505 thành 409.
+            // Chỉ mục này để database tự chặn tên trùng không phân biệt hoa thường,
+            // và tên ux_departments_name phải khớp DbConstraintNames để ErrorMapper đổi lỗi 23505 thành 409.
             migrationBuilder.Sql("CREATE UNIQUE INDEX ux_departments_name ON departments (lower(name));");
 
-            // Dữ liệu mẫu (BR3.2). Chỉ chèn cột name, để id do database tự cấp:
+            // Dữ liệu mẫu. Chỉ chèn cột name, để id do database tự cấp:
             // nếu chèn kèm id cố định thì bộ đếm tự tăng không chạy theo, lần thêm phòng ban sau sẽ bị trùng id.
             migrationBuilder.InsertData(
                 table: "departments",

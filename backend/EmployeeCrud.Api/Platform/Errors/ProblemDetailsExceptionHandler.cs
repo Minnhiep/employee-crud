@@ -10,7 +10,7 @@ namespace EmployeeCrud.Api.Platform.Errors;
 
 /// <summary>
 /// Bộ bắt lỗi toàn cục: mọi exception chưa được xử lý trong controller/service đều đi qua đây
-/// và được đổi thành ProblemDetails (application/problem+json) theo phong bì C3.
+/// và được đổi thành ProblemDetails (application/problem+json).
 /// </summary>
 public sealed class ProblemDetailsExceptionHandler(
     IProblemDetailsService problemDetailsService,
@@ -28,7 +28,7 @@ public sealed class ProblemDetailsExceptionHandler(
         var traceId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
 
         // Log đặt ở đây (không thêm middleware log riêng) để chuỗi xử lý gọn.
-        // Không ghi body hay chuỗi kết nối (BR3.2).
+        // Không ghi body hay chuỗi kết nối.
         if (status >= StatusCodes.Status500InternalServerError)
         {
             logger.LogError(exception, "Lỗi không xử lý: {Method} {Path} (traceId {TraceId})",
@@ -42,7 +42,7 @@ public sealed class ProblemDetailsExceptionHandler(
 
         // Trước khi gọi tới đây, bộ bắt lỗi đã xóa sạch header của phản hồi, kể cả header CORS.
         // Thiếu header CORS thì trình duyệt chặn đọc phản hồi và chỉ báo "lỗi mạng",
-        // nên phải áp lại chính sách CORS (NFR7.2).
+        // nên phải áp lại chính sách CORS.
         await ApplyCorsAsync(httpContext);
 
         httpContext.Response.StatusCode = status;

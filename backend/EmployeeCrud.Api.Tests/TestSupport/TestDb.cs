@@ -10,7 +10,7 @@ namespace EmployeeCrud.Api.Tests.TestSupport;
 /// Tạo AppDbContext chạy trên database InMemory cho unit test service.
 /// Mỗi lần gọi CreateOptions là một database mới (tên bằng Guid), nên các test không dính dữ liệu của nhau.
 /// Giới hạn: InMemory không có chỉ mục không trùng, không có khóa ngoại, sắp xếp theo mã ký tự;
-/// các điểm đó được kiểm tay trên PostgreSQL thật (xem unit-test-instructions.md).
+/// các điểm đó được kiểm tay trên PostgreSQL thật.
 /// </summary>
 internal static class TestDb
 {

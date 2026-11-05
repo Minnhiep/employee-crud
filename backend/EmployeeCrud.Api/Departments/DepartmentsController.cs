@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace EmployeeCrud.Api.Departments;
 
 /// <summary>
-/// API phòng ban (hợp đồng C1). Controller chỉ nhận request và trả mã HTTP; mọi luật nằm ở DepartmentService.
-/// Lỗi nghiệp vụ (DomainError) do U1 đổi sang ProblemDetails 400/404/409.
+/// API phòng ban. Controller chỉ nhận request và trả mã HTTP; mọi luật nằm ở DepartmentService.
+/// Lỗi nghiệp vụ (DomainError) do ProblemDetailsExceptionHandler đổi sang ProblemDetails 400/404/409.
 /// </summary>
 [ApiController]
 [Route("api/departments")]

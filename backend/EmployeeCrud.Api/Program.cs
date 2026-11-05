@@ -19,9 +19,9 @@ builder.Services
     .AddControllers()
     .ConfigureApiBehaviorOptions(options =>
     {
-        // Lỗi kiểm dữ liệu: trả 400 tiếng Việt, khóa camelCase (BR1.2).
+        // Lỗi kiểm dữ liệu: trả 400 tiếng Việt, khóa camelCase.
         options.InvalidModelStateResponseFactory = ValidationResponseFactory.Create;
-        // Để 404/405/415 do framework sinh ra đi qua StatusCodeProblemWriter, nhận title tiếng Việt (BR1.7).
+        // Để 404/405/415 do framework sinh ra đi qua StatusCodeProblemWriter, nhận title tiếng Việt.
         options.SuppressMapClientErrors = true;
     });
 
@@ -30,13 +30,13 @@ builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 builder.Services.AddFrontendCors(builder.Configuration);
 builder.Services.AddOpenApi();
 
-// Mỗi request một AppDbContext (vòng đời scoped, BR3.1). Chuỗi kết nối được đọc khi tạo ngữ cảnh,
+// Mỗi request một AppDbContext (vòng đời scoped). Chuỗi kết nối được đọc khi tạo ngữ cảnh,
 // nên lệnh "dotnet ef" và test đều dựng được ứng dụng mà không cần mở kết nối lúc khởi động.
 builder.Services.AddDbContext<AppDbContext>((services, options) =>
     options.UseNpgsql(services.GetRequiredService<IConfiguration>()
         .GetConnectionString(StartupChecks.ConnectionStringName)));
 
-// Service nghiệp vụ: Scoped, cùng vòng đời với AppDbContext của request (NFR5.6).
+// Service nghiệp vụ: Scoped, cùng vòng đời với AppDbContext của request.
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
@@ -48,7 +48,7 @@ StartupChecks.EnsureConnectionString(app);
 
 // 0. Header bảo mật, gắn vào mọi phản hồi kể cả lỗi (xem SecurityHeaders).
 app.UseSecurityHeaders();
-// 1. CORS đứng ngoài cùng, để mọi phản hồi (kể cả lỗi) đều đi qua nó.
+// 1. CORS đứng ngay sau header bảo mật, ngoài bộ bắt lỗi, để mọi phản hồi (kể cả lỗi) đều đi qua nó.
 app.UseCors(CorsSetup.PolicyName);
 // 2. Bắt mọi lỗi phía sau và đổi thành ProblemDetails.
 app.UseExceptionHandler();
@@ -57,7 +57,7 @@ app.UseStatusCodePages(StatusCodeProblemWriter.WriteAsync);
 
 if (app.Environment.IsDevelopment())
 {
-    // Tài liệu API chỉ có ở môi trường Development (BR2.4).
+    // Tài liệu API chỉ có ở môi trường Development.
     app.MapOpenApi();
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "EmployeeCrud API v1"));
 }
