@@ -11,7 +11,7 @@ API của ứng dụng quản lý nhân viên và phòng ban: 10 thao tác, nh�
 | Định dạng gửi lên | `Content-Type: application/json`, tên trường viết kiểu camelCase (`fullName`, `departmentId`) |
 | Định dạng trả về khi thành công | `application/json; charset=utf-8` |
 | Định dạng trả về khi lỗi 400, 404, 405, 409, 415, 500 | `application/problem+json` (chuẩn ProblemDetails, RFC 9457), luôn có `type`, `title`, `status`, `traceId` |
-| Chuẩn hóa chữ | Tên phòng ban, họ tên, email và chuỗi tìm được chuẩn hóa trước khi kiểm và lưu: gộp nhiều khoảng trắng thành một, bỏ khoảng trắng hai đầu, đưa chữ có dấu về một dạng (NFC). Có ký tự điều khiển (ví dụ U+0000) hoặc ký tự vô hình (ví dụ U+200B) thì trả `400` "… chứa ký tự không hợp lệ" |
+| Chuẩn hóa chữ | Tên phòng ban, họ tên, email và chuỗi tìm được chuẩn hóa trước khi kiểm và lưu: gộp nhiều khoảng trắng thành một, bỏ khoảng trắng hai đầu, đưa chữ có dấu về một dạng (NFC). Tên phòng ban, họ tên, email có ký tự điều khiển (ví dụ U+0000), ký tự vô hình (ví dụ U+200B) hoặc noncharacter (ví dụ U+FFFE) thì trả `400` "… chứa ký tự không hợp lệ". Chuỗi tìm có các ký tự đó thì trả `200` với `[]`, xem mục `GET /api/employees` |
 | Ai được gọi từ trình duyệt | Chỉ trang `http://localhost:5173` (CORS). Postman không bị CORS chặn |
 | Đăng nhập | Không có |
 
@@ -128,7 +128,7 @@ Request: không có body. Ví dụ `DELETE /api/departments/25`.
 
 Response `204`: không có body.
 
-Lỗi có thể: `404` không có phòng ban mã đó; `409` phòng ban còn nhân viên, câu báo ghi số người còn lại (xem ví dụ ở mục Lỗi 409). Giao diện biết trước số người nhờ `employeeCount` nên không cho bấm xóa; 409 chỉ còn xảy ra khi có người được thêm chen vào giữa lúc tải và lúc xóa.
+Lỗi có thể: `404` không có phòng ban mã đó; `409` phòng ban còn nhân viên, câu báo ghi số người còn lại (xem ví dụ ở mục Lỗi 409). Giao diện biết trước số người nhờ `employeeCount`: nút Xóa vẫn bấm được nhưng chỉ mở hộp báo phòng còn N nhân viên, không gọi API. Vì vậy 409 chỉ còn xảy ra khi có người được thêm chen vào giữa lúc tải và lúc xóa.
 
 ---
 
@@ -173,7 +173,7 @@ Tham số không bắt buộc thứ hai: `departmentId`, chỉ lấy nhân viên
 - Số hợp lệ nhưng không có phòng ban đó (ví dụ `?departmentId=999999`) thì trả `200` với `[]`: lọc không ra ai, không phải lỗi "không tìm thấy".
 - Bỏ trống (`?departmentId=`) nghĩa là không lọc.
 
-Chuỗi tìm được chuẩn hóa như họ tên, email đã lưu, nên `?search=nguyễn%20%20văn` (hai dấu cách) vẫn tìm ra "Nguyễn Văn …". Chuỗi tìm có ký tự điều khiển hoặc ký tự vô hình (ví dụ `?search=%00`) cũng trả `200` với `[]`: họ tên, email đã bị chặn các ký tự đó khi lưu nên không ai khớp, và API không gửi chuỗi đó xuống database.
+Chuỗi tìm được chuẩn hóa như họ tên, email đã lưu, nên `?search=nguyễn%20%20văn` (hai dấu cách) vẫn tìm ra "Nguyễn Văn …". Chuỗi tìm có ký tự điều khiển, ký tự vô hình hoặc noncharacter (ví dụ `?search=%00`, `?search=a%EF%BF%BEb`) cũng trả `200` với `[]`: họ tên, email đã bị chặn các ký tự đó khi lưu nên không ai khớp, và API không gửi chuỗi đó xuống database.
 
 ### POST /api/employees
 
@@ -297,7 +297,7 @@ Response `400`, `Content-Type: application/problem+json`:
 }
 ```
 
-Họ tên và email của nhân viên dùng cùng luật, lời báo là `"Họ tên chứa ký tự không hợp lệ"` (trường `fullName`) và `"Email chứa ký tự không hợp lệ"` (trường `email`). Vì sao chặn: ký tự vô hình làm hai tên trông giống hệt mà máy coi là khác (lách được luật không trùng), còn U+0000 bị PostgreSQL từ chối.
+Họ tên và email của nhân viên dùng cùng luật, lời báo là `"Họ tên chứa ký tự không hợp lệ"` (trường `fullName`) và `"Email chứa ký tự không hợp lệ"` (trường `email`). Vì sao chặn: ký tự vô hình làm hai tên trông giống hệt mà máy coi là khác (lách được luật không trùng), còn U+0000 bị PostgreSQL từ chối. Noncharacter là 66 mã Unicode dành riêng cho nội bộ phần mềm, không phải chữ để trao đổi: U+FDD0 đến U+FDEF và hai mã cuối của mỗi mặt phẳng (U+FFFE, U+FFFF, U+1FFFE, ... U+10FFFF). Riêng U+FFFE từng làm API trả 500 ở bước chuẩn hóa chữ.
 
 ### Lỗi 404 Not Found
 

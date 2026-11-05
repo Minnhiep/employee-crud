@@ -20,7 +20,7 @@ type FormFieldProps = {
 };
 
 /**
- * Một ô nhập có nhãn, gợi ý và dòng lỗi (US4.6, WCAG 1.3.1, 3.3.2). Ví dụ:
+ * Một ô nhập có nhãn, gợi ý và dòng lỗi (WCAG 1.3.1, 3.3.2). Ví dụ:
  *   <FormField id="fullName" label="Họ tên" required errors={fieldErrors.fullName}>
  *     {(props) => <input {...props} value={...} onChange={...} />}
  *   </FormField>

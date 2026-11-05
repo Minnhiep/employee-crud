@@ -5,7 +5,7 @@ import { normalizeText } from "../../utils/normalizeText";
 export const DEPARTMENT_NAME_MAX_LENGTH = 100;
 
 /**
- * Kiểm tên phòng ban trên trình duyệt, cùng luật và cùng thứ tự với API (BR1.1–BR1.3), để báo lỗi ngay
+ * Kiểm tên phòng ban trên trình duyệt, cùng luật và cùng thứ tự với API, để báo lỗi ngay
  * mà không cần gọi máy chủ. API vẫn kiểm lại, vì không được tin dữ liệu từ form.
  */
 export function validateDepartment(name: string): FieldErrors {

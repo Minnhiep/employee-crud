@@ -12,7 +12,7 @@ public class Employee
 
     public string FullName { get; set; } = "";
 
-    /// <summary>Lưu đúng như người dùng gõ (đã bỏ khoảng trắng hai đầu), không đổi về chữ thường (Q1).</summary>
+    /// <summary>Lưu theo chữ người dùng gõ sau khi chuẩn hóa (bỏ khoảng trắng hai đầu, gộp khoảng trắng, đưa về NFC), không đổi về chữ thường.</summary>
     public string Email { get; set; } = "";
 
     public int DepartmentId { get; set; }

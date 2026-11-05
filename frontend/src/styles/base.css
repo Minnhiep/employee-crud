@@ -59,7 +59,7 @@ select {
 
 /*
  * h1 và main chỉ nhận focus bằng code (tabindex="-1", không nằm trong thứ tự Tab) để trình đọc màn hình
- * đọc tiêu đề trang mới. Chúng không phải nút bấm nên không cần viền focus (trước đây hiện khung xanh).
+ * đọc tiêu đề trang mới. Chúng không phải nút bấm nên không cần viền focus.
  */
 h1:focus,
 main:focus {

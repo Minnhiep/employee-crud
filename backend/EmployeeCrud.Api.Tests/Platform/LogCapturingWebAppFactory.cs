@@ -15,7 +15,12 @@ public sealed class LogCapturingWebAppFactory : PlatformWebAppFactory
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
-        builder.ConfigureLogging(logging => logging.AddProvider(Logs));
+        builder.ConfigureLogging(logging =>
+        {
+            logging.AddProvider(Logs);
+            // Dòng "Request finished" ở mức Information: test dùng nó để biết request đã chạy xong hẳn.
+            logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Information);
+        });
     }
 }
 

@@ -2,6 +2,18 @@
 
 > **Nguồn:** `code-generation-plan.md` (Testing Contract), `unit-test-instructions.md`, `code-summary.md` của U1–U5; `nfr-requirements/` và `nfr-design/` của từng Unit; hợp đồng C3; `team.md` (Testing Posture, Deployment); `docs/ke-hoach.md` mục 5 (Hiệp chọn gộp vào bước này); hai Change Request ngày 03/11 (làm lại giao diện, form 08aacca2 và 1af678f9; rà soát tổng thể, `ra-soat-tong-the.md`). Kết quả chạy: `test-results.md`.
 
+## Lượt 6 (04/11/2026, kiểm tra lại riêng theo `docs/ke-hoach.md`)
+
+**Kết luận: Không đạt ở 2 mục, chưa sửa.** Mọi chức năng và bàn giao của đề bài vẫn đạt; 138/138 test; độ phủ service 100%; truy vết 0 ID chưa phủ. Chi tiết: `test-results.md` lượt 6.
+
+| Target ID | Source | Expected | Actual | Evidence | Owning Stage | Verdict |
+|---|---|---|---|---|---|---|
+| TP-4 | `team.md` Code Style | Format và lint sạch trước commit | ESLint, Prettier sạch; `dotnet format --verify-no-changes` 8 lỗi ở 6 file | Lượt 6 §1, BT-05 | build-and-test | Not Met |
+| S-04, N-09 | Rà soát tổng thể nhóm 1 | Ký tự lạ không làm API ra 500 | U+FFFE ra 500 ở 3 đường gọi; các ký tự khác đúng | Lượt 6 §2, BT-04 | build-and-test | Not Met |
+| Các mục còn lại của lượt 5 | Như bảng dưới | Như bảng dưới | Không đổi. Kiểm lại trực tiếp ở lượt 6: KH-1, KH-2, KH-3, TP-1, TP-2, U1-NFR7.1, U2-NFR7.4, FR8.4 | Lượt 6 §1–§3 | build-and-test | Met |
+
+Sẵn sàng: Build-ready có; Test-ready có; Deployment-ready (chạy trên máy theo README) có. Hai mục Not Met không chặn demo. Hai phương án sửa kèm ước lượng ở `test-results.md` lượt 6 §5; lượt này chỉ kiểm tra nên không mở lại Code Generation.
+
 ## 1. Trạng thái chung
 
 Các lượt: lượt 1 (02/11) → Loop-back 1 về U1 (BT-01, BT-02) → lượt 2 dừng vì Change Request làm lại giao diện → lượt 3 (03/11 sáng) → Loop-back 2 về U1 (BT-03) → Change Request rà soát tổng thể (U1–U5) → lượt 4 (03/11 chiều) → **Change Request FR8 quan hệ phòng ban – nhân viên (U3–U5) → Loop-back 3 (U4) → Change Request kiểu liên kết (U4) → lượt 5 (04/11, lượt chốt)**.

@@ -14,10 +14,10 @@ type Options = {
 };
 
 /**
- * Luật xóa phòng ban dùng chung cho trang danh sách và trang chi tiết (BR6.4, US6.4):
+ * Luật xóa phòng ban dùng chung cho trang danh sách và trang chi tiết:
  * - Phòng còn người (employeeCount > 0, số của lần tải gần nhất): hộp thông báo "còn N nhân viên",
  *   không có nút xóa, có liên kết tới danh sách nhân viên đã lọc theo phòng đó.
- * - Phòng 0 người: hộp xác nhận như trước (BR4.5).
+ * - Phòng 0 người: hộp xác nhận xóa.
  * API vẫn tự chặn (409) nếu có người được thêm chen vào giữa lúc tải và lúc xóa; trang cha báo lỗi đó.
  */
 export function useDepartmentDelete({ onDeleted, onError }: Options): {

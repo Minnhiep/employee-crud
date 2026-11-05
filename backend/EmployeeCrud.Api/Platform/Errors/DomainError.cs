@@ -1,6 +1,6 @@
 namespace EmployeeCrud.Api.Platform.Errors;
 
-/// <summary>Ba loại lỗi nghiệp vụ mà service có thể báo (hợp đồng C5).</summary>
+/// <summary>Ba loại lỗi nghiệp vụ mà service có thể báo.</summary>
 public enum DomainErrorKind
 {
     NotFound,

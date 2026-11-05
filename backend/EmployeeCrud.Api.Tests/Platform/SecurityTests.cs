@@ -4,8 +4,8 @@ using System.Text;
 namespace EmployeeCrud.Api.Tests.Platform;
 
 /// <summary>
-/// Các lớp bảo vệ của phần nền (rà soát tổng thể 03/11/2026): chặn tên miền lạ (S-03)
-/// và header bảo mật trên mọi phản hồi /api, kể cả phản hồi lỗi (S-05).
+/// Các lớp bảo vệ của phần nền: chặn tên miền lạ
+/// và header bảo mật trên mọi phản hồi /api, kể cả phản hồi lỗi.
 /// </summary>
 public class SecurityTests(PlatformWebAppFactory factory) : IClassFixture<PlatformWebAppFactory>
 {

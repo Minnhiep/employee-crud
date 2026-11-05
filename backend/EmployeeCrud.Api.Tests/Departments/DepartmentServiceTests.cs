@@ -10,7 +10,7 @@ using Npgsql;
 namespace EmployeeCrud.Api.Tests.Departments;
 
 /// <summary>
-/// Unit test cho luật nghiệp vụ phòng ban (BR1, BR2, NFR3.3). Số thứ tự (#) khớp bảng ca test trong unit-test-instructions.md.
+/// Unit test cho luật nghiệp vụ phòng ban. Số thứ tự (#) và mã D chỉ để gọi tên từng ca test cho gọn.
 /// </summary>
 public class DepartmentServiceTests
 {
@@ -215,6 +215,29 @@ public class DepartmentServiceTests
         AssertDomainError(exception!, DomainErrorKind.NotFound);
     }
 
+    [Fact] // Tên không đổi nên EF không gửi UPDATE và không có lỗi tranh chấp: phải đọc lại mới biết phòng đã mất.
+    public async Task Update_WithUnchangedName_WhenRowDisappearsBeforeSave_ThrowsNotFound()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
+        var service = new DepartmentService(new RemoveDepartmentBeforeSaveContext(_options, seeded[0].Id));
+
+        var exception = await Record.ExceptionAsync(
+            () => service.UpdateAsync(seeded[0].Id, new DepartmentRequest { Name = "Kế toán" }));
+
+        AssertDomainError(exception!, DomainErrorKind.NotFound);
+    }
+
+    [Fact] // Tên không đổi, phòng còn: vẫn thành công và đúng số người.
+    public async Task Update_WithUnchangedName_ReturnsEmployeeCount()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
+        await TestDb.SeedEmployeeAsync(_options, "An Le", "an@congty.vn", seeded[0].Id);
+
+        var result = await CreateService().UpdateAsync(seeded[0].Id, new DepartmentRequest { Name = "Kế toán" });
+
+        Assert.Equal(new DepartmentDto(seeded[0].Id, "Kế toán", 1), result);
+    }
+
     // ---- Xóa ----
 
     [Fact] // #16
@@ -235,7 +258,7 @@ public class DepartmentServiceTests
         AssertDomainError(exception!, DomainErrorKind.NotFound);
     }
 
-    [Fact] // #18. Còn nhân viên: PostgreSQL báo 23503 trên khóa ngoại fk_employees_department (U4 tạo).
+    [Fact] // #18. Còn nhân viên: PostgreSQL báo 23503 trên khóa ngoại fk_employees_department.
     public async Task Delete_WhenEmployeesStillReferToIt_ThrowsConflictWithDepartmentName()
     {
         var seeded = await TestDb.SeedAsync(_options, "Kế toán");
@@ -261,7 +284,7 @@ public class DepartmentServiceTests
         AssertDomainError(exception!, DomainErrorKind.NotFound);
     }
 
-    [Fact] // #20. Lỗi database khác: không nuốt, ném nguyên để U1 trả 500 và ghi log.
+    [Fact] // #20. Lỗi database khác: không nuốt, ném nguyên để ErrorMapper trả 500 và ghi log.
     public async Task Delete_WhenOtherDatabaseError_RethrowsOriginalException()
     {
         var seeded = await TestDb.SeedAsync(_options, "Kế toán");
@@ -273,7 +296,7 @@ public class DepartmentServiceTests
         Assert.Same(original, exception);
     }
 
-    [Fact] // D1 (U4, BR2.7). Còn nhân viên thì service chặn TRƯỚC khi xóa, phòng ban vẫn còn.
+    [Fact] // D1. Còn nhân viên thì service chặn TRƯỚC khi xóa, phòng ban vẫn còn.
     public async Task Delete_WhenDepartmentHasEmployees_ThrowsConflict_AndKeepsDepartment()
     {
         var seeded = await TestDb.SeedAsync(_options, "Kế toán");
@@ -287,7 +310,7 @@ public class DepartmentServiceTests
         Assert.Equal(["Kế toán"], await NamesInDatabaseAsync());
     }
 
-    [Fact] // D2 (U4, NFR3.5). Bước kiểm trước và nhánh dự phòng 23503 ra cùng title và cùng câu.
+    [Fact] // D2. Bước kiểm trước và nhánh dự phòng 23503 ra cùng title và cùng câu.
     public async Task Delete_PreCheckAndForeignKeyFallback_ReturnTheSameError()
     {
         var seeded = await TestDb.SeedAsync(_options, "Kế toán");
@@ -304,7 +327,7 @@ public class DepartmentServiceTests
         Assert.Equal(fallback.Message, preCheck.Message);
     }
 
-    [Fact] // D3 (U4). PostgreSQL thật báo 23001 cho khóa ngoại RESTRICT (thấy khi chạy trên pgAdmin): vẫn ra 409, không 500.
+    [Fact] // D3. PostgreSQL thật báo 23001 cho khóa ngoại RESTRICT (thấy khi chạy trên pgAdmin): vẫn ra 409, không 500.
     public async Task Delete_WhenRestrictViolationOnSave_ThrowsConflictWithDepartmentName()
     {
         var seeded = await TestDb.SeedAsync(_options, "Kế toán");
@@ -318,7 +341,7 @@ public class DepartmentServiceTests
         Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì còn 1 nhân viên.", error.Message);
     }
 
-    // ---- Số nhân viên theo phòng ban (Change Request FR8, U4: BR5.1, BR5.2) ----
+    // ---- Số nhân viên theo phòng ban ----
 
     [Fact] // D4. Danh sách có employeeCount đúng từng phòng, kể cả phòng 0 người.
     public async Task GetAll_ReturnsEmployeeCountPerDepartment()
@@ -401,7 +424,7 @@ public class DepartmentServiceTests
         Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì còn 1 nhân viên.", error.Message);
     }
 
-    // ---- Kiểm tồn tại (cho U4) ----
+    // ---- Kiểm tồn tại (cho EmployeeService) ----
 
     [Theory] // #21
     [InlineData(true)]
@@ -416,7 +439,7 @@ public class DepartmentServiceTests
         Assert.Equal(exists, result);
     }
 
-    // ---- Chuẩn hóa tên (Step 11, rà soát N-04, S-04) ----
+    // ---- Chuẩn hóa tên ----
     // Viết bằng mã \u cho chữ có dấu và ký tự vô hình, để người đọc thấy rõ từng ký tự (ký tự vô hình gõ thẳng thì không nhìn thấy).
     private const string KeToanNfc = "K\u1EBF to\u00E1n"; // "Kế toán": ế, á là một ký tự dựng sẵn (NFC)
     private const string KeToanNfd = "Ke\u0302\u0301 toa\u0301n"; // trông y hệt, nhưng là e + dấu mũ + dấu sắc (NFD)
@@ -462,7 +485,7 @@ public class DepartmentServiceTests
     {
         string[] names =
         [
-            "\0", // ký tự NUL: trước đây PostgreSQL từ chối, API trả 500
+            "\0", // ký tự NUL: PostgreSQL từ chối, API sẽ trả 500
             "K\u1EBF\u001Bto\u00E1n", // ESC
             "K\u1EBF\u200Bto\u00E1n", // dấu cách rộng 0
             "\u202Eto\u00E1n", // đảo chiều chữ (CVE-2021-42574)
@@ -503,5 +526,55 @@ public class DepartmentServiceTests
         var error = AssertDomainError(exception!, DomainErrorKind.Validation);
         Assert.Equal("Tên phòng ban chứa ký tự không hợp lệ", error.Message);
         Assert.Equal([KeToanNfc], await NamesInDatabaseAsync());
+    }
+
+    // Đầu và cuối mỗi nhóm noncharacter, gồm cả mã ở mặt phẳng phụ. Để lọt U+FFFE tới bước chuẩn hóa thì API trả 500.
+    private static readonly string[] Noncharacters =
+        [.. new[] { 0xFFFE, 0xFFFF, 0xFDD0, 0xFDEF, 0x1FFFE, 0x10FFFF }.Select(char.ConvertFromUtf32)];
+
+    [Fact]
+    public async Task Create_WithNoncharacter_ThrowsValidationAndSavesNothing()
+    {
+        foreach (var noncharacter in Noncharacters)
+        {
+            var exception = await Record.ExceptionAsync(
+                () => CreateService().CreateAsync(new DepartmentRequest { Name = $"Kế{noncharacter}toán" }));
+
+            var error = AssertDomainError(exception!, DomainErrorKind.Validation);
+            Assert.Equal("name", error.Field);
+            Assert.Equal("Tên phòng ban chứa ký tự không hợp lệ", error.Message);
+        }
+
+        Assert.Empty(await NamesInDatabaseAsync());
+    }
+
+    [Fact]
+    public async Task Update_WithNoncharacter_ThrowsValidationAndKeepsOldName()
+    {
+        var seeded = await TestDb.SeedAsync(_options, KeToanNfc);
+
+        foreach (var noncharacter in Noncharacters)
+        {
+            var exception = await Record.ExceptionAsync(
+                () => CreateService().UpdateAsync(seeded[0].Id, new DepartmentRequest { Name = $"Tài{noncharacter}chính" }));
+
+            var error = AssertDomainError(exception!, DomainErrorKind.Validation);
+            Assert.Equal("Tên phòng ban chứa ký tự không hợp lệ", error.Message);
+        }
+
+        Assert.Equal([KeToanNfc], await NamesInDatabaseAsync());
+    }
+
+    [Fact] // Hai mã sát ngoài dải U+FDD0–U+FDEF là chữ bình thường: chặn lố một mã thì test này báo.
+    public async Task Create_WithCharactersNextToNoncharacterRange_Saves()
+    {
+        var nameBefore = "Phòng " + char.ConvertFromUtf32(0xFDCF);
+        var nameAfter = "Phòng " + char.ConvertFromUtf32(0xFDF0);
+
+        var before = await CreateService().CreateAsync(new DepartmentRequest { Name = nameBefore });
+        var after = await CreateService().CreateAsync(new DepartmentRequest { Name = nameAfter });
+
+        Assert.Equal(nameBefore, before.Name);
+        Assert.Equal(nameAfter, after.Name);
     }
 }

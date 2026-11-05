@@ -100,7 +100,7 @@ public class ErrorMapperTests
         Assert.False(string.IsNullOrWhiteSpace(problem.Detail));
     }
 
-    // Build and Test (Loop-back 1): PostgreSQL báo 23001 khi xóa phòng ban còn nhân viên (ON DELETE RESTRICT).
+    // PostgreSQL báo 23001 khi xóa phòng ban còn nhân viên (ON DELETE RESTRICT).
     [Fact]
     public void RestrictViolationNotHandledByService_Returns409Fallback()
     {

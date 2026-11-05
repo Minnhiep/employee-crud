@@ -14,13 +14,13 @@ using Npgsql;
 namespace EmployeeCrud.Api.Employees;
 
 /// <summary>
-/// Luật nghiệp vụ của nhân viên (BR1, BR2.1–BR2.6). Đăng ký Scoped: mỗi request một service và một AppDbContext riêng.
-/// Hỏi phòng ban có tồn tại qua <see cref="IDepartmentService"/> (hợp đồng C4), không đọc thẳng bảng departments.
+/// Luật nghiệp vụ của nhân viên. Đăng ký Scoped: mỗi request một service và một AppDbContext riêng.
+/// Hỏi phòng ban có tồn tại qua <see cref="IDepartmentService"/>, không đọc thẳng bảng departments.
 /// </summary>
 public class EmployeeService(AppDbContext db, IDepartmentService departments) : IEmployeeService
 {
     public const string FullNameField = "fullName";
-    public const string EmailField = "email";
+    public const string EmailField = ErrorTitles.EmailKey;
     public const string DepartmentIdField = "departmentId";
 
     public const string FullNameInvalidCharactersMessage = "Họ tên chứa ký tự không hợp lệ";
@@ -34,7 +34,7 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
     public const string DepartmentNotFoundMessage = "Phòng ban không tồn tại";
     public const string DepartmentFilterInvalidMessage = "Phòng ban lọc không hợp lệ";
 
-    // BR1.6: một luật định dạng email, chép GIỐNG HỆT ở frontend/src/pages/employees/validateEmployee.ts.
+    // Một luật định dạng email, chép GIỐNG HỆT ở frontend/src/pages/employees/validateEmployee.ts.
     // Đọc thành lời: trước "@" ít nhất một ký tự không phải khoảng trắng hay "@"; sau "@" ít nhất hai đoạn
     // ngăn bởi dấu chấm, mỗi đoạn không rỗng (nên dấu chấm không đứng đầu, cuối hay liền nhau).
     // Điều kiện: email PHẢI được chuẩn hóa (TextInput: bỏ hai đầu, gộp khoảng trắng) trước khi kiểm. .NET cho "$"
@@ -46,7 +46,7 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         RegexOptions.CultureInvariant);
 
     // Một cách đổi thực thể sang DTO, dùng chung cho danh sách, đọc theo id và đọc lại sau khi lưu.
-    // Viết dạng Expression để EF dịch e.Department.Name thành JOIN departments trong cùng một câu SQL (NFR5.3).
+    // Viết dạng Expression để EF dịch e.Department.Name thành JOIN departments trong cùng một câu SQL.
     private static readonly Expression<Func<Employee, EmployeeDto>> ToDto = e =>
         new EmployeeDto(e.Id, e.FullName, e.Email, e.DepartmentId, e.Department.Name);
 
@@ -55,13 +55,13 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         string? departmentId = null,
         CancellationToken cancellationToken = default)
     {
-        // BR5.3: kiểm phòng ban lọc TRƯỚC chuỗi tìm, để tham số sai luôn được báo 400 (kể cả khi chuỗi tìm cũng lạ).
+        // Kiểm phòng ban lọc TRƯỚC chuỗi tìm, để tham số sai luôn được báo 400 (kể cả khi chuỗi tìm cũng lạ).
         var departmentFilter = ParseDepartmentFilter(departmentId);
 
-        // BR2.2: chuẩn hóa chuỗi tìm giống họ tên, email lúc lưu (gộp khoảng trắng, NFC), nên gõ hai dấu cách
+        // Chuẩn hóa chuỗi tìm giống họ tên, email lúc lưu (gộp khoảng trắng, NFC), nên gõ hai dấu cách
         // hoặc gõ kiểu tổ hợp vẫn tìm ra. Có ký tự lạ (ví dụ U+0000) thì không ai khớp được, vì họ tên, email đã bị
-        // chặn ký tự đó khi lưu: trả rỗng luôn, không gửi xuống PostgreSQL (trước đây U+0000 làm API trả 500;
-        // Hiệp chọn trả rỗng thay vì 400).
+        // chặn ký tự đó khi lưu: trả rỗng luôn, không gửi xuống PostgreSQL (U+0000 sẽ làm API trả 500).
+        // Trả rỗng chứ không 400, vì đây là tìm không ra, không phải dữ liệu nhập sai.
         if (!TextInput.TryNormalize(search, out var term))
         {
             return [];
@@ -69,8 +69,8 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
 
         var query = db.Employees.AsNoTracking();
 
-        // Lọc theo phòng (FR8.3) nằm trong cùng câu SQL với tìm kiếm: hai điều kiện ghép AND.
-        // Phòng không tồn tại thì không ai khớp, trả [] (lọc không ra kết quả, không phải 404; ADR-007).
+        // Lọc theo phòng nằm trong cùng câu SQL với tìm kiếm: hai điều kiện ghép AND.
+        // Phòng không tồn tại thì không ai khớp, trả [] (lọc không ra kết quả, không phải 404).
         if (departmentFilter is int filterId)
         {
             query = query.Where(e => e.DepartmentId == filterId);
@@ -81,14 +81,14 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         {
             // Chuỗi tìm được hạ chữ ở .NET rồi gửi xuống dưới dạng tham số (@p); cột được hạ chữ ở SQL
             // (ToLower() trong biểu thức thành lower(full_name)). Contains được EF dịch an toàn:
-            // "%" và "_" trong chuỗi tìm là chữ thường, không thành ký tự đại diện (NFR2.3).
+            // "%" và "_" trong chuỗi tìm là chữ thường, không thành ký tự đại diện.
             // Có phân biệt dấu: "binh" không khớp "Bình", đúng yêu cầu.
             var lowered = term.ToLowerInvariant();
             query = query.Where(e =>
                 e.FullName.ToLower().Contains(lowered) || e.Email.ToLower().Contains(lowered));
         }
 
-        // Sắp theo họ tên, rồi theo id để hai người trùng tên luôn có thứ tự cố định (BR2.1).
+        // Sắp theo họ tên, rồi theo id để hai người trùng tên luôn có thứ tự cố định.
         return await query
             .OrderBy(e => e.FullName)
             .ThenBy(e => e.Id)
@@ -107,7 +107,7 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
 
     public async Task<EmployeeDto> CreateAsync(EmployeeRequest request, CancellationToken cancellationToken = default)
     {
-        // Thứ tự kiểm cố định (NFR3.6): dữ liệu (rẻ, không chạm database) → phòng ban có không (400)
+        // Thứ tự kiểm cố định: dữ liệu (rẻ, không chạm database) → phòng ban có không (400)
         // → email trùng (409). Nhờ vậy lỗi "dữ liệu sai" luôn được báo trước lỗi "xung đột".
         var input = Normalize(request);
         await EnsureDepartmentExistsAsync(input.DepartmentId, cancellationToken);
@@ -129,13 +129,13 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
     public async Task<EmployeeDto> UpdateAsync(int id, EmployeeRequest request, CancellationToken cancellationToken = default)
     {
         // Tìm nhân viên TRƯỚC khi kiểm dữ liệu: sửa người không tồn tại luôn ra 404,
-        // kể cả khi dữ liệu gửi lên cũng sai (NFR3.6).
+        // kể cả khi dữ liệu gửi lên cũng sai.
         var employee = await FindTrackedAsync(id, cancellationToken);
 
         var input = Normalize(request);
         await EnsureDepartmentExistsAsync(input.DepartmentId, cancellationToken);
 
-        // Loại trừ chính nó: giữ nguyên email, hoặc chỉ đổi hoa thường email của mình, vẫn lưu được (BR1.7).
+        // Loại trừ chính nó: giữ nguyên email, hoặc chỉ đổi hoa thường email của mình, vẫn lưu được.
         await EnsureEmailIsFreeAsync(input.Email, excludeId: id, cancellationToken);
 
         employee.FullName = input.FullName;
@@ -143,9 +143,8 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         employee.DepartmentId = input.DepartmentId;
 
         // Nếu mọi giá trị giữ nguyên, EF không gửi câu UPDATE, nên SaveAsync không phát hiện được trường hợp
-        // "vừa bị xóa ở nơi khác". Kết quả vẫn là 404, nhưng do bước đọc lại GetByIdAsync ở dưới không thấy dòng
-        // (rà soát N-10: comment cũ ghi nhầm là 200). Hai người sửa cùng lúc thì người lưu sau thắng, vì
-        // requirements mục 6 không yêu cầu xử lý xung đột này (reliability-design §2).
+        // "vừa bị xóa ở nơi khác". Kết quả vẫn là 404, nhưng do bước đọc lại GetByIdAsync ở dưới không thấy dòng.
+        // Hai người sửa cùng lúc thì người lưu sau thắng, vì đề bài không yêu cầu xử lý xung đột này.
         await SaveAsync(id, cancellationToken);
 
         return await GetByIdAsync(id, cancellationToken);
@@ -155,14 +154,14 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
     {
         var employee = await FindTrackedAsync(id, cancellationToken);
 
-        // BR2.5: xóa hẳn khỏi database, không xóa mềm.
+        // Xóa hẳn khỏi database, không xóa mềm.
         db.Employees.Remove(employee);
         await SaveAsync(id, cancellationToken);
     }
 
-    // Lưu và đổi các lỗi "chen nhau" thành lỗi nghiệp vụ (BR2.6). Lỗi khác ném nguyên để U1 trả 500.
-    // Email trùng (23505 trên ux_employees_email) không bắt ở đây: ErrorMapper của U1 đã đổi thành 409.
-    // id là null khi thêm mới (rà soát A-08: trước đây truyền id 0, chưa có mã thật).
+    // Lưu và đổi các lỗi "chen nhau" thành lỗi nghiệp vụ. Lỗi khác ném nguyên để ErrorMapper trả 500.
+    // Email trùng (23505 trên ux_employees_email) không bắt ở đây: ErrorMapper đã đổi thành 409.
+    // id là null khi thêm mới, vì lúc đó chưa có mã thật.
     private async Task SaveAsync(int? id, CancellationToken cancellationToken)
     {
         try
@@ -173,13 +172,13 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         {
             // Dòng vừa bị xóa ở nơi khác sau khi ta đọc: câu UPDATE/DELETE không tác động dòng nào.
             // Câu INSERT khi thêm mới không thể "không tìm thấy dòng", nên lúc thêm mới không vào nhánh này:
-            // lỗi đó là bất thường, được ném nguyên để U1 trả 500 và ghi log.
+            // lỗi đó là bất thường, được ném nguyên để ErrorMapper trả 500 và ghi log.
             throw NotFound(existingId);
         }
         catch (DbUpdateException exception) when (IsDepartmentForeignKeyViolation(exception))
         {
             // Phòng ban bị xóa giữa lúc ta kiểm ExistsAsync và lúc lưu: khóa ngoại báo 23503.
-            // Báo như lỗi dữ liệu của ô Phòng ban, cùng câu với BR1.9.
+            // Báo như lỗi dữ liệu của ô Phòng ban, cùng câu với EnsureDepartmentExistsAsync.
             // Lưu ý: khi THÊM/SỬA nhân viên trỏ tới phòng ban không có, PostgreSQL báo 23503
             // (foreign_key_violation). Mã 23001 (restrict_violation) chỉ xuất hiện ở chiều ngược lại:
             // XÓA phòng ban còn nhân viên, và chỗ đó do DepartmentService xử lý.
@@ -187,8 +186,8 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         }
     }
 
-    // BR1.1–BR1.6, BR1.8: chuẩn hóa (gộp khoảng trắng, NFC, chặn ký tự điều khiển và ký tự vô hình; cùng hàm với
-    // tên phòng ban ở U3) rồi kiểm; báo lỗi ĐẦU TIÊN theo thứ tự họ tên → email → phòng ban (DomainError chỉ chứa
+    // Chuẩn hóa (gộp khoảng trắng, NFC, chặn ký tự điều khiển và ký tự vô hình; cùng hàm với
+    // tên phòng ban) rồi kiểm; báo lỗi ĐẦU TIÊN theo thứ tự họ tên → email → phòng ban (DomainError chỉ chứa
     // một trường; form React đã báo đủ các ô). Trong mỗi ô: ký tự không hợp lệ → rỗng → quá dài (→ định dạng).
     private static ValidInput Normalize(EmployeeRequest request)
     {
@@ -208,7 +207,7 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         }
 
         // Email cũng chuẩn hóa: U+200B không phải khoảng trắng nên lọt qua EmailPattern, và hai email trông giống hệt
-        // (một cái có ký tự vô hình, hoặc gõ kiểu tổ hợp) sẽ lách được luật không trùng (BR1.7).
+        // (một cái có ký tự vô hình, hoặc gõ kiểu tổ hợp) sẽ lách được luật không trùng.
         if (!TextInput.TryNormalize(request.Email, out var email))
         {
             throw DomainError.Validation(EmailField, EmailInvalidCharactersMessage);
@@ -237,7 +236,7 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         return new ValidInput(fullName, email, departmentId);
     }
 
-    // BR1.9: phòng ban phải đang có. Hỏi qua IDepartmentService (C4) để U3 giữ quyền trên bảng departments.
+    // Phòng ban phải đang có. Hỏi qua IDepartmentService để DepartmentService giữ quyền trên bảng departments.
     private async Task EnsureDepartmentExistsAsync(int departmentId, CancellationToken cancellationToken)
     {
         if (!await departments.ExistsAsync(departmentId, cancellationToken))
@@ -246,9 +245,9 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         }
     }
 
-    // BR1.7: so không phân biệt hoa thường. ToLower() được Npgsql dịch thành lower(email) = lower(@p),
+    // So không phân biệt hoa thường. ToLower() được Npgsql dịch thành lower(email) = lower(@p),
     // cùng biểu thức với chỉ mục ux_employees_email. Nếu hai request chen nhau cùng qua bước này,
-    // chỉ mục chặn cái sau (23505) và U1 đổi thành 409.
+    // chỉ mục chặn cái sau (23505) và ErrorMapper đổi thành 409.
     private async Task EnsureEmailIsFreeAsync(string email, int? excludeId, CancellationToken cancellationToken)
     {
         var taken = await db.Employees.AnyAsync(
@@ -276,8 +275,8 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
     private static DomainError NotFound(int id) =>
         DomainError.NotFound($"Không tìm thấy nhân viên có mã {id}.");
 
-    // BR5.3: departmentId đến từ địa chỉ trang nên controller nhận dạng chuỗi và service tự đọc số. Nhờ vậy giá trị
-    // sai trả câu tiếng Việt, không lọt câu tiếng Anh của model binding (ADR-007).
+    // departmentId đến từ địa chỉ trang nên controller nhận dạng chuỗi và service tự đọc số. Nhờ vậy giá trị
+    // sai trả câu tiếng Việt, không lọt câu tiếng Anh của model binding.
     // NumberStyles.None: chỉ chữ số 0-9, không nhận dấu "+", "-", khoảng trắng hay dấu phân cách hàng nghìn;
     // TryParse cũng tự từ chối số vượt phạm vi int. Rỗng (hoặc chỉ khoảng trắng) nghĩa là không lọc.
     private static int? ParseDepartmentFilter(string? departmentId)

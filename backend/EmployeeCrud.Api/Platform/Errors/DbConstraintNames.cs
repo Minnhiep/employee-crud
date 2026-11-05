@@ -1,8 +1,9 @@
 namespace EmployeeCrud.Api.Platform.Errors;
 
 /// <summary>
-/// Tên ràng buộc database cố định. Migration của phòng ban (U3) và nhân viên (U4) phải đặt đúng các tên này,
-/// vì ErrorMapper nhận ra lỗi trùng / lỗi khóa ngoại dựa vào tên ràng buộc, không đoán từ câu báo lỗi.
+/// Tên ràng buộc database cố định. Migration của phòng ban và nhân viên phải đặt đúng các tên này,
+/// vì code nhận ra lỗi theo tên ràng buộc, không đoán từ câu báo lỗi: ErrorMapper với lỗi trùng,
+/// DepartmentService và EmployeeService với lỗi khóa ngoại.
 /// </summary>
 public static class DbConstraintNames
 {

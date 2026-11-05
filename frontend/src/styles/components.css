@@ -46,13 +46,13 @@
   align-items: center;
   height: var(--brand-height);
   padding: 0 var(--space-5);
-  color: #ffffff;
+  color: var(--color-sidebar-text-strong);
   text-decoration: none;
   border-bottom: var(--border-width) solid var(--color-sidebar-divider);
 }
 
 .sidebar__brand:hover {
-  color: #ffffff;
+  color: var(--color-sidebar-text-strong);
 }
 
 .sidebar__brand-name {
@@ -100,14 +100,14 @@
 }
 
 .nav__link:hover {
-  color: #ffffff;
+  color: var(--color-sidebar-text-strong);
   background: var(--color-sidebar-active);
 }
 
 /* Mục đang mở: nền sáng hơn + vạch bên trái + chữ trắng đậm, không chỉ đổi màu (WCAG 1.4.1). */
 .nav__link--active {
   font-weight: var(--font-weight-semibold);
-  color: #ffffff;
+  color: var(--color-sidebar-text-strong);
   background: var(--color-sidebar-active);
 }
 
@@ -187,6 +187,14 @@
 .breadcrumb__item a:hover {
   color: var(--color-primary);
   text-decoration: underline;
+}
+
+/* Liên kết đang khóa khi form lưu: cùng dáng với nút đang khóa, rê chuột không đổi màu. */
+.breadcrumb__item a[aria-disabled="true"] {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .breadcrumb__item [aria-current="page"] {
@@ -294,7 +302,7 @@
   padding-left: 2.25rem;
 }
 
-/* ---- Ô lọc theo phòng ban (FR8.3) ----
+/* ---- Ô lọc theo phòng ban ----
    Dùng lại kiểu ô chọn của form (".field select") nhưng xếp nhãn và ô trên một hàng trong thanh công cụ. */
 
 .filter {
@@ -306,6 +314,12 @@
 
 .filter label {
   white-space: nowrap;
+}
+
+.toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 /* ---- Bảng ---- */
@@ -363,8 +377,8 @@
   text-align: right;
 }
 
-/* Tên trong bảng là liên kết (ví dụ tên phòng ban → trang chi tiết), kiểu bảng của phần mềm quản trị
-   (Hiệp chọn 04/11): lúc thường chữ màu thường, đậm vừa, không gạch; rê chuột thì xanh và gạch dưới.
+/* Tên trong bảng là liên kết (ví dụ tên phòng ban → trang chi tiết), kiểu bảng của phần mềm quản trị:
+   lúc thường chữ màu thường, đậm vừa, không gạch; rê chuột thì xanh và gạch dưới.
    Liên kết đứng riêng một ô bảng, không nằm trong đoạn chữ, nên không cần gạch sẵn để phân biệt (WCAG 1.4.1).
    Bàn phím vẫn thấy viền focus chung (:focus-visible trong base.css). */
 .table .table__link {
@@ -518,7 +532,7 @@
   background: var(--color-danger-hover);
 }
 
-/* Nút đang khóa: mờ đi nhưng chữ vẫn đọc được (US4.4). aria-disabled dùng khi cần giữ focus trên nút. */
+/* Nút đang khóa: mờ đi nhưng chữ vẫn đọc được. aria-disabled dùng khi cần giữ focus trên nút. */
 .btn[disabled],
 .btn[aria-disabled="true"] {
   cursor: not-allowed;
@@ -532,15 +546,11 @@
   gap: var(--space-5);
 }
 
-/* Lưới hai cột trên màn rộng; trường cần cả hàng thêm class field--full. */
+/* Lưới hai cột trên màn rộng. */
 .form__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-5) var(--space-6);
-}
-
-.field--full {
-  grid-column: 1 / -1;
 }
 
 /* Một ô và các dòng trạng thái của nó (ví dụ "Đang tải danh sách phòng ban…") nằm chung một ô lưới. */
@@ -618,8 +628,7 @@
 }
 
 .field input[disabled],
-.field select[disabled],
-.search input[disabled] {
+.field select[disabled] {
   cursor: not-allowed;
   background-color: var(--color-surface-muted);
 }
@@ -694,7 +703,7 @@
 .alert--error {
   color: var(--color-danger);
   background: var(--color-danger-subtle);
-  border-color: rgb(180 35 24 / 25%);
+  border-color: var(--color-danger-border);
 }
 
 /* Thông báo thường (không phải lỗi), ví dụ "Phòng ban đã chọn không còn tồn tại". Chữ màu thường để đủ tương phản. */
@@ -869,7 +878,7 @@
 }
 
 .dialog::backdrop {
-  background: rgb(18 48 74 / 45%);
+  background: var(--color-backdrop);
 }
 
 .dialog__body {

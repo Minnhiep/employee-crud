@@ -6,8 +6,8 @@ using Microsoft.Extensions.Logging;
 namespace EmployeeCrud.Api.Tests.Platform;
 
 /// <summary>
-/// Nhật ký lỗi (NFR6.2, rà soát tổng thể 03/11/2026): mỗi lỗi 500 có traceId trong log trùng traceId trong phản hồi (A-02);
-/// request bị trình duyệt hủy giữa chừng không bị ghi thành lỗi (A-01).
+/// Nhật ký lỗi: mỗi lỗi 500 có traceId trong log trùng traceId trong phản hồi;
+/// request bị trình duyệt hủy giữa chừng không bị ghi thành lỗi.
 /// </summary>
 public class LoggingTests : IDisposable
 {
@@ -38,22 +38,42 @@ public class LoggingTests : IDisposable
     public async Task RequestCancelledByTheBrowser_IsNotLoggedAsAnError()
     {
         // Giống trang Nhân viên: người dùng tìm kiếm mới thì lời gọi cũ bị hủy giữa chừng.
+        var startedBefore = TestOnlyController.SlowRequestsStarted;
         var cancelledBefore = TestOnlyController.SlowRequestsCancelled;
-        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+        using var cancel = new CancellationTokenSource();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            _factory.CreateClient().GetAsync("/api/test-only/slow", cancel.Token));
+        var request = _factory.CreateClient().GetAsync("/api/test-only/slow", cancel.Token);
 
-        // Chờ (tối đa 5 giây) tới khi máy chủ báo đã nhận việc hủy, thay vì chờ cố định: máy chậm cũng không chập chờn.
+        // Hủy khi máy chủ đã nhận request, không hủy theo hẹn giờ: máy chậm cũng không hủy nhầm lúc request chưa tới.
+        Assert.True(
+            await WaitUntilAsync(() => TestOnlyController.SlowRequestsStarted > startedBefore),
+            "Request chậm phải tới được máy chủ");
+        await cancel.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => request);
+
+        Assert.True(
+            await WaitUntilAsync(() => TestOnlyController.SlowRequestsCancelled > cancelledBefore),
+            "Máy chủ phải nhận được việc hủy");
+        // "Request finished" được ghi sau cùng, khi bộ bắt lỗi đã chạy hết: tới lúc đó đọc log mới chắc đủ dòng.
+        Assert.True(
+            await WaitUntilAsync(() => _factory.Logs.Entries.Any(IsSlowRequestFinished)),
+            "Máy chủ phải xử lý xong request bị hủy");
+        Assert.DoesNotContain(_factory.Logs.Entries, entry => entry.Level >= LogLevel.Error);
+    }
+
+    private static bool IsSlowRequestFinished((string Category, LogLevel Level, string Message) entry) =>
+        entry.Message.StartsWith("Request finished", StringComparison.Ordinal)
+        && entry.Message.Contains("/api/test-only/slow", StringComparison.Ordinal);
+
+    // Chờ theo điều kiện, tối đa 5 giây, thay vì chờ cố định: máy chậm cũng không chập chờn.
+    private static async Task<bool> WaitUntilAsync(Func<bool> condition)
+    {
         var deadline = DateTime.UtcNow.AddSeconds(5);
-        while (TestOnlyController.SlowRequestsCancelled <= cancelledBefore && DateTime.UtcNow < deadline)
+        while (!condition() && DateTime.UtcNow < deadline)
         {
             await Task.Delay(50);
         }
 
-        Assert.True(TestOnlyController.SlowRequestsCancelled > cancelledBefore, "Máy chủ phải nhận được việc hủy");
-        // Cho bộ bắt lỗi chạy hết sau khi exception rời action, rồi mới đọc log.
-        await Task.Delay(200);
-        Assert.DoesNotContain(_factory.Logs.Entries, entry => entry.Level >= LogLevel.Error);
+        return condition();
     }
 }

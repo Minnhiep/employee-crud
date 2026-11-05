@@ -7,7 +7,7 @@ namespace EmployeeCrud.Api.Platform.Errors;
 
 /// <summary>
 /// Framework tự trả 404 (đường dẫn lạ), 405 (sai phương thức), 415 (sai Content-Type) mà không có nội dung.
-/// Lớp này điền nội dung ProblemDetails tiếng Việt cho các phản hồi đó (BR1.7).
+/// Lớp này điền nội dung ProblemDetails tiếng Việt cho các phản hồi đó.
 /// </summary>
 public static class StatusCodeProblemWriter
 {

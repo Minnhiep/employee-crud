@@ -13,7 +13,7 @@ type ErrorSummaryProps = {
   ref?: Ref<HTMLDivElement>;
 };
 
-/** Khung tóm tắt lỗi ở đầu form (US4.1, WCAG 3.3.1); mỗi lỗi gắn ô là liên kết nhảy tới ô đó. */
+/** Khung tóm tắt lỗi ở đầu form (WCAG 3.3.1); mỗi lỗi gắn ô là liên kết nhảy tới ô đó. */
 export function ErrorSummary({
   fieldErrors = {},
   fieldLabels = {},

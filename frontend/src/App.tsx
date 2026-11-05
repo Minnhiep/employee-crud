@@ -14,7 +14,7 @@ import { EmployeesPage } from "./pages/employees/EmployeesPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
 /**
- * Form sửa nhân viên có key theo id (rà soát U3): đang sửa người A mà gõ địa chỉ sửa người B
+ * Form sửa nhân viên có key theo id: đang sửa người A mà gõ địa chỉ sửa người B
  * thì form được tạo mới và nạp đúng người B, không giữ dữ liệu của A.
  */
 function EmployeeEditRoute() {
@@ -22,13 +22,13 @@ function EmployeeEditRoute() {
   return <EmployeeFormPage key={`edit-${id}`} mode="edit" />;
 }
 
-/** Cùng cách với form sửa nhân viên (rà soát tổng thể A-13): đổi id thì form phòng ban được tạo mới. */
+/** Cùng cách với form sửa nhân viên: đổi id thì form phòng ban được tạo mới. */
 function DepartmentEditRoute() {
   const { id } = useParams();
   return <DepartmentFormPage key={`edit-${id}`} mode="edit" />;
 }
 
-/** Trang chi tiết phòng ban (FR8.2) cũng tạo mới theo id, để không lẫn dữ liệu khi đi từ phòng này sang phòng khác. */
+/** Trang chi tiết phòng ban cũng tạo mới theo id, để không lẫn dữ liệu khi đi từ phòng này sang phòng khác. */
 function DepartmentDetailRoute() {
   const { id } = useParams();
   return <DepartmentDetailPage key={`detail-${id}`} />;

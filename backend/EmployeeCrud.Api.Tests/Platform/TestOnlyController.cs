@@ -8,7 +8,7 @@ namespace EmployeeCrud.Api.Tests.Platform;
 
 /// <summary>
 /// Controller chỉ có trong project test (đăng ký qua AddApplicationPart), dùng để gây ra từng loại lỗi
-/// và kiểm phần nền của U1 trước khi có controller thật của phòng ban / nhân viên.
+/// và kiểm phần nền mà không phụ thuộc controller thật của phòng ban / nhân viên.
 /// </summary>
 [ApiController]
 [Route("api/test-only")]
@@ -23,10 +23,14 @@ public sealed class TestOnlyController : ControllerBase
     // Đếm số lần request chậm thật sự bị hủy phía máy chủ, để test chắc là việc hủy đã đi tới đây (không đạt giả).
     public static int SlowRequestsCancelled;
 
+    // Đếm số request chậm đã vào tới đây: test chờ số này tăng rồi mới hủy, nên không cần đoán bằng hẹn giờ.
+    public static int SlowRequestsStarted;
+
     // Chạy lâu để test kịp hủy request giữa chừng, giống trang hủy lời gọi cũ khi người dùng tìm kiếm mới.
     [HttpGet("slow")]
     public async Task<IActionResult> Slow(CancellationToken cancellationToken)
     {
+        Interlocked.Increment(ref SlowRequestsStarted);
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
@@ -45,13 +49,13 @@ public sealed class TestOnlyController : ControllerBase
     [HttpPost("validate")]
     public IActionResult Validate(TestRequest request) => Ok(request);
 
-    // Giống controller thật của U3, U4: [Produces("application/json")] là bộ lọc kết quả,
-    // ghi đè loại nội dung của mọi ObjectResult (Build and Test, Loop-back 1).
+    // Giống controller thật của phòng ban, nhân viên: [Produces("application/json")] là bộ lọc kết quả,
+    // ghi đè loại nội dung của mọi ObjectResult.
     [HttpPost("validate-produces-json")]
     [Produces("application/json")]
     public IActionResult ValidateWithProducesJson(TestRequest request) => Ok(request);
 
-    // Lời báo có ký tự HTML, để test chắc phản hồi 400 mã hóa < > (rà soát U1 R-10, S-09).
+    // Lời báo có ký tự HTML, để test chắc phản hồi 400 mã hóa < >.
     [HttpPost("validate-html")]
     public IActionResult ValidateHtml(HtmlRequest request) => Ok(request);
 

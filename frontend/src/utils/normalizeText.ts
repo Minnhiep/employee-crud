@@ -1,7 +1,7 @@
 /**
- * Chuẩn hóa chữ người dùng nhập, cùng luật với TextInput.TryNormalize ở backend (rà soát tổng thể N-04, S-04):
+ * Chuẩn hóa chữ người dùng nhập, cùng luật với TextInput.TryNormalize ở backend:
  * gộp mọi chuỗi khoảng trắng thành một dấu cách, bỏ khoảng trắng hai đầu, đưa chữ có dấu về dạng dựng sẵn (NFC).
- * Trả null khi có ký tự điều khiển, ký tự định dạng vô hình hoặc nửa cặp surrogate.
+ * Trả null khi có ký tự điều khiển, ký tự định dạng vô hình, nửa cặp surrogate hoặc noncharacter.
  * Form dùng hàm này để báo lỗi sớm; API vẫn kiểm lại vì không được tin dữ liệu từ trình duyệt.
  */
 
@@ -11,7 +11,8 @@ const WHITESPACE =
   /[\t-\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/u;
 
 // Cc: ký tự điều khiển (ví dụ \0). Cf: ký tự định dạng vô hình (U+200B, U+202E...). Cs: nửa cặp surrogate đứng một mình.
-const INVALID = /[\p{Cc}\p{Cf}\p{Cs}]/u;
+// Noncharacter_Code_Point: 66 mã dành riêng cho nội bộ phần mềm (ví dụ U+FFFE), không phải chữ để trao đổi.
+const INVALID = /[\p{Cc}\p{Cf}\p{Cs}\p{Noncharacter_Code_Point}]/u;
 
 export function normalizeText(raw: string): string | null {
   let result = "";

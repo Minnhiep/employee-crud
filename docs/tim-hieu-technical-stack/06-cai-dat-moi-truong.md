@@ -1,7 +1,7 @@
 # 06. Cài đặt môi trường trên máy cá nhân
 
 > Ứng với **Ngày 1–2: "Cài môi trường"** trong kế hoạch.
-> Trạng thái máy (kiểm lại ngày 30/10/2026): **đã đủ**. Hiệp đã cài .NET SDK 10.0.403 (ASP.NET Core 10.0.14) và PostgreSQL 18.6 + pgAdmin 4 theo hướng dẫn dưới đây. Node.js v24.15.0, npm 11.16.0, Git 2.54.0, Postman 12.18.5, VS Code + C# Dev Kit có sẵn từ trước.
+> Trạng thái máy (kiểm lại ngày 30/10/2026): **đã đủ**. Máy phát triển đã cài .NET SDK 10.0.403 (ASP.NET Core 10.0.14) và PostgreSQL 18.6 + pgAdmin 4 theo hướng dẫn dưới đây. Node.js v24.15.0, npm 11.16.0, Git 2.54.0, Postman 12.18.5, VS Code + C# Dev Kit có sẵn từ trước.
 > Phần dưới giữ lại để cài trên máy khác hoặc làm căn cứ viết README.
 
 ## 1. Cài .NET 10 SDK
@@ -70,7 +70,7 @@ git --version
 Get-Service postgresql*
 ```
 
-Hoặc nhắn em "kiểm lại máy", em chạy lại bước kiểm.
+Đối chiếu kết quả với bảng dưới.
 
 | Cần có | Kết quả mong đợi |
 |---|---|
@@ -87,7 +87,7 @@ Hoặc nhắn em "kiểm lại máy", em chạy lại bước kiểm.
 | Đã cài mà `dotnet` vẫn báo không tìm thấy | Terminal/VS Code mở từ trước khi cài | Đóng hết, mở lại; vẫn lỗi thì khởi động lại máy |
 | `dotnet --list-sdks` trống | Lỡ cài Runtime thay vì SDK | Quay lại bước 1.2, chọn đúng SDK |
 | pgAdmin báo sai mật khẩu | Nhập nhầm mật khẩu `postgres` | Nhập lại mật khẩu đã đặt lúc cài |
-| Cài PostgreSQL báo cổng 5432 đã dùng | Có một PostgreSQL khác đang chạy | Báo em kiểm, không tự gỡ |
+| Cài PostgreSQL báo cổng 5432 đã dùng | Có một PostgreSQL khác đang chạy | Xem dịch vụ nào đang giữ cổng rồi mới xử lý, không tự gỡ |
 | Trình duyệt báo chứng chỉ không an toàn ở `https://localhost` | Chưa tin cậy chứng chỉ phát triển | Chạy `dotnet dev-certs https --trust` |
 | Gõ "SQL" hay "PostgreSQL" ở ô tìm kiếm Windows không thấy ứng dụng | Ô tìm kiếm chưa cập nhật; tên ứng dụng là "pgAdmin 4" | Start → All apps → thư mục **PostgreSQL 18** → pgAdmin 4, hoặc gõ `pgAdmin` |
 | pgAdmin đứng ở "Waiting for pgAdmin 4 to start..." | Lần đầu khởi động chậm | Đợi 30–60 giây, đừng bấm mở thêm |
@@ -101,5 +101,5 @@ Hoặc nhắn em "kiểm lại máy", em chạy lại bước kiểm.
 
 ## Nguồn
 
-- [Tải .NET 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0), [PostgreSQL cho Windows](https://www.postgresql.org/download/windows/): trang tải chính thức. Hôm nay em chưa mở lại hai trang này, nên tên nút và các màn hình cài có thể khác chút.
+- [Tải .NET 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0), [PostgreSQL cho Windows](https://www.postgresql.org/download/windows/): trang tải chính thức. Chưa mở lại hai trang này khi viết, nên tên nút và các màn hình cài có thể khác chút.
 - Kết quả kiểm máy: các lệnh `Get-Command`, `node -v`, `git --version`, `Get-Service`, chạy ngày 30/10/2026.

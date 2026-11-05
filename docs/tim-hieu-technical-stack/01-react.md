@@ -2,6 +2,8 @@
 
 > Phần trong kế hoạch: *JavaScript cơ bản; component, props, state; useState, useEffect; form và kiểm tra dữ liệu; gọi API; hiển thị trạng thái loading và lỗi.*
 > Vị trí trong luồng: **bước 1–3 và 9** ở [00-tong-quan-luong.md](00-tong-quan-luong.md).
+>
+> **Lưu ý: đây là bản nháp học, viết trước khi làm bài.** Code dưới đây là ví dụ để hiểu khái niệm. Bài thật khác ở: viết bằng TypeScript (`.tsx`, `.ts`), không phải `.jsx`, `.js`; backend chạy cổng 5081, không phải 5080; `PUT` trả `200` kèm dữ liệu sau khi sửa, không phải `204`; có đủ thêm, sửa, xóa phòng ban; hỏi xác nhận xóa bằng hộp thoại riêng, không dùng `window.confirm`. Đúng với bài thật: code ở `frontend/src/`, [danh sách API](../danh-sach-api.md).
 
 ## 1. React là gì, nói đơn giản
 
@@ -51,7 +53,7 @@ async function load() {
 
 **Vì sao cần "mảng/object mới"?** React so sánh state cũ và mới bằng tham chiếu (có phải cùng một object không). Nếu sửa trực tiếp `employee.fullName = "Bình"` thì vẫn là object cũ, React tưởng không có gì đổi và **không vẽ lại**.
 
-Tài liệu JavaScript: [MDN JavaScript Guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide) (link quen thuộc, hôm nay em chưa mở lại).
+Tài liệu JavaScript: [MDN JavaScript Guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide) (link quen thuộc, chưa mở lại khi viết).
 
 ## 3. Tổng quan các cách tạo dự án React
 
@@ -82,7 +84,7 @@ Ví dụ đời thường: CSR giống mua đồ nội thất **tự lắp** (gi
 |---|---|---|
 | **Vite** | Phổ biến nhất, khởi động nhanh, ít cấu hình | `npm create vite@latest my-app -- --template react` (mẫu `react-ts` là TypeScript) |
 | **Rsbuild** | Viết bằng Rust, build nhanh, hợp dự án lớn | `npx create-rsbuild --template react` |
-| **Parcel** | Gần như không cần cấu hình | Không có lệnh tạo mẫu riêng; cài `parcel` rồi tự viết `index.html` (em chưa kiểm lại hướng dẫn hiện hành) |
+| **Parcel** | Gần như không cần cấu hình | Không có lệnh tạo mẫu riêng; cài `parcel` rồi tự viết `index.html` (chưa kiểm lại hướng dẫn hiện hành) |
 
 - **Hợp khi:** đã có backend riêng và React chỉ là giao diện gọi API; hoặc ứng dụng nội bộ cần đăng nhập, không cần Google tìm thấy.
 - **Tự lo thêm:** chuyển trang (ví dụ thư viện React Router), tải dữ liệu, tối ưu.
@@ -222,7 +224,7 @@ Mảng ở cuối `useEffect` gọi là **dependency array**, quyết định kh
 | `[search]` | Lần đầu và mỗi khi `search` đổi |
 | Không có mảng | Sau **mọi** lần vẽ (dễ gây gọi API liên tục) |
 
-Lưu ý: ở chế độ phát triển, `<StrictMode>` cố ý chạy effect **hai lần** để lộ lỗi thiếu dọn dẹp. Thấy API bị gọi 2 lần khi chạy `npm run dev` là bình thường. Nguồn: [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects) (link quen thuộc, hôm nay em chưa mở lại).
+Lưu ý: ở chế độ phát triển, `<StrictMode>` cố ý chạy effect **hai lần** để lộ lỗi thiếu dọn dẹp. Thấy API bị gọi 2 lần khi chạy `npm run dev` là bình thường. Nguồn: [Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects) (link quen thuộc, chưa mở lại khi viết).
 
 `API_URL` nên để trong file `.env` của Vite, ví dụ `VITE_API_URL=http://localhost:5080`, rồi đọc bằng `import.meta.env.VITE_API_URL`. Số cổng backend tùy máy, xem trong `launchSettings.json` của ASP.NET Core. Cho gọn, khai báo một lần trong `src/api.js` (xem mục 8) rồi `import { API_URL } from "./api";` ở các file cần dùng.
 
@@ -410,4 +412,4 @@ Những chỗ cần hiểu:
 
 - [react.dev/learn](https://react.dev/learn), tài liệu chính thức, nằm trong kế hoạch.
 - [Build a React app from Scratch](https://react.dev/learn/build-a-react-app-from-scratch) (Vite, Parcel, Rsbuild), [Creating a React App](https://react.dev/learn/creating-a-react-app) (React Router v7), [Sunsetting Create React App](https://react.dev/blog/2025/02/14/sunsetting-create-react-app), [React Versions](https://react.dev/versions): đã tra ngày 30/10/2026.
-- Em biết sẵn, hôm nay chưa mở lại trang để kiểm: Next.js và Expo có trong danh sách framework của react.dev, lệnh `create-next-app`, cách dùng Parcel, các sân chơi online.
+- Viết theo kiến thức sẵn có, chưa mở lại trang để kiểm: Next.js và Expo có trong danh sách framework của react.dev, lệnh `create-next-app`, cách dùng Parcel, các sân chơi online.

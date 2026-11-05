@@ -8,17 +8,17 @@
 GET {{baseUrl}}/api/departments
 Accept: application/json
 
-### 2. Một phòng ban theo mã
-GET {{baseUrl}}/api/departments/1
-Accept: application/json
-
-### 3. Thêm phòng ban (tên trùng, kể cả khác hoa thường, sẽ ra 409)
+### 2. Thêm phòng ban (lần đầu ra 201; gửi lại cùng tên, kể cả khác hoa thường, ra 409)
 POST {{baseUrl}}/api/departments
 Content-Type: application/json
 
 {
   "name": "Thử nghiệm"
 }
+
+### 3. Một phòng ban theo mã
+GET {{baseUrl}}/api/departments/1
+Accept: application/json
 
 ### 4. Sửa tên phòng ban
 PUT {{baseUrl}}/api/departments/1
@@ -28,7 +28,8 @@ Content-Type: application/json
   "name": "Nhân sự"
 }
 
-### 5. Xóa phòng ban (còn nhân viên thì ra 409, không xóa)
+### 5. Xóa phòng ban (mã 99999 không có nên ra 404)
+# Muốn thấy 409: đổi 99999 thành mã một phòng còn nhân viên; API từ chối và không xóa.
 DELETE {{baseUrl}}/api/departments/99999
 
 ### 6. Danh sách nhân viên, có thể tìm theo họ tên hoặc email (không phân biệt hoa thường)
@@ -47,11 +48,7 @@ Accept: application/json
 GET {{baseUrl}}/api/employees?departmentId=abc
 Accept: application/json
 
-### 7. Một nhân viên theo mã
-GET {{baseUrl}}/api/employees/1
-Accept: application/json
-
-### 8. Thêm nhân viên (email trùng ra 409; phòng ban không có ra 400)
+### 7. Thêm nhân viên (lần đầu ra 201; gửi lại cùng email ra 409; phòng ban không có ra 400)
 POST {{baseUrl}}/api/employees
 Content-Type: application/json
 
@@ -60,6 +57,10 @@ Content-Type: application/json
   "email": "nguyen.van.thu@example.com",
   "departmentId": 1
 }
+
+### 8. Một nhân viên theo mã
+GET {{baseUrl}}/api/employees/1
+Accept: application/json
 
 ### 9. Sửa nhân viên (gửi đủ 3 trường)
 PUT {{baseUrl}}/api/employees/1

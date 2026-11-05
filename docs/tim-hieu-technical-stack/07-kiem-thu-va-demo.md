@@ -37,32 +37,37 @@ Mỗi dòng ghi lại kết quả: **Đạt / Không đạt**, kèm ghi chú n�
 
 | Mã | Tình huống | Cách làm | Kết quả mong đợi |
 |---|---|---|---|
-| F01 | Xem danh sách | Mở trang | Hiện "Đang tải..." rồi ra bảng nhân viên kèm tên phòng ban |
-| F02 | Danh sách rỗng | Database chưa có nhân viên | Hiện "Chưa có nhân viên.", không lỗi |
-| F03 | Tìm có kết quả | Gõ một phần họ tên, bấm Tìm | Chỉ hiện người khớp |
+| F01 | Xem danh sách | Mở trang | Hiện "Đang tải dữ liệu…" rồi ra bảng nhân viên kèm tên phòng ban |
+| F02 | Danh sách rỗng | Database chưa có nhân viên | Hiện "Chưa có nhân viên nào", câu gợi ý và nút "Thêm nhân viên", không lỗi |
+| F03 | Tìm có kết quả | Gõ một phần họ tên, bấm Tìm | Chỉ hiện người khớp, có dòng "Tìm thấy N nhân viên" |
 | F04 | Tìm không phân biệt hoa thường | Gõ "AN" và "an" | Ra cùng kết quả |
 | F05 | Tìm theo email | Gõ một phần email | Ra người có email khớp |
-| F06 | Tìm không có kết quả | Gõ "zzz" | Hiện "Chưa có nhân viên." |
-| F07 | Thêm hợp lệ | Nhập đủ, chọn phòng ban, bấm Thêm | Báo "Đã thêm"; người mới hiện trong danh sách; pgAdmin thấy dòng mới |
-| F08 | Dropdown phòng ban | Mở dropdown | Có đủ phòng ban từ `GET /api/departments` |
-| F09 | Sửa | Bấm Sửa ở một dòng, đổi tên, bấm Cập nhật | Báo "Đã cập nhật"; danh sách và DB đổi theo |
-| F10 | Đổi người đang sửa | Bấm Sửa người A, rồi bấm Sửa người B | Form hiện dữ liệu của B (kiểm cái `key` của form) |
-| F11 | Hủy sửa | Bấm Sửa, rồi bấm Hủy | Form về chế độ thêm mới, không đổi dữ liệu |
-| F12 | Xóa | Bấm Xóa, xác nhận | Báo "Đã xóa"; dòng biến mất; DB không còn dòng đó |
-| F13 | Hủy xóa | Bấm Xóa, chọn Cancel | Không có gì bị xóa |
+| F06 | Tìm không có kết quả | Gõ "zzz" | Hiện "Không tìm thấy nhân viên phù hợp", câu nêu chuỗi đã tìm và nút "Xóa bộ lọc" |
+| F07 | Thêm hợp lệ | Bấm "Thêm nhân viên" ở đầu trang, nhập đủ, chọn phòng ban, bấm "Lưu nhân viên" | Về danh sách, báo `Đã thêm nhân viên "X"`; người mới hiện trong danh sách; pgAdmin thấy dòng mới |
+| F08 | Dropdown phòng ban | Mở dropdown | Dòng đầu "Chọn phòng ban", sau đó đủ phòng ban từ `GET /api/departments` |
+| F09 | Sửa | Bấm Sửa ở một dòng, đổi tên, bấm "Lưu nhân viên" | Về danh sách, báo `Đã cập nhật nhân viên "X"`; danh sách và DB đổi theo |
+| F10 | Đổi người đang sửa | Mở trang sửa người A, rồi đổi số trên địa chỉ thành mã người B (`/employees/<mã B>/edit`) | Form hiện đúng dữ liệu của B, không còn dữ liệu của A |
+| F11 | Hủy sửa | Từ danh sách đang tìm, bấm Sửa, đổi tên, bấm Hủy | Về danh sách, giữ chuỗi tìm và phòng đang lọc; dữ liệu không đổi |
+| F12 | Xóa | Bấm Xóa, trong hộp "Xóa nhân viên?" bấm "Xóa nhân viên" | Báo `Đã xóa nhân viên "X"`; dòng biến mất; DB không còn dòng đó |
+| F13 | Hủy xóa | Bấm Xóa, trong hộp bấm "Hủy" hoặc phím Esc | Hộp đóng, không có gì bị xóa |
 | F14 | Dữ liệu còn sau khi tắt máy chủ | Tắt `dotnet run`, chạy lại, tải lại trang | Dữ liệu vẫn còn, vì đã lưu trong PostgreSQL |
+| F15 | Hủy sửa phòng ban từ trang chi tiết | Mở chi tiết một phòng, bấm "Sửa phòng ban", bấm Hủy | Về lại đúng trang chi tiết đó |
+| F16 | Lưu sửa phòng ban từ trang chi tiết | Mở chi tiết một phòng, bấm "Sửa phòng ban", đổi tên, bấm "Lưu phòng ban" | Về lại trang chi tiết, báo `Đã cập nhật phòng ban "X"`. Mở sửa từ danh sách hoặc gõ thẳng địa chỉ thì Lưu và Hủy về danh sách phòng ban |
 
 ### 3.2 Kiểm tra dữ liệu và báo lỗi
 
 | Mã | Tình huống | Cách làm | Kết quả mong đợi |
 |---|---|---|---|
-| V01 | Bỏ trống họ tên | Để trống, bấm Thêm | Báo lỗi ngay ở form; **không** gửi request (Network không có POST) |
-| V02 | Email sai định dạng | Gõ "abc" | Báo "Email không hợp lệ" |
+| V01 | Bỏ trống họ tên | Để trống, bấm "Lưu nhân viên" | Khung "Chưa lưu được. Kiểm tra lại các trường sau:" và "Vui lòng nhập họ tên" dưới ô; **không** gửi request (Network không có POST) |
+| V02 | Email sai định dạng | Gõ "abc" | Báo "Email không đúng định dạng" |
 | V03 | Chưa chọn phòng ban | Không chọn | Báo "Vui lòng chọn phòng ban" |
 | V04 | Email trùng | Thêm người có email đã tồn tại | Backend trả **409**; form hiện "Email đã được sử dụng" |
 | V05 | Email trùng khác hoa thường | Đã có `an@x.com`, thêm `AN@x.com` | Vẫn báo trùng (409) |
-| V06 | Bấm Thêm 2 lần liên tiếp | Bấm nhanh 2 lần | Chỉ tạo **một** nhân viên, vì nút bị khóa khi đang lưu |
-| V07 | Máy chủ tắt | Tắt backend, bấm Thêm hoặc tải danh sách | Hiện "Không kết nối được máy chủ" / "Không tải được", trang không trắng |
+| V06 | Bấm "Lưu nhân viên" 2 lần liên tiếp | Bấm nhanh 2 lần | Chỉ tạo **một** nhân viên, vì nút đổi thành "Đang lưu…" và bị khóa khi đang lưu |
+| V07 | Máy chủ tắt | Thử ba cách: mở form rồi mới tắt backend, bấm "Lưu nhân viên"; tắt backend rồi mở form; tắt backend rồi mở danh sách | Lần lượt: khung "Chưa lưu được." kèm "Không kết nối được máy chủ, vui lòng thử lại"; "Không tải được danh sách phòng ban." và nút Lưu bị khóa; "Không tải được danh sách nhân viên" và nút "Thử lại". Trang không trắng |
+| V08 | Phòng ban vừa bị xóa khi đang nhập | Mở form, chọn một phòng trống, xóa phòng đó ở tab khác, bấm "Lưu nhân viên" | Ô Phòng ban báo "Phòng ban không tồn tại", phòng đã xóa không còn trong danh sách và bị bỏ chọn; họ tên, email giữ nguyên; chọn phòng khác lưu được, không cần tải lại trang |
+| V09 | Máy chủ trả lời quá 10 giây lúc ghi | F12 → Network, tạo mức giới hạn tốc độ có độ trễ trên 10 000 ms và chọn nó, rồi lưu hoặc xóa | Lưu: "Máy chủ phản hồi quá lâu, chưa rõ đã lưu hay chưa. Hãy kiểm tra lại danh sách trước khi thử lại." Xóa: cùng câu với "đã xóa". Nút bật lại sau khi báo. Lời gọi đọc quá giờ và mất mạng thật vẫn báo "Không kết nối được máy chủ, vui lòng thử lại" |
+| V10 | Tải phòng ban lỗi khi đang lọc | Mở `/employees?departmentId=2&search=a`, để `GET /api/departments` lỗi | Ô lọc khóa, có nút "Thử lại" và "Bỏ lọc phòng ban". "Bỏ lọc phòng ban" giữ chuỗi tìm; "Thử lại" tải lại phòng ban khi API đã chạy lại |
 
 ### 3.3 Kiểm thẳng API bằng Postman (bỏ qua kiểm tra của giao diện)
 
@@ -70,13 +75,13 @@ Phần này chứng minh backend **tự bảo vệ**, không phụ thuộc giao 
 
 | Mã | Request | Kết quả mong đợi |
 |---|---|---|
-| A01 | `POST /api/employees` thiếu `email` | **400**, `errors.Email` có thông báo |
-| A02 | `POST` với `departmentId: 999` | **409**, "Phòng ban không tồn tại" |
+| A01 | `POST /api/employees` thiếu `email` | **400**, `errors.email` là "Vui lòng nhập email" |
+| A02 | `POST` với `departmentId: 999` | **400**, `errors.departmentId` là "Phòng ban không tồn tại" |
 | A03 | `GET /api/employees/999` | **404** |
 | A04 | `PUT /api/employees/999` | **404** |
 | A05 | `DELETE /api/employees/999` | **404** |
 | A06 | `POST` hợp lệ | **201**, có header `Location`, body có `id` mới |
-| A07 | `PUT` hợp lệ | **204**, không có body |
+| A07 | `PUT` hợp lệ | **200**, body là nhân viên sau khi sửa |
 
 ### 3.4 Kiểm ở database (pgAdmin)
 

@@ -9,11 +9,11 @@ using Npgsql;
 namespace EmployeeCrud.Api.Departments;
 
 /// <summary>
-/// Luật nghiệp vụ của phòng ban (BR1, BR2). Đăng ký Scoped: mỗi request một service và một AppDbContext riêng.
+/// Luật nghiệp vụ của phòng ban. Đăng ký Scoped: mỗi request một service và một AppDbContext riêng.
 /// </summary>
 public class DepartmentService(AppDbContext db) : IDepartmentService
 {
-    public const string NameField = "name";
+    public const string NameField = ErrorTitles.NameKey;
     public const string NameRequiredMessage = "Vui lòng nhập tên phòng ban";
     public const string NameTooLongMessage = "Tên phòng ban tối đa 100 ký tự";
     public const string NameInvalidMessage = "Tên phòng ban chứa ký tự không hợp lệ";
@@ -21,7 +21,7 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
 
     public async Task<IReadOnlyList<DepartmentDto>> GetAllAsync(CancellationToken cancellationToken = default) =>
         // Chỉ đọc: không theo dõi thay đổi; sắp ngay trong database. Số nhân viên là truy vấn con trong
-        // cùng câu SELECT (BR5.1, ADR-006), nên 8 hay 80 phòng ban vẫn chỉ một lần gọi database.
+        // cùng câu SELECT, nên 8 hay 80 phòng ban vẫn chỉ một lần gọi database.
         await db.Departments
             .AsNoTracking()
             .OrderBy(d => d.Name)
@@ -43,6 +43,7 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
 
         var department = new Department { Name = name };
         db.Departments.Add(department);
+        // Hai người thêm cùng tên một lúc đều qua được bước kiểm trên; chỉ mục không trùng chặn người sau tại đây (409).
         await db.SaveChangesAsync(cancellationToken);
 
         // Phòng vừa tạo chưa thể có nhân viên nào.
@@ -54,7 +55,7 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         var name = NormalizeName(request.Name);
         var department = await FindTrackedAsync(id, cancellationToken);
 
-        // Loại trừ chính nó: giữ nguyên tên, hoặc chỉ đổi hoa thường của chính nó, vẫn lưu được (BR1.4).
+        // Loại trừ chính nó: giữ nguyên tên, hoặc chỉ đổi hoa thường của chính nó, vẫn lưu được.
         await EnsureNameIsFreeAsync(name, excludeId: id, cancellationToken);
 
         department.Name = name;
@@ -65,12 +66,13 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         catch (DbUpdateConcurrencyException)
         {
             // Dòng vừa bị xóa ở nơi khác sau khi ta đọc: câu UPDATE không tác động dòng nào.
-            // ErrorMapper của U1 không nhận ra lỗi này (không có PostgresException bên trong), nên service tự báo 404.
+            // ErrorMapper không nhận ra lỗi này (không có PostgresException bên trong), nên service tự báo 404.
             throw NotFound(id);
         }
 
-        // Đổi tên không đổi số người, nhưng vẫn đếm để phản hồi PUT có cùng hình dạng với GET (hợp đồng C1).
-        return new DepartmentDto(department.Id, department.Name, await CountEmployeesAsync(id, cancellationToken));
+        // Đọc lại thay vì dùng dữ liệu đang giữ: tên không đổi thì EF không gửi UPDATE nên không có lỗi tranh chấp,
+        // chỉ bước đọc này mới biết phòng vừa bị xóa (404). Phản hồi PUT nhờ đó cũng cùng hình dạng với GET.
+        return await GetByIdAsync(id, cancellationToken);
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -78,7 +80,7 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         // Đọc dòng trước khi xóa: vừa để báo 404, vừa có sẵn tên để đưa vào lời báo khi còn nhân viên.
         var department = await FindTrackedAsync(id, cancellationToken);
 
-        // BR5.2: kiểm trước, còn nhân viên thì không xóa và nói rõ còn bao nhiêu người.
+        // Kiểm trước, còn nhân viên thì không xóa và nói rõ còn bao nhiêu người.
         // Đếm bằng chỉ mục ix_employees_department_id.
         var employeeCount = await CountEmployeesAsync(id, cancellationToken);
         if (employeeCount > 0)
@@ -97,8 +99,8 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         }
         catch (DbUpdateException exception) when (IsEmployeeForeignKeyViolation(exception))
         {
-            // Đường dự phòng của BR2.5: có người vừa thêm nhân viên vào phòng ban này sau bước kiểm ở trên,
-            // khóa ngoại RESTRICT (U4) chặn. Đếm lại để câu báo có số đúng lúc này (BR5.2).
+            // Đường dự phòng: có người vừa thêm nhân viên vào phòng ban này sau bước kiểm ở trên,
+            // khóa ngoại RESTRICT chặn. Đếm lại để câu báo có số đúng lúc này.
             // Lúc database chặn chắc chắn còn ít nhất một người; nếu đếm lại ra 0 (người đó vừa bị xóa tiếp)
             // thì vẫn báo 1 thay vì câu vô lý "còn 0 nhân viên".
             var countNow = await CountEmployeesAsync(id, cancellationToken);
@@ -109,7 +111,7 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
     public Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default) =>
         db.Departments.AnyAsync(d => d.Id == id, cancellationToken);
 
-    // BR1.1–BR1.3: chuẩn hóa (gộp khoảng trắng, NFC, chặn ký tự điều khiển) rồi mới kiểm, nên độ dài và
+    // Chuẩn hóa (gộp khoảng trắng, NFC, chặn ký tự điều khiển) rồi mới kiểm, nên độ dài và
     // trùng tên được tính trên đúng tên sẽ lưu. Đây là nơi duy nhất kiểm độ dài.
     // Thứ tự kiểm: ký tự không hợp lệ trước, rồi rỗng, rồi quá dài. Ví dụ tên chỉ có "\0" được báo
     // "chứa ký tự không hợp lệ" (đúng nguyên nhân), không bị báo nhầm là "Vui lòng nhập tên phòng ban".
@@ -133,9 +135,9 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         return name;
     }
 
-    // BR1.4: so không phân biệt hoa thường. ToLower() được Npgsql dịch thành lower(name) = lower(@p),
+    // So không phân biệt hoa thường. ToLower() được Npgsql dịch thành lower(name) = lower(@p),
     // cùng biểu thức với chỉ mục ux_departments_name. Nếu hai request chen nhau cùng qua bước này,
-    // chỉ mục chặn cái sau (23505) và U1 đổi thành 409.
+    // chỉ mục chặn cái sau (23505) và ErrorMapper đổi thành 409.
     private async Task EnsureNameIsFreeAsync(string name, int? excludeId, CancellationToken cancellationToken)
     {
         // Gọi ToLower() ở cả hai vế bên trong biểu thức, để PostgreSQL dùng đúng một hàm lower() cho cả hai bên.
@@ -154,7 +156,7 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         ?? throw NotFound(id);
 
     // Khóa ngoại fk_employees_department khai ON DELETE RESTRICT, nên khi xóa phòng ban còn nhân viên
-    // PostgreSQL báo 23001 (restrict_violation), không phải 23503 (đã thấy khi chạy thật trên pgAdmin, U4).
+    // PostgreSQL báo 23001 (restrict_violation), không phải 23503 (đã thấy khi chạy thật trên pgAdmin).
     // Bắt cả hai mã để đường dự phòng không lọt thành lỗi 500.
     private static bool IsEmployeeForeignKeyViolation(DbUpdateException exception) =>
         exception.InnerException is PostgresException
@@ -166,8 +168,8 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
     private Task<int> CountEmployeesAsync(int departmentId, CancellationToken cancellationToken) =>
         db.Employees.CountAsync(e => e.DepartmentId == departmentId, cancellationToken);
 
-    // Một hàm duy nhất tạo lỗi "còn nhân viên", gọi từ cả bước kiểm trước lẫn nhánh bắt 23503,
-    // để hai đường luôn ra cùng một mẫu câu (NFR3.5, hợp đồng C1).
+    // Một hàm duy nhất tạo lỗi "còn nhân viên", gọi từ cả bước kiểm trước lẫn nhánh bắt lỗi khóa ngoại (23001, 23503),
+    // để hai đường luôn ra cùng một mẫu câu.
     public static string HasEmployeesMessage(string departmentName, int employeeCount) =>
         $"Không thể xóa phòng ban \"{departmentName}\" vì còn {employeeCount} nhân viên.";
 

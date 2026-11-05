@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace EmployeeCrud.Api.Employees;
 
 /// <summary>
-/// API nhân viên (hợp đồng C2). Controller chỉ nhận request và trả mã HTTP; mọi luật nằm ở EmployeeService.
-/// Lỗi nghiệp vụ (DomainError) do U1 đổi sang ProblemDetails 400/404/409.
+/// API nhân viên. Controller chỉ nhận request và trả mã HTTP; mọi luật nằm ở EmployeeService.
+/// Lỗi nghiệp vụ (DomainError) do ProblemDetailsExceptionHandler đổi sang ProblemDetails 400/404/409.
 /// </summary>
 [ApiController]
 [Route("api/employees")]
@@ -14,10 +14,10 @@ public class EmployeesController(IEmployeeService employees) : ControllerBase
     /// <summary>
     /// Danh sách nhân viên kèm tên phòng ban, sắp theo họ tên.
     /// Có <c>?search=</c> thì chỉ lấy người có họ tên hoặc email chứa chuỗi đó (không phân biệt hoa thường).
-    /// Có <c>?departmentId=</c> thì chỉ lấy người của phòng đó (FR8.3); sai dạng trả 400.
+    /// Có <c>?departmentId=</c> thì chỉ lấy người của phòng đó; sai dạng trả 400.
     /// </summary>
     // departmentId nhận dạng chuỗi, không phải int?: nếu để ASP.NET tự đổi kiểu thì "abc" ra 400 câu tiếng Anh;
-    // service tự đọc số để báo câu tiếng Việt như mọi lỗi khác (ADR-007).
+    // service tự đọc số để báo câu tiếng Việt như mọi lỗi khác.
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<EmployeeDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<HttpValidationProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]

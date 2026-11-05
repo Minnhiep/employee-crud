@@ -26,7 +26,7 @@ type ConfirmProps = CommonProps & {
 
 type NoticeProps = CommonProps & {
   /**
-   * Hộp chỉ báo vì sao chưa làm được (Change Request FR8.4): không có nút xác nhận, chỉ có "Đóng"
+   * Hộp chỉ báo vì sao chưa làm được: không có nút xác nhận, chỉ có "Đóng"
    * và một hành động phụ, ví dụ liên kết "Xem 3 nhân viên".
    */
   variant: "notice";
@@ -119,7 +119,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
       ) : (
         /*
          * Lúc đang gửi yêu cầu, hai nút dùng aria-disabled thay cho disabled: nút "disabled" bị trình duyệt
-         * lấy mất focus, người dùng bàn phím và trình đọc màn hình mất vị trí trong hộp (rà soát U2, R-07).
+         * lấy mất focus, người dùng bàn phím và trình đọc màn hình mất vị trí trong hộp.
          * Vì nút vẫn bấm được về mặt kỹ thuật, hai hàm xử lý tự bỏ qua khi busy.
          */
         <div className="dialog__actions">

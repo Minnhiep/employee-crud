@@ -1,7 +1,7 @@
 import { apiDelete, apiGet, apiPost, apiPut } from "./client";
 import type { RequestOptions } from "./client";
 
-/** Nhân viên API trả về (hợp đồng C2), có sẵn tên phòng ban để không phải gọi thêm. */
+/** Nhân viên API trả về, có sẵn tên phòng ban để không phải gọi thêm. */
 export type Employee = {
   id: number;
   fullName: string;
@@ -21,7 +21,7 @@ const BASE_PATH = "/api/employees";
 
 /**
  * Danh sách nhân viên, đã sắp theo họ tên ở backend.
- * Có chuỗi tìm thì thêm ?search=; có phòng ban thì thêm ?departmentId= (FR8.3, hai điều kiện ghép AND).
+ * Có chuỗi tìm thì thêm ?search=; có phòng ban thì thêm ?departmentId= (hai điều kiện ghép AND).
  * URLSearchParams mã hóa giá trị, nên dấu tiếng Việt, khoảng trắng, "%", "&" đi đúng nguyên văn.
  */
 export function getEmployees(

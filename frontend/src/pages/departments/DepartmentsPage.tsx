@@ -26,7 +26,7 @@ const columns: DataTableColumn<Department>[] = [
   {
     key: "name",
     header: "Tên phòng ban",
-    // Tên là liên kết tới trang chi tiết (US6.2): xem phòng này có những ai.
+    // Tên là liên kết tới trang chi tiết: xem phòng này có những ai.
     render: (department) => (
       <Link
         className="table__strong table__link"
@@ -47,15 +47,15 @@ const columns: DataTableColumn<Department>[] = [
 ];
 
 /**
- * Trang danh sách phòng ban (US1.1, US1.4, US6.1): bốn trạng thái tải / lỗi / trống / có dữ liệu (BR4.1),
- * cột số nhân viên, và xóa theo luật của useDepartmentDelete (BR6.4).
+ * Trang danh sách phòng ban: bốn trạng thái tải / lỗi / trống / có dữ liệu,
+ * cột số nhân viên, và xóa theo luật của useDepartmentDelete.
  */
 export function DepartmentsPage() {
   const headingRef = usePageTitle(TITLE);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tăng số này để tải lại (bấm "Thử lại", sau khi xóa). Cùng kiểu với trang nhân viên (rà soát tổng thể A-05).
+  // Tăng số này để tải lại (bấm "Thử lại", sau khi xóa). Cùng kiểu với trang nhân viên.
   const [reloadKey, setReloadKey] = useState(0);
   const [result, setResult] = useState<LoadResult | null>(null);
   // Lỗi khi xóa (409, lỗi mạng...) hiện ở đầu thân trang; bảng vẫn giữ nguyên.
@@ -102,7 +102,7 @@ export function DepartmentsPage() {
 
   const { requestDelete, isSubmitting, dialogs } = useDepartmentDelete({
     onDeleted: (department) => {
-      // Gọi lại hàm tải danh sách để dòng vừa xóa biến mất ngay, không cần F5 (rà soát U2).
+      // Gọi lại hàm tải danh sách để dòng vừa xóa biến mất ngay, không cần F5.
       reload();
       // navigate chỉ để mang lời báo cho Toast; việc tải danh sách không phụ thuộc vào nó.
       void navigate(location.pathname + location.search, {
@@ -112,7 +112,7 @@ export function DepartmentsPage() {
       setHeadingFocusRequest((request) => request + 1);
     },
     onError: (_department, error) => {
-      // 404 (đã bị xóa ở nơi khác) và 409 (có người vừa được thêm vào phòng, AC6.4.3) đều làm số trên bảng cũ:
+      // 404 (đã bị xóa ở nơi khác) và 409 (có người vừa được thêm vào phòng) đều làm số trên bảng cũ:
       // tải lại để bảng đúng với database.
       if (
         error instanceof ApiError &&

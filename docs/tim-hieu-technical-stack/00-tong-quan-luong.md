@@ -3,6 +3,8 @@
 > Tài liệu tự học theo [Kế hoạch tìm hiểu technical stack 2 tuần](../ke-hoach.md).
 > Mục tiêu cuối: **tự giải thích được luồng React → API JSON → ASP.NET Core → PostgreSQL**, rồi áp dụng làm bài CRUD nhân viên/phòng ban.
 > Viết ngày 30/10/2026.
+>
+> **Lưu ý: đây là bản nháp học, viết trước khi làm bài.** Bài thật khác ở: React viết bằng TypeScript, không phải JavaScript; API có 10 thao tác, gồm cả thêm, sửa, xóa phòng ban. Đúng với bài thật: [danh sách API](../danh-sach-api.md), [sơ đồ database](../so-do-database.md).
 
 ## 1. Hình dung bằng ví dụ đời thường: một nhà hàng
 
@@ -112,7 +114,7 @@ Hai thay đổi đáng chú ý so với hướng dẫn cũ trên mạng:
 - Bảng `employees`: `id`, `full_name`, `email` (không trùng), `department_id` (khóa ngoại tới `departments`).
 - API: `GET /api/departments`; `GET /api/employees?search=...`; `GET /api/employees/{id}`; `POST /api/employees`; `PUT /api/employees/{id}`; `DELETE /api/employees/{id}`.
 
-Đây là mô hình tối thiểu để học, em tự chọn tên. Khi làm bài thật có thể thêm trường như số điện thoại hay ngày vào làm.
+Đây là mô hình tối thiểu để học, tên do người viết tự chọn. Khi làm bài thật có thể thêm trường như số điện thoại hay ngày vào làm.
 
 ## 7. Câu hỏi tự kiểm (trả lời không nhìn tài liệu)
 

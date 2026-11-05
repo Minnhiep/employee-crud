@@ -2,6 +2,8 @@
 
 > Phần trong kế hoạch: *C# cơ bản, LINQ, async/await; Web API; Controller, Service, DTO; Dependency Injection; Entity Framework Core kết nối PostgreSQL, migration và CRUD.*
 > Vị trí trong luồng: **bước 4–8** ở [00-tong-quan-luong.md](00-tong-quan-luong.md).
+>
+> **Lưu ý: đây là bản nháp học, viết trước khi làm bài.** Code dưới đây là ví dụ để hiểu khái niệm. Bài thật khác ở: project tên `EmployeeCrud.Api`, chia theo thư mục `Departments/`, `Employees/`, `Platform/`, không có thư mục `Controllers/`; tìm kiếm dùng `ToLower()` với `Contains`, không dùng `ILike`; email giữ nguyên chữ hoa thường như người dùng gõ, chống trùng bằng chỉ mục trên `lower(email)`, nên ý "lưu email chữ thường" dưới đây không áp dụng; email tối đa 254 ký tự, không phải 255; `PUT` trả `200` kèm dữ liệu; phòng ban có đủ thêm, sửa, xóa. Đúng với bài thật: code ở `backend/EmployeeCrud.Api/`, [danh sách API](../danh-sach-api.md).
 
 ## 1. Nói đơn giản
 
@@ -146,7 +148,7 @@ public class EmployeesController(IEmployeeService service) : ControllerBase { ..
 | `AddScoped` | Một cái cho **mỗi request** | **DbContext**, service dùng DbContext |
 | `AddSingleton` | Một cái cho cả ứng dụng | Cấu hình, cache. **Không** chứa DbContext |
 
-Nguồn: [Dependency injection in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection) (link quen thuộc, hôm nay em chưa mở lại).
+Nguồn: [Dependency injection in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection) (link quen thuộc, chưa mở lại khi viết).
 
 ## 6. Entity Framework Core: nối với PostgreSQL
 
@@ -203,7 +205,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 }
 ```
 
-**Vì sao phải đặt tên bảng/cột thủ công?** Mặc định EF Core đặt tên theo C# (`Employees`, `FullName`). Trong PostgreSQL, tên có chữ hoa phải luôn viết trong ngoặc kép (`SELECT "FullName" FROM "Employees"`), rất dễ quên khi viết SQL tay. Dùng tên chữ thường kiểu `snake_case` thì SQL tay gọn hơn, xem [04-postgresql.md](04-postgresql.md). Cách tự động hơn là gói `EFCore.NamingConventions` với `UseSnakeCaseNamingConvention()` (em chưa kiểm bản tương thích .NET 10).
+**Vì sao phải đặt tên bảng/cột thủ công?** Mặc định EF Core đặt tên theo C# (`Employees`, `FullName`). Trong PostgreSQL, tên có chữ hoa phải luôn viết trong ngoặc kép (`SELECT "FullName" FROM "Employees"`), rất dễ quên khi viết SQL tay. Dùng tên chữ thường kiểu `snake_case` thì SQL tay gọn hơn, xem [04-postgresql.md](04-postgresql.md). Cách tự động hơn là gói `EFCore.NamingConventions` với `UseSnakeCaseNamingConvention()` (chưa kiểm bản tương thích .NET 10).
 
 Đăng ký trong `Program.cs`:
 
@@ -240,7 +242,7 @@ Quy tắc:
 - Kế hoạch yêu cầu nộp "phần khởi tạo database hoặc migration", và thư mục `Migrations/` chính là phần đó.
 - **Mỗi database chỉ dùng một cách tạo bảng.** Đã dùng migration cho `employee_db` thì đừng chạy thêm các câu `CREATE TABLE` tay ở [04-postgresql.md](04-postgresql.md) vào cùng database, vì sẽ báo lỗi bảng đã tồn tại. Ngược lại cũng vậy.
 
-Nguồn: [EF Core Migrations](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/) (link quen thuộc, hôm nay em chưa mở lại).
+Nguồn: [EF Core Migrations](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/) (link quen thuộc, chưa mở lại khi viết).
 
 ## 8. CRUD: Service và Controller
 
@@ -398,7 +400,7 @@ modelBuilder.Entity<Department>().HasData(
     new Department { Id = 3, Name = "Kỹ thuật" });
 ```
 
-Lưu ý khi seed với `Id` cố định: PostgreSQL **không tự đẩy bộ đếm id** khi dòng được chèn với id ghi sẵn. Sau này nếu thêm phòng ban mà không ghi id, bộ đếm bắt đầu từ 1 và có thể báo trùng khóa chính. Bài này không có chức năng thêm phòng ban nên chưa gặp; em chưa chạy thử điểm này với Npgsql 10.
+Lưu ý khi seed với `Id` cố định: PostgreSQL **không tự đẩy bộ đếm id** khi dòng được chèn với id ghi sẵn. Sau này nếu thêm phòng ban mà không ghi id, bộ đếm bắt đầu từ 1 và có thể báo trùng khóa chính. Bài này không có chức năng thêm phòng ban nên chưa gặp; chưa chạy thử điểm này với Npgsql 10.
 
 Ghi chú:
 - Kiểm `AnyAsync` email trước khi lưu **chưa đủ** khi hai người cùng lưu một lúc: cả hai đều thấy "chưa có", rồi cả hai cùng ghi. **Chỉ mục duy nhất** (unique index) ở database mới là chốt chặn cuối. Khi chốt này chặn, EF Core ném `DbUpdateException`. Bài 2 tuần có thể chưa xử lý trường hợp này, nhưng nên hiểu vì sao cần cả hai lớp.
@@ -469,4 +471,4 @@ app.Run();
 
 - [Tutorial: Create a controller-based web API (ASP.NET Core 10)](https://learn.microsoft.com/en-us/aspnet/core/tutorials/first-web-api?view=aspnetcore-10.0), tutorial trong kế hoạch.
 - [.NET support policy](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core), [Generate OpenAPI documents](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/openapi/aspnetcore-openapi?view=aspnetcore-10.0), [Npgsql EF Core](https://www.npgsql.org/efcore/), [NuGet Npgsql.EntityFrameworkCore.PostgreSQL](https://www.nuget.org/packages/Npgsql.EntityFrameworkCore.PostgreSQL/): đã tra ngày 30/10/2026.
-- [EF Core docs](https://learn.microsoft.com/en-us/ef/core/), [C# docs](https://learn.microsoft.com/en-us/dotnet/csharp/): link quen thuộc, hôm nay em chưa mở lại.
+- [EF Core docs](https://learn.microsoft.com/en-us/ef/core/), [C# docs](https://learn.microsoft.com/en-us/dotnet/csharp/): link quen thuộc, chưa mở lại khi viết.

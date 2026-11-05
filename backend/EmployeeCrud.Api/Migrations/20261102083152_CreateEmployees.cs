@@ -39,9 +39,9 @@ namespace EmployeeCrud.Api.Migrations
                 column: "department_id");
 
             // Viết tay: EF Core không sinh được chỉ mục trên biểu thức lower(email).
-            // Chỉ mục này để database tự chặn email trùng không phân biệt hoa thường (BR3.2),
+            // Chỉ mục này để database tự chặn email trùng không phân biệt hoa thường,
             // còn email vẫn lưu đúng như người dùng gõ. Tên ux_employees_email phải khớp DbConstraintNames
-            // để U1 đổi lỗi 23505 thành 409 "Email đã được sử dụng".
+            // để ErrorMapper đổi lỗi 23505 thành 409 "Email đã được sử dụng".
             migrationBuilder.Sql("CREATE UNIQUE INDEX ux_employees_email ON employees (lower(email));");
         }
 

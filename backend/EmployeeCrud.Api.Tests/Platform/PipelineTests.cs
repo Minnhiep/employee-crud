@@ -79,8 +79,8 @@ public class PipelineTests(PlatformWebAppFactory factory) : IClassFixture<Platfo
         Assert.Equal("Họ tên là bắt buộc", messages[0].GetString());
     }
 
-    // Build and Test (Loop-back 1): controller thật có [Produces("application/json")], từng làm 400
-    // trả application/json không có type, nên client.ts (chỉ đọc problem+json) mất lời báo theo ô.
+    // Controller thật có [Produces("application/json")], thứ có thể làm 400 trả application/json
+    // không có type, khi đó client.ts (chỉ đọc problem+json) mất lời báo theo ô.
     [Fact]
     public async Task MissingRequiredField_OnProducesJsonAction_StillReturnsProblemJsonWithType()
     {
