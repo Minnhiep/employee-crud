@@ -6,5 +6,21 @@
     "scope": "classic",
     "status": "complete",
     "request": "e7755adb"
+  },
+  {
+    "uuid": "01a1a53a-f1c4-7314-bcfc-75def7e6d5e8",
+    "slug": "sua-loi-luot-6",
+    "dirName": "261104-sua-loi-luot-6",
+    "scope": "bugfix",
+    "status": "complete",
+    "request": "b7e8d594"
+  },
+  {
+    "uuid": "01a1a7be-3ebf-7fd1-b880-7bd0cf53134d",
+    "slug": "sua-loi-luot-8",
+    "dirName": "261104-sua-loi-luot-8",
+    "scope": "bugfix",
+    "status": "complete",
+    "request": "2c1b3069"
   }
 ]

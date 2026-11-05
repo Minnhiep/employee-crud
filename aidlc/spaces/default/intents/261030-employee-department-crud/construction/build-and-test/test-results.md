@@ -290,6 +290,76 @@ Thêm: 6 giá trị `departmentId` sai → 400 `errors.departmentId`; phòng kh�
 - File U2 sửa trong U4 (Hiệp duyệt): `ConfirmDialog.tsx`, `DataTable.tsx`, `PageHeader.tsx`, `StatusMessage.tsx`, `styles/components.css`.
 - Comment giải thích trong `backend/EmployeeCrud.Api.Tests/TestSupport/ThrowingAppDbContext.cs` (vượt Smart App Control ở checkpoint U1).
 
+## Lượt chạy 6 — 2026-11-04 (kiểm tra lại toàn bộ theo `docs/ke-hoach.md`, chạy riêng bước `--single`)
+
+**Kết quả: KHÔNG ĐẠT** (2 lệnh hoặc mục tiêu Không đạt: BT-04, BT-05). Không sửa code ở lượt này: Hiệp chỉ yêu cầu kiểm tra. Code đã kiểm: commit `6768935`, cây code sạch lúc bắt đầu. Hiệp duyệt phiếu việc bằng form.
+
+### 1. Build, test, độ phủ, quét
+
+| Lệnh | Mã thoát | Kết quả |
+|---|---|---|
+| `npm --prefix frontend run verify` | 0 | typecheck, ESLint, Prettier, Vite build (JS 301,78 KB, CSS 16,92 KB) sạch; `dotnet test` **138/138** |
+| Microsoft Code Coverage + reportgenerator `-assemblyfilters:+EmployeeCrud.Api` | 0 | `DepartmentService`, `EmployeeService`, `ValidInput`, `TextInput` 100%; `ErrorMapper` 97,6%; toàn assembly 47,6% |
+| `dotnet format backend/EmployeeCrud.slnx --verify-no-changes` | 2 | **Không đạt (BT-05):** 8 lỗi ở 6 file: 5 `FINALNEWLINE`, 3 `WHITESPACE` (`DepartmentService.cs` dòng 22–24) |
+| `dotnet ef migrations has-pending-model-changes` | 0 | Model khớp migration |
+| `npm --prefix frontend audit --omit=dev` | 0 | 0 lỗ hổng ở gói chạy thật |
+| `npm --prefix frontend audit` | khác 0 | Lỗi mức moderate ở `minimatch` qua ESLint, chỉ là gói dev, không vào bản build; `audit fix --force` sẽ hạ `typescript-eslint` nên không chạy |
+| `dotnet list ... package --vulnerable --include-transitive` | 0 | 0 gói có lỗ hổng |
+| Quét mật khẩu trong code và lịch sử Git | 0 | Không có mật khẩu thật; chỉ có lệnh mẫu trong tài liệu. File bí mật, `bin/`, `obj/`, `dist/`, `node_modules/` không nằm trong Git |
+| `aidlc engine sensor-traceability --stage build-and-test` | 0 | `pass: true`, 0 ID chưa phủ |
+
+### 2. API thật (Node `fetch`, backend + PostgreSQL thật, 83 nhân viên, 9 phòng ban)
+
+| Nhóm ca | Kết quả |
+|---|---|
+| Tìm chữ Việt hoa, thường, `%`, `_`, chuỗi SQL | `nguyễn`/`NGUYỄN` đều 7; `đỗ`/`ĐỖ` đều 6; `%`, `_`, chuỗi `DROP TABLE` đều 0 dòng, bảng còn nguyên |
+| Trùng tên phòng và email, kể cả chữ Việt hoa và thừa khoảng trắng | 409 đúng lời báo |
+| JSON hỏng, sai kiểu, thiếu trường, `departmentId` 0, âm, không có | 400 `problem+json`, không có 500 |
+| Gửi kèm `id`, `departmentName` lạ | Bị bỏ qua, không ghi đè được |
+| id 0, âm, chữ, vượt phạm vi | 404 `problem+json` |
+| 8 thêm cùng email, 8 thêm cùng tên phòng | Đúng 1 lần 201, 7 lần 409 |
+| 12 lượt xóa phòng chen với thêm nhân viên | Mỗi lượt đúng một bên thắng (204/400 hoặc 409/201), không có 500, không có nhân viên mồ côi |
+| CORS, header bảo mật | Origin lạ không có header cho phép; có CSP và `nosniff` |
+| Body 5 MB; 40 MB | 400; bị ngắt kết nối (giới hạn mặc định của Kestrel) |
+| URL `search` 20.000 ký tự | 414 không có body `problem+json` (Kestrel chặn trước khi vào ứng dụng) |
+| **Ký tự U+FFFE ở tên phòng, họ tên, `?search=`** | **500 (BT-04)** |
+
+Dữ liệu thử đã xóa. Sau kiểm: 83 nhân viên, 9 phòng ban; danh sách giống hệt trước khi kiểm.
+
+### 3. Trình duyệt thật (Playwright điều khiển Chromium, bản build `npm run preview`, backend thật)
+
+| Mục | Kết quả |
+|---|---|
+| Thêm phòng ban, thêm, sửa, tìm, xóa nhân viên, xóa phòng rỗng | Đạt; mỗi thao tác đúng một request ghi; bấm đúp Lưu chỉ 1 POST |
+| Form rỗng | Báo đủ 3 ô, 0 request ghi |
+| Trùng email khác hoa thường | Lời báo cạnh ô, ở lại form |
+| Họ tên chứa `<img src=x onerror=...>` | Hiện như chữ, mã không chạy |
+| F5, Sửa từ kết quả tìm | Giữ `?search=`, Lưu về đúng trang tìm |
+| Xóa phòng còn người | Hộp "còn 1 nhân viên", không có nút xóa |
+| Trang không có, sửa nhân viên không có, khổ 320 px | Đúng lời báo, không cuộn ngang |
+| Bấm Hủy khi đang lưu (giả lập API chậm 1,5 giây) | **Dữ liệu vẫn được lưu** (BT-06) |
+| `/employees/{id}e0/edit` | Mở form của nhân viên `{id}` (BT-07) |
+
+Console chỉ có dòng trình duyệt tự ghi cho 409 và 404 chủ động gây ra. Dữ liệu thử đã xóa.
+
+### 4. Rà độc lập
+
+Một reviewer độc lập đọc code, tài liệu, test: không có lỗi mức Nặng. BT-04, BT-06, BT-07 do reviewer nêu và đã tái hiện trên ứng dụng thật ở trên. Mục chưa tái hiện, chỉ từ đọc code, ghi ở BT-08.
+
+### 5. Chi tiết lỗi và phương án
+
+**BT-04 (Không đạt, S-04, C3-400).** U+FFFE qua được `TextInput.TryNormalize` rồi làm `string.Normalize` ném `ArgumentException`, nên API trả 500 ở `POST /api/departments`, `POST /api/employees`, `GET /api/employees?search=`. Tài liệu API ghi các ký tự lạ ra 400 hoặc `[]`. Người dùng thường rất khó gặp vì đây không phải ký tự gõ được; dữ liệu không hỏng. Gốc: code U1 (`Platform/Text/TextInput.cs`), `frontend/src/utils/normalizeText.ts` cần cùng luật. Phương án: kiểm thêm ký tự không hợp lệ trước khi chuẩn hóa, thêm test hồi quy. Ước lượng: 2 file code, 2–3 test, khoảng 30 phút; chi phí 0; rủi ro thấp.
+
+**BT-05 (Không đạt, TP-4).** `dotnet format` lỗi; `verify` không gọi lệnh này nên các lượt sau lượt 1 không thấy. Phương án: chạy `dotnet format`, thêm lệnh này vào `verify`. Ước lượng: khoảng 10 phút; chi phí 0; rủi ro rất thấp, chỉ đổi định dạng. `.editorconfig` đặt `insert_final_newline = false`, nên cũng có thể đổi luật này thay vì sửa 5 file; Hiệp chọn.
+
+**BT-06 (Vừa, ngoài đề bài).** Hủy khi đang lưu vẫn lưu. Phương án: khóa nút Hủy lúc đang lưu ở 2 form. Khoảng 10 phút.
+
+**BT-07 (Nhẹ, ngoài đề bài).** `Number("2127e0")` ra 2127. Phương án: kiểm id bằng chữ số như `DepartmentDetailPage`. Khoảng 10 phút.
+
+**BT-08 (Nhẹ, tài liệu và test).** Theo reviewer, chưa tái hiện bằng chạy thật trừ dòng `.http`: `EmployeeCrud.Api.http` mục 5 ghi "ra 409" với id 99999 (đã đọc: thực tế là 404); `danh-sach-api.md:131` ghi "không cho bấm xóa" (lượt này thấy nút vẫn bấm được và mở hộp thông báo); `so-do-database.md:48` ghi email "lưu đúng như người dùng gõ" trong khi đã chuẩn hóa; thiếu ca biên đúng 254 ký tự email; test pipeline không gọi controller thật (đúng phạm vi `team.md`).
+
+**Theo ghi nhận, không phải lỗi so với đề bài:** họ tên nhận `12345`, `!!!`; email nhận `a..b@`, `.a@`, `a,b@`, `<x>@`; PUT phòng ban kiểm dữ liệu trước 404, PUT nhân viên làm ngược lại; người lưu sau đè người lưu trước (đã chốt ở thiết kế).
+
 ## Loop-Back Log
 
 ### Loop-back 1 — 2026-11-02T18:29:13Z

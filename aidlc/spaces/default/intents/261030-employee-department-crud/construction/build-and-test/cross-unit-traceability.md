@@ -1,6 +1,6 @@
 # Truy vết liên Unit: employee-crud
 
-> **Nguồn:** kết quả `aidlc engine sensor-traceability --stage build-and-test` (lượt chạy 3, 2026-11-03; chạy lại ở lượt 4 sau Change Request rà soát tổng thể: `pass: true`, 0 ID chưa phủ), đọc từ `traceability.json` của U1–U5 và `requirements.md`.
+> **Nguồn:** kết quả `aidlc engine sensor-traceability --stage build-and-test` (lượt chạy 3, 2026-11-03; chạy lại ở lượt 4 sau Change Request rà soát tổng thể và ở lượt 6 ngày 2026-11-04, gồm cả FR8.1–FR8.6, AC6.x: `pass: true`, 0 ID chưa phủ), đọc từ `traceability.json` của U1–U5 và `requirements.md`.
 
 ## Kết luận
 
