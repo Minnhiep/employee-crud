@@ -58,6 +58,7 @@ app.UseStatusCodePages(StatusCodeProblemWriter.WriteAsync);
 if (app.Environment.IsDevelopment())
 {
     // Tài liệu API chỉ có ở môi trường Development.
+    // Swagger UI không tự sinh đặc tả: nó đọc file JSON do MapOpenApi() phát ở /openapi/v1.json.
     app.MapOpenApi();
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "EmployeeCrud API v1"));
 }

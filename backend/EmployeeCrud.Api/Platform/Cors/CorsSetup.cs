@@ -10,6 +10,8 @@ public static class CorsSetup
 
     public static IServiceCollection AddFrontendCors(this IServiceCollection services, IConfiguration configuration)
     {
+        // Đọc danh sách từ appsettings; thiếu mục này thì vẫn cho đúng địa chỉ frontend chạy trên máy,
+        // để ứng dụng không bị chặn CORS chỉ vì quên cấu hình.
         var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
             ?? ["http://localhost:5173"];
 
