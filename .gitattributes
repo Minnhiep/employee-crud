@@ -1,0 +1,7 @@
+# Vì sao có file này:
+# Git cài mặc định trên Windows (core.autocrlf=true) đổi file văn bản sang
+# xuống dòng CRLF khi ghi ra máy (clone, pull, đổi nhánh). Prettier và
+# .editorconfig của dự án dùng LF, nên khi đó `npm run verify` báo lỗi định dạng.
+# Dòng dưới bắt mọi bản clone ghi file văn bản ra dạng LF, bất kể core.autocrlf
+# của từng máy; file nhị phân Git tự nhận ra và giữ nguyên.
+* text=auto eol=lf
