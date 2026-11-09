@@ -1,224 +1,204 @@
-# Kiến trúc
+# Architecture: employee-crud
 
 ## Architecture Analysis
 
 ### System Overview
 
-Một trang React chạy trên trình duyệt gọi một Web API ASP.NET Core qua JSON. API đọc và ghi PostgreSQL trên cùng máy qua EF Core. Hai tiến trình chạy riêng: Vite ở cổng 5173, backend ở cổng 5081, database ở cổng 5432.
+Ba phần chạy trên cùng một máy:
+
+1. **Frontend** `frontend/`: SPA React + TypeScript dựng bằng Vite, chạy ở `http://localhost:5173`. Định tuyến phía trình duyệt bằng `react-router`; mọi lời gọi API đi qua một chỗ (`src/api/client.ts`).
+2. **Backend** `backend/EmployeeCrud.Api/`: ASP.NET Core Web API (.NET 10) kiểu controller, chạy ở `http://localhost:5081`. Mỗi request đi qua chuỗi middleware cố định rồi tới Controller → Service → `AppDbContext` (EF Core).
+3. **Database**: PostgreSQL 18 trên máy, database `employee_db`, cấu trúc do hai migration EF Core tạo.
+
+Chi tiết từng thành phần: `component-inventory.md`. Phiên bản: `technology-stack.md`.
 
 ### Architectural Style
 
-**Monolith phân tầng, tách frontend.** Bằng chứng: một project API (`EmployeeCrud.Api.csproj`), một DbContext (`AppDbContext`), hai bảng, không hàng đợi, không dịch vụ ngoài. Backend chia thư mục theo tính năng (`Departments/`, `Employees/`) cộng phần nền chung (`Platform/`), trong mỗi tính năng là Controller → Service → EF Core. `project.md` cấm microservices.
+**Monolith hai tầng tách đôi (SPA + một Web API) trên một database**, không microservice, không message bus, không cache. Bằng chứng: một solution với một project ứng dụng (`backend/EmployeeCrud.slnx`), một gói npm frontend, hai bảng trong một database; `project.md` cấm kiến trúc phức tạp. Trong backend, code chia theo **thư mục tính năng** (`Departments/`, `Employees/`) cộng một thư mục nền dùng chung (`Platform/`), mỗi tính năng theo mẫu Controller → Service (interface + class) → DTO/Request → Entity + `IEntityTypeConfiguration`. Không có tầng Repository riêng: service dùng thẳng `AppDbContext`.
 
 ### Component Relationships
 
 ```mermaid
-flowchart TD
-    Browser["Trình duyệt"] --> Pages["React pages"]
-    Pages --> Hooks["Hooks và components dùng chung"]
-    Pages --> ApiClient["api/client.ts"]
-    ApiClient -->|"HTTP JSON, CORS"| Pipeline["Middleware pipeline"]
-    Pipeline --> DeptCtrl["DepartmentsController"]
-    Pipeline --> EmpCtrl["EmployeesController"]
-    DeptCtrl --> DeptSvc["DepartmentService"]
-    EmpCtrl --> EmpSvc["EmployeeService"]
-    EmpSvc -->|"IDepartmentService.ExistsAsync"| DeptSvc
-    DeptSvc --> TextInput["Platform.Text.TextInput"]
-    EmpSvc --> TextInput
-    DeptSvc --> Db["AppDbContext"]
-    EmpSvc --> Db
-    Db -->|"Npgsql"| Pg[("PostgreSQL employee_db")]
-    DeptSvc -. "DomainError" .-> Handler["ProblemDetailsExceptionHandler"]
-    EmpSvc -. "DomainError" .-> Handler
-    Handler --> Mapper["ErrorMapper"]
-    Handler -->|"ProblemDetails"| Pipeline
-```
-
-Bản chữ: trình duyệt chạy các trang React. Trang dùng hook, component chung và `api/client.ts`. Client gọi API qua HTTP JSON. Request đi qua middleware tới `DepartmentsController` hoặc `EmployeesController`. Mỗi controller gọi service của nó; `EmployeeService` hỏi `DepartmentService` qua interface để biết phòng ban có tồn tại. Cả hai service dùng `TextInput` để chuẩn hóa chữ và `AppDbContext` để nói chuyện với PostgreSQL qua Npgsql. Service báo lỗi bằng `DomainError`; `ProblemDetailsExceptionHandler` nhờ `ErrorMapper` đổi lỗi thành ProblemDetails rồi trả ngược ra pipeline.
-
-Thứ tự middleware (`Program.cs:49-67`), thứ tự này có ý nghĩa:
-
-```mermaid
 flowchart LR
-    A["Lọc Host, mặc định của framework"] --> B["UseSecurityHeaders"]
-    B --> C["UseCors"]
-    C --> D["UseExceptionHandler"]
-    D --> E["UseStatusCodePages"]
-    E --> F["OpenAPI, Swagger, chỉ Development"]
-    F --> G["UseRouting"]
-    G --> H["MapControllers"]
+  subgraph Browser["Trình duyệt - localhost:5173"]
+    Pages["Pages: EmployeesPage, EmployeeFormPage, DepartmentsPage, DepartmentDetailPage, DepartmentFormPage"]
+    Shared["shared-components, hooks, utils"]
+    Client["frontend-api-client: api/client.ts, departments.ts, employees.ts"]
+  end
+  subgraph Api["EmployeeCrud.Api - localhost:5081"]
+    MW["Middleware: SecurityHeaders, CORS, ExceptionHandler, StatusCodePages, Routing"]
+    DC["DepartmentsController"]
+    EC["EmployeesController"]
+    DS["DepartmentService"]
+    ES["EmployeeService"]
+    TI["Platform.Text - TextInput"]
+    ERR["Platform.Errors - DomainError, ErrorMapper"]
+    CTX["AppDbContext - EF Core"]
+  end
+  PG[("PostgreSQL 18 - employee_db")]
+  Pages --> Shared
+  Pages --> Client
+  Client -- "HTTP JSON qua fetch, CORS" --> MW
+  MW --> DC
+  MW --> EC
+  DC --> DS
+  EC --> ES
+  ES -- "ExistsAsync" --> DS
+  DS --> TI
+  ES --> TI
+  DS --> CTX
+  ES --> CTX
+  DS -. "ném DomainError" .-> ERR
+  ES -. "ném DomainError" .-> ERR
+  ERR -. "ProblemDetails" .-> MW
+  CTX -- "Npgsql" --> PG
 ```
 
-Bản chữ: lọc Host của framework chạy trước, rồi header bảo mật, CORS, bắt lỗi toàn cục, điền nội dung cho phản hồi rỗng, trang OpenAPI ở Development, định tuyến, controller. Header bảo mật gắn bằng `OnStarting` để sống sót khi bộ bắt lỗi xóa header; handler tự áp lại CORS cho cùng lý do.
+Text fallback: Các trang React dùng component, hook, tiện ích dùng chung và gọi API qua `frontend-api-client`. Client gửi HTTP JSON (bị trình duyệt kiểm CORS) tới backend. Request đi qua middleware (header bảo mật, CORS, bộ bắt lỗi, trang mã trạng thái, định tuyến) tới `DepartmentsController` hoặc `EmployeesController`. Controller gọi service tương ứng; `EmployeeService` hỏi `DepartmentService.ExistsAsync` để biết phòng ban có tồn tại. Hai service chuẩn hóa chữ bằng `TextInput`, đọc/ghi qua `AppDbContext`, EF Core dùng Npgsql nói chuyện với PostgreSQL. Lỗi nghiệp vụ được ném dưới dạng `DomainError`, `ErrorMapper` đổi thành ProblemDetails và bộ bắt lỗi ghi phản hồi.
 
 ### Data Flow
 
-- **Ghi:** form kiểm bằng `validateEmployee` hoặc `validateDepartment` → `normalizeText` → JSON → model binding với `[Required]` → service chuẩn hóa lại bằng `TextInput`, kiểm luật → `SaveChangesAsync` → đọc lại thành DTO → JSON → `navigate` về chỗ quay lại kèm lời báo cho `Toast`. Sửa nhân viên đọc lại bằng `GetByIdAsync`; sửa phòng ban tự dựng DTO, không đọc lại (`BE-11`).
-- **Đọc:** trang gọi API trong `useEffect` với `AbortController`; danh sách nhân viên lấy `search` và `departmentId` từ địa chỉ trang. Service dùng `AsNoTracking`, chiếu sang DTO trong câu SQL; tên phòng ban lấy bằng JOIN, số nhân viên bằng truy vấn con.
-- **Lỗi:** service ném `DomainError` → handler → `ErrorMapper` → ProblemDetails tiếng Việt. Lỗi 23505, 23503, 23001 của PostgreSQL thành 409 hoặc 400. Mọi lỗi lạ thành 500 chung, chi tiết chỉ trong log, tra bằng `traceId`.
-- **Hết giờ:** `client.ts` hẹn 10 giây cho mọi lời gọi. Hết giờ thì ra `ApiError` loại `network` với cùng câu "Không kết nối được máy chủ", kể cả POST, PUT, DELETE có thể đã lưu (`FE-15`).
+**Đường đi của một request ghi** (ví dụ thêm nhân viên): form React chuẩn hóa và kiểm dữ liệu → `client.ts` gửi JSON (hẹn giờ 10 giây, hủy được bằng `AbortSignal`) → `SecurityHeaders` đăng ký gắn header lúc phản hồi bắt đầu → CORS → bộ bắt lỗi → `[ApiController]` kiểm model (thiếu trường bắt buộc thì `ValidationResponseFactory` trả 400 tiếng Việt) → controller → service chuẩn hóa, kiểm luật, hỏi database → `SaveChangesAsync` → đọc lại DTO (kèm JOIN tên phòng ban) → 201/200 JSON camelCase. Lỗi đi ngược: `DomainError` hoặc `DbUpdateException` có `PostgresException` → `ErrorMapper.Map` → `application/problem+json` có `traceId`, header CORS được áp lại → `client.ts` đổi thành `ApiError` với `kind` `network`/`server`/`client`/`aborted` → trang hiện lỗi cạnh ô hoặc ở khung tóm tắt.
+
+**Trạng thái phía giao diện**: chuỗi tìm và phòng lọc nằm trên địa chỉ trang (`useSearchParams`), không lưu state riêng; lời báo thành công đi qua `location.state.message` và được `Toast` xóa khỏi lịch sử; không có store toàn cục (không Redux, không Context).
+
+**Mô hình dữ liệu** (nguồn: `Migrations/`, `docs/so-do-database.md`):
+
+| Bảng | Cột | Ràng buộc |
+|---|---|---|
+| `departments` | `id integer` identity, `name varchar(100) NOT NULL` | `PK_departments`; chỉ mục viết tay `ux_departments_name` UNIQUE trên `lower(name)`; 4 dòng mẫu |
+| `employees` | `id integer` identity, `full_name varchar(100)`, `email varchar(254)`, `department_id integer` (đều NOT NULL) | `PK_employees`; `fk_employees_department` → `departments.id` `ON DELETE RESTRICT`; `ix_employees_department_id`; chỉ mục viết tay `ux_employees_email` UNIQUE trên `lower(email)` |
+
+Tên ràng buộc là hợp đồng giữa database và code: `Platform/Errors/DbConstraintNames.cs` giữ ba tên `ux_departments_name`, `ux_employees_email`, `fk_employees_department`; `ErrorMapper` và hai service nhận ra lỗi theo mã SQLSTATE + tên ràng buộc.
 
 ### Key Design Decisions
 
-| Quyết định | Vì sao | Hệ quả |
-|---|---|---|
-| Thư mục theo tính năng, không theo tầng | Mỗi tính năng gom một chỗ | Controller nằm trong `Departments/`, `Employees/` |
-| Không có tầng Repository | Một database, CRUD đơn giản | Service dùng thẳng `AppDbContext` |
-| Lỗi nghiệp vụ dùng exception `DomainError` | Service không cần biết HTTP | `ErrorMapper` là hàm thuần, test được từng nhánh |
-| Tầng nền `Platform` không phụ thuộc tầng nghiệp vụ | Giữ một chiều phụ thuộc | `ErrorMapper` gõ tay khóa `"name"`, `"email"` (`BE-12`) |
-| Kiểm trùng ở service và chốt bằng chỉ mục `lower()` viết tay | Hai request chen nhau vẫn bị chặn | Chỉ mục nằm trong SQL migration, EF snapshot không thấy |
-| Hai lớp chuẩn hóa chữ: `TextInput` và `normalizeText` | Form báo sớm, API không tin form | Luật nhân bản, phải đổi cùng nhau |
-| Địa chỉ trang là nguồn của `search`, `departmentId` | Back, F5 tự đúng | Không cần kho state; không Redux |
-| Trạng thái tải suy ra từ "khóa tải" khi vẽ | Kết quả cũ không đè kết quả mới | Không cần cờ `loading` riêng ở trang danh sách |
-| `<dialog>` gốc cho hộp xác nhận | Trình duyệt tự giữ focus | Hook tự trả focus khi đóng |
-| User-secrets cho chuỗi kết nối | Không đưa mật khẩu lên Git | Thiếu thì dừng lúc khởi động (`StartupChecks`) |
+| Quyết định | Lý do (theo comment trong code) | Phương án khác đã thấy hoặc ghi lại | Hệ quả |
+|---|---|---|---|
+| Luật trùng tên/email kiểm ở service **và** chỉ mục UNIQUE trên `lower()` | Service cho câu báo gắn đúng ô; chỉ mục chặn hai request chen nhau | Chỉ dựa vào service (lọt khi chen nhau); dùng gói đổi tên/collation (không dùng, `team.md` cấm `EFCore.NamingConventions`) | Chỉ mục phải viết tay bằng `migrationBuilder.Sql`, InMemory không kiểm được |
+| Lỗi nghiệp vụ là exception `DomainError` 3 loại, một hàm thuần `ErrorMapper` đổi sang HTTP | Service không biết mã HTTP; test được từng nhánh không cần web | Trả `Result<T>` hoặc `IActionResult` từ service | Controller rất mỏng; mọi lỗi ra ProblemDetails tiếng Việt |
+| Độ dài đo **sau** chuẩn hóa, không đặt `[MaxLength]` trên Request | Tránh hai câu trả lời khác nhau cho cùng dữ liệu | DataAnnotations đầy đủ | Luật độ dài chỉ có ở service và form |
+| `EmployeeService` hỏi phòng ban qua `IDepartmentService.ExistsAsync` | `DepartmentService` giữ quyền trên bảng `departments` | Truy vấn thẳng `db.Departments` | Hai service phụ thuộc một chiều Employee → Department |
+| Kiểm dữ liệu chép tay ở frontend (`normalizeText.ts`, `validate*.ts`) cùng câu báo với backend | Báo lỗi ngay, không cần gọi máy chủ; API vẫn kiểm lại | Chỉ kiểm ở API | Phải giữ hai phía khớp bằng tay (xem `code-quality-assessment.md`) |
+| Unit test dùng EF Core InMemory | Nhanh, không cần PostgreSQL (`team.md` Q7) | SQLite, Testcontainers (không dùng, cấm Docker) | Chỉ mục `lower()`, RESTRICT, collation tiếng Việt kiểm tay |
+| Cấu hình chung chỉ ở máy: connection string qua user-secrets, frontend base URL qua `.env.development` | Không commit bí mật | Để trong `appsettings.json` | Thiếu chuỗi kết nối thì `StartupChecks` dừng ngay với lời hướng dẫn |
+
+**Bảo mật** (không có đăng nhập theo phạm vi): CORS chỉ cho `http://localhost:5173`, chỉ `GET/POST/PUT/DELETE`, chỉ header `Content-Type`, không gửi credentials; `AllowedHosts` giới hạn `localhost;127.0.0.1;[::1]` (chặn DNS rebinding); mọi phản hồi có `X-Content-Type-Options: nosniff`, riêng `/api` thêm `Cache-Control: no-store` và CSP `default-src 'none'; frame-ancestors 'none'`; tắt header `Server`; lỗi 500 không lộ thông điệp gốc; log không ghi body hay chuỗi kết nối; JSON lỗi mã hóa ký tự HTML. Swagger chỉ có ở Development.
 
 ### Improvement Opportunities
 
-Liệt kê trong `code-quality-assessment.md`. Ở mức kiến trúc chỉ cần lưu ý: khóa trường lỗi nên có một chỗ dùng chung ở backend (`BE-12`); việc kiểm `returnTo` đang nằm riêng trong `EmployeeFormPage`, sẽ cần dùng lại khi sửa `FE-13`.
+- **Đầu dòng chưa được repo quy định** (liên quan intent): không có `.gitattributes`, `.editorconfig` không có `end_of_line`, Prettier dùng mặc định `lf`. Hướng thường gặp: khai quy tắc đầu dòng trong `.gitattributes` (và/hoặc `end_of_line` trong `.editorconfig`) rồi chuẩn hóa lại các file. Đây chỉ là ghi nhận; quyết định thuộc các stage sau.
+- Không có test tự động so luật kiểm dữ liệu giữa frontend và backend.
+- `AppDbContext` (nền) tham chiếu thực thể của hai tính năng: phụ thuộc hai chiều ở mức namespace; chấp nhận được ở quy mô này.
+- Không có CI: mọi cổng chất lượng phụ thuộc người chạy `npm run verify` trên máy (đúng phạm vi đề bài).
 
 ## Interaction Diagrams
 
-### Giao dịch 1: Thêm nhân viên
+### 1. Thêm nhân viên
 
 ```mermaid
 sequenceDiagram
-    participant U as Người dùng
-    participant F as EmployeeFormPage
-    participant C as client.ts
-    participant A as EmployeesController
-    participant S as EmployeeService
-    participant D as DepartmentService
-    participant P as PostgreSQL
-    U->>F: Nhập và bấm Lưu
-    F->>F: validateEmployee, normalizeText
-    F->>C: createEmployee trong useSubmitGuard
-    C->>A: POST /api/employees
-    A->>S: CreateAsync
-    S->>S: TextInput, EmailPattern
-    S->>D: ExistsAsync
-    D->>P: SELECT departments
-    P-->>D: Có
-    S->>P: SELECT lower email
-    P-->>S: Chưa có
-    S->>P: INSERT employees
-    alt Hai request chen nhau
-        P-->>S: 23505 ux_employees_email
-        S-->>A: DbUpdateException
-        A-->>C: 409 errors.email
-        C-->>F: ApiError hiện cạnh ô
-    else Lưu được
-        P-->>S: id mới
-        S->>P: Đọc lại kèm JOIN departments
-        S-->>A: EmployeeDto
-        A-->>C: 201 và Location
-        C-->>F: Employee
-        F->>U: Về chỗ quay lại, Toast báo thành công
+  actor U as Người dùng
+  participant F as EmployeeFormPage
+  participant C as api/client.ts
+  participant EC as EmployeesController
+  participant ES as EmployeeService
+  participant DS as DepartmentService
+  participant PG as PostgreSQL
+  U->>F: Nhập họ tên, email, chọn phòng ban, bấm Lưu
+  F->>F: validateEmployee và normalizeText
+  alt Form có lỗi
+    F-->>U: Khung tóm tắt lỗi và lỗi cạnh ô, không gọi API
+  else Hợp lệ
+    F->>C: createEmployee(request)
+    C->>EC: POST /api/employees, JSON, hẹn giờ 10 giây
+    EC->>ES: CreateAsync(request)
+    ES->>ES: Normalize - TextInput, EmailPattern, departmentId
+    ES->>DS: ExistsAsync(departmentId)
+    DS->>PG: SELECT EXISTS trên departments
+    ES->>PG: SELECT EXISTS email trùng theo lower()
+    ES->>PG: INSERT employees qua SaveChangesAsync
+    ES->>PG: Đọc lại kèm JOIN departments
+    EC-->>C: 201 Created, Location, EmployeeDto
+    C-->>F: Employee
+    F-->>U: Về danh sách, Toast đã thêm nhân viên
+  end
+```
+
+Text fallback: Người dùng nhập form và bấm Lưu. Form kiểm và chuẩn hóa trên trình duyệt; có lỗi thì hiện khung tóm tắt và không gọi API. Hợp lệ thì `client.ts` gửi `POST /api/employees`. Controller gọi `EmployeeService.CreateAsync`: chuẩn hóa và kiểm dữ liệu, hỏi `DepartmentService.ExistsAsync`, kiểm email trùng theo `lower()`, lưu, rồi đọc lại DTO kèm tên phòng ban. API trả 201 kèm header `Location`; form quay về danh sách và hiện Toast. Lỗi dữ liệu trả 400, phòng ban không có trả 400 ở ô `departmentId` (form nạp lại danh sách phòng ban), email trùng trả 409 ở ô `email`.
+
+### 2. Xóa phòng ban
+
+```mermaid
+sequenceDiagram
+  actor U as Người dùng
+  participant P as DepartmentsPage
+  participant H as useDepartmentDelete
+  participant C as api/client.ts
+  participant DS as DepartmentService
+  participant EH as ProblemDetailsExceptionHandler
+  participant PG as PostgreSQL
+  U->>P: Bấm Xóa ở một dòng
+  P->>H: requestDelete(department)
+  alt employeeCount lớn hơn 0 theo lần tải gần nhất
+    H-->>U: Hộp thông báo còn N nhân viên, liên kết xem N nhân viên
+  else employeeCount bằng 0
+    H-->>U: Hộp xác nhận xóa
+    U->>H: Xác nhận
+    H->>C: deleteDepartment(id)
+    C->>DS: DELETE /api/departments/id qua DepartmentsController
+    DS->>PG: Đọc phòng ban, đếm nhân viên
+    alt Còn nhân viên hoặc khóa ngoại RESTRICT chặn
+      DS-->>EH: DomainError Conflict
+      EH-->>C: 409 problem+json, detail nêu số nhân viên
+      C-->>P: ApiError client 409
+      P-->>U: Tải lại bảng, hiện lời báo của API
+    else Không còn ai
+      DS->>PG: DELETE departments
+      DS-->>C: 204 No Content
+      P-->>U: Tải lại bảng, Toast đã xóa phòng ban
     end
+  end
 ```
 
-Bản chữ: người dùng bấm Lưu; form kiểm và chuẩn hóa rồi gọi API trong `useSubmitGuard` để chặn gửi hai lần. Service chuẩn hóa lại, kiểm định dạng, hỏi `DepartmentService` phòng ban có tồn tại, kiểm email chưa ai dùng, rồi INSERT. Nếu hai request chen nhau, chỉ mục `ux_employees_email` báo 23505 và `ErrorMapper` trả 409 gắn ô email. Nếu lưu được, service đọc lại kèm tên phòng ban và trả 201.
+Text fallback: Bấm Xóa trên trang danh sách (hoặc trang chi tiết) gọi `useDepartmentDelete`. Nếu số nhân viên của lần tải gần nhất lớn hơn 0, hiện hộp thông báo không có nút xóa, kèm liên kết tới danh sách nhân viên đã lọc theo phòng. Nếu bằng 0, hiện hộp xác nhận; xác nhận thì gọi `DELETE`. Service đọc phòng ban (không có thì 404), đếm lại nhân viên; còn người thì 409. Nếu có người được thêm chen vào sau bước đếm, khóa ngoại RESTRICT chặn (PostgreSQL báo 23001, code bắt cả 23503) và service đếm lại để báo 409 với số đúng (ít nhất 1). Thành công trả 204; trang tải lại bảng và hiện Toast.
 
-### Giao dịch 2: Xóa phòng ban còn nhân viên
+### 3. Tìm và lọc nhân viên
 
 ```mermaid
 sequenceDiagram
-    participant U as Người dùng
-    participant H as useDepartmentDelete
-    participant S as DepartmentService
-    participant P as PostgreSQL
-    U->>H: Bấm Xóa
-    alt employeeCount lớn hơn 0 ở lần tải gần nhất
-        H->>U: Hộp thông báo, liên kết Xem N nhân viên
-    else employeeCount bằng 0
-        H->>U: Hộp xác nhận
-        U->>H: Xác nhận
-        H->>S: DELETE /api/departments/id
-        S->>P: Đọc phòng ban, đếm nhân viên
-        alt Có người vừa thêm trước bước đếm
-            S-->>H: 409 còn N nhân viên
-        else Đếm ra 0
-            S->>P: DELETE departments
-            alt Có người chen vào đúng lúc xóa
-                P-->>S: 23001 fk_employees_department
-                S->>P: Đếm lại
-                S-->>H: 409 còn N nhân viên
-            else Xóa được
-                P-->>S: Xong
-                S-->>H: 204
-            end
-        end
-    end
+  actor U as Người dùng
+  participant P as EmployeesPage
+  participant C as api/client.ts
+  participant ES as EmployeeService
+  participant PG as PostgreSQL
+  U->>P: Gõ chuỗi tìm rồi bấm Tìm, hoặc chọn phòng ban
+  P->>P: normalizeSearch, ghi search và departmentId lên địa chỉ trang
+  P->>C: getEmployees(search, departmentId, signal)
+  Note over P,C: Lời gọi cũ bị hủy bằng AbortController, lỗi aborted bị bỏ qua
+  C->>ES: GET /api/employees với search và departmentId qua EmployeesController
+  ES->>ES: ParseDepartmentFilter, sai dạng thì 400
+  ES->>ES: TryNormalize chuỗi tìm, ký tự lạ thì trả rỗng
+  ES->>PG: SELECT có JOIN departments, lọc phòng và lower() LIKE, sắp theo full_name rồi id
+  ES-->>C: 200 danh sách EmployeeDto
+  C-->>P: Employee[]
+  P-->>U: Bảng kết quả và dòng đếm aria-live
 ```
 
-Bản chữ: nếu số người ở lần tải gần nhất lớn hơn 0, giao diện chỉ hiện hộp thông báo và không gọi API. Nếu bằng 0, giao diện hỏi xác nhận rồi gọi DELETE. Service đếm lại; còn người thì trả 409. Nếu có người chen vào đúng lúc xóa, khóa ngoại báo 23001, service đếm lại và vẫn trả 409 cùng một mẫu câu.
+Text fallback: Trang Nhân viên lấy chuỗi tìm và phòng lọc từ địa chỉ trang. Mỗi lần đổi, trang hủy lời gọi cũ và gọi `GET /api/employees`. Service kiểm `departmentId` trước (sai dạng thì 400 "Phòng ban lọc không hợp lệ"), chuẩn hóa chuỗi tìm (có ký tự lạ thì trả `[]` không chạm database), rồi chạy một câu SELECT có JOIN, điều kiện phòng và `lower(...) LIKE` trên họ tên hoặc email, sắp theo họ tên rồi id. Phòng trên địa chỉ không còn thì trang bỏ tham số và hiện câu báo.
 
-### Giao dịch 3: Tìm kiếm và hủy lời gọi cũ
+### 4. Luồng công cụ liên quan intent: `npm run verify` sau khi clone trên Windows
 
 ```mermaid
-sequenceDiagram
-    participant U as Người dùng
-    participant B as SearchBox
-    participant E as EmployeesPage
-    participant S as EmployeeService
-    participant P as PostgreSQL
-    U->>B: Gõ và bấm Tìm
-    B->>E: onSearch
-    E->>E: normalizeSearch, ghi ?search= lên địa chỉ
-    E->>E: Hủy lời gọi cũ bằng AbortController
-    E->>S: GET /api/employees?search=
-    S->>S: ParseDepartmentFilter, TextInput
-    alt Chuỗi có ký tự không hợp lệ
-        S-->>E: 200 danh sách rỗng
-    else Hợp lệ
-        S->>P: SELECT, lower column, chứa chuỗi tìm
-        P-->>S: Các dòng
-        S-->>E: 200 danh sách EmployeeDto
-    end
-    E->>U: Bảng hoặc câu không tìm thấy
+flowchart TD
+  A["git clone trên Windows"] --> B{"core.autocrlf true và không có .gitattributes"}
+  B -- "đúng" --> C["File văn bản ghi ra đĩa dạng CRLF"]
+  B -- "sai" --> D["File giữ LF như trong repo"]
+  C --> E["npm run verify trong frontend"]
+  D --> E
+  E --> F["typecheck"] --> G["lint"] --> H["format:check - prettier --check ."]
+  H -- "CRLF, Prettier mặc định endOfLine lf" --> X["Báo lỗi, verify dừng"]
+  H -- "LF" --> I["build"] --> J["dotnet format --verify-no-changes"] --> K["dotnet test"]
 ```
 
-Bản chữ: bấm Tìm thì trang ghi chuỗi đã chuẩn hóa lên địa chỉ; đổi địa chỉ làm effect chạy lại, lời gọi cũ bị hủy. Service kiểm tham số lọc, chuẩn hóa chuỗi tìm; chuỗi có ký tự bị từ chối thì trả rỗng mà không gửi xuống database, còn lại thì truy vấn PostgreSQL.
-
-### Giao dịch 4: Lỗi ngoài dự kiến
-
-```mermaid
-sequenceDiagram
-    participant C as client.ts
-    participant A as Controller
-    participant H as ProblemDetailsExceptionHandler
-    participant M as ErrorMapper
-    C->>A: Request
-    A->>A: Lỗi không phải DomainError
-    A-->>H: Exception không được bắt
-    H->>M: Map
-    M-->>H: Nhánh mặc định, 500
-    H->>H: Ghi log kèm traceId, áp lại CORS
-    H-->>C: 500 ProblemDetails
-    C-->>C: kind server, câu chung
-```
-
-Bản chữ: lỗi không phải `DomainError` và không phải lỗi database đã biết thì tới handler, rơi vào nhánh mặc định của `ErrorMapper`, thành 500 câu chung. Trước đây U+FFFE đi đường này; nay `TextInput` chặn sớm và trả 400.
-
-### Giao dịch 5: PUT phòng ban khi phòng vừa bị xóa
-
-```mermaid
-sequenceDiagram
-    participant C as client.ts
-    participant S as DepartmentService
-    participant P as PostgreSQL
-    C->>S: PUT /api/departments/id
-    S->>P: Đọc phòng ban
-    Note over S,P: Nơi khác xóa phòng này
-    alt Tên mới khác tên cũ
-        S->>P: UPDATE
-        P-->>S: 0 dòng
-        S-->>C: 404
-    else Tên không đổi
-        S->>S: EF không gửi UPDATE
-        S->>P: Đếm nhân viên
-        S-->>C: 200 với dữ liệu đã đọc
-    end
-```
-
-Bản chữ: đổi tên thì câu UPDATE không tác động dòng nào và service trả 404. Tên không đổi thì EF không gửi UPDATE nên không có lỗi nào, API trả 200 cho phòng đã mất. Đọc code, chưa chạy. Đây là `BE-11`.
+Text fallback: Clone trên Windows với `core.autocrlf=true` (mặc định Git for Windows) và repo không có `.gitattributes` thì file văn bản được ghi ra dạng CRLF. `npm run verify` chạy lần lượt typecheck, lint, `prettier --check .`. Prettier không có cấu hình nên mong đợi LF, thấy CRLF thì báo lỗi; vì các bước nối bằng `&&`, `verify` dừng tại đó và các bước build, `dotnet format`, `dotnet test` không chạy. Với cây LF, chuỗi chạy tiếp đến hết.

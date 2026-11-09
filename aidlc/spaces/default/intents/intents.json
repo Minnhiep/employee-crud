@@ -22,5 +22,13 @@
     "scope": "bugfix",
     "status": "complete",
     "request": "2c1b3069"
+  },
+  {
+    "uuid": "01a1bf13-0a34-7f6f-b914-afba64459973",
+    "slug": "kiem-cuoi-crlf",
+    "dirName": "261109-kiem-cuoi-crlf",
+    "scope": "bugfix",
+    "status": "in-flight",
+    "request": "8fc78f38"
   }
 ]

@@ -1,78 +1,70 @@
-# Phụ thuộc
+# Dependencies: employee-crud
 
-Phiên bản từng gói ở `technology-stack.md`. File này mô tả ai phụ thuộc ai.
+Phiên bản cụ thể nằm ở `technology-stack.md`; tài liệu này ghi **ai dùng gì** và các phụ thuộc giữa phần code với nhau.
 
-## Phụ thuộc ngoài
+## Phụ thuộc ngoài theo thành phần
 
-| Bên ngoài | Ai dùng | Kiểu | Khi thiếu |
-|---|---|---|---|
-| PostgreSQL 18 | `AppDbContext` qua Npgsql | Lúc chạy | Backend vẫn khởi động; request cần dữ liệu trả 500 (`StartupChecks.cs:24-25`, `docs/danh-sach-api.md`) |
-| Chuỗi kết nối user-secrets | `Program.cs:35-37` | Cấu hình | Dừng lúc khởi động |
-| NuGet | `dotnet restore` | Lúc cài | Xem `README.md` mục 4 |
-| npm registry | `npm ci` | Lúc cài | Xem `README.md` mục 7 |
-| GitHub `Minnhiep/employee-crud` | `README.md:33` | Nguồn code | Repo Private |
+| Thành phần | Phụ thuộc ngoài | Dùng để |
+| --- | --- | --- |
+| `Program` | ASP.NET Core (MVC, ProblemDetails, CORS, Diagnostics), Microsoft.AspNetCore.OpenApi, Swashbuckle SwaggerUI, Npgsql EF provider | Dựng ứng dụng, middleware, tài liệu API |
+| `DepartmentService`, `EmployeeService` | EF Core (`AnyAsync`, `CountAsync`, `AsNoTracking`, `DbUpdateException`), Npgsql (`PostgresException`, `PostgresErrorCodes`) | Truy vấn, bắt lỗi ràng buộc |
+| `Platform.Errors` | ASP.NET Core Diagnostics/MVC, EF Core, Npgsql, `System.Text.Json` | Đổi lỗi sang ProblemDetails |
+| `Migrations` | EF Core Migrations, `Npgsql.EntityFrameworkCore.PostgreSQL.Metadata` | Tạo bảng, identity |
+| `EmployeeCrud.Api.Tests` | xUnit, Mvc.Testing, EF InMemory, Npgsql (dựng `PostgresException` giả), coverlet | Test |
+| `frontend-api-client` | `fetch`, `AbortController`/`AbortSignal.any` của trình duyệt | HTTP |
+| Trang, `shared-components`, `hooks` | `react`, `react-router` (`BrowserRouter`, `Link`, `NavLink`, `useSearchParams`, `useNavigate`, `useLocation`, `useParams`, `useNavigationType`, `Outlet`) | UI và định tuyến |
+| `repo-tooling` | Node/npm (Vite, tsc, ESLint, Prettier), .NET SDK (`dotnet format`, `dotnet test`, tool manifest), Git | Kiểm chất lượng |
 
-Ứng dụng không gọi dịch vụ mạng ngoài lúc chạy. Không tải phông, ảnh hay script từ bên thứ ba.
+Không có gói icon, gói UI, gói state, gói HTTP client hay gói đổi tên cột (cố ý, xem comment trong code và `team.md`).
 
-## Phụ thuộc nội bộ: project
+## Phụ thuộc lúc chạy
 
-```mermaid
-flowchart LR
-    Tests["EmployeeCrud.Api.Tests"] -->|"ProjectReference"| Api["EmployeeCrud.Api"]
-    Npm["frontend npm verify, coverage"] -.->|"gọi dotnet test"| Tests
-    Web["frontend chạy thật"] -.->|"HTTP"| Api
-```
+- Trình duyệt → backend: HTTP JSON tới `http://localhost:5081`, phải mở đúng origin `http://localhost:5173` vì CORS so nguyên văn.
+- Backend → PostgreSQL 18 qua Npgsql; chuỗi kết nối từ user-secrets hoặc biến môi trường; backend vẫn khởi động khi PostgreSQL tắt (chỉ lỗi lúc request cần dữ liệu).
+- Backend không gọi dịch vụ ngoài nào khác.
 
-Bản chữ: project test tham chiếu project API. Script `verify` và `coverage` của frontend gọi `dotnet test`. Lúc chạy, frontend chỉ nối với API qua HTTP, không chia sẻ code.
+## Phụ thuộc giữa các project
 
-## Phụ thuộc nội bộ: backend
+- `EmployeeCrud.Api.Tests` → `EmployeeCrud.Api` (`ProjectReference`; dùng `Program` qua `public partial class Program`).
+- `frontend/package.json` script `verify` và `coverage` gọi `dotnet` trên `../backend/EmployeeCrud.slnx`: frontend phụ thuộc đường dẫn tương đối tới backend ở cấp công cụ, không ở cấp code.
+- Không có thư viện dùng chung giữa C# và TypeScript; luật kiểm dữ liệu được chép tay hai phía (`TextInput.cs` ↔ `normalizeText.ts`, `EmployeeService.EmailPattern` ↔ `validateEmployee.ts`, độ dài tối đa).
 
-```text
-Program                     -> Departments, Employees, Platform.*
-Employees.EmployeeService   -> IDepartmentService, Platform.Data, Platform.Errors, Platform.Text
-Employees.Employee          -> Departments.Department
-Employees.EmployeeConfig    -> Platform.Errors.DbConstraintNames
-Departments.DepartmentService -> Platform.Data, Platform.Errors, Platform.Text
-Platform.Data.AppDbContext  -> Departments, Employees
-Platform.Errors.ProblemDetailsExceptionHandler -> Platform.Cors
-Platform.Errors.ErrorMapper -> Platform.Errors (không phụ thuộc nghiệp vụ)
-```
+## Đồ thị phụ thuộc nội bộ
 
-Tham chiếu vòng ở mức namespace, không phải lỗi biên dịch vì cùng một assembly:
-- `Platform.Data` ↔ `Departments`, `Employees`: `AppDbContext` khai `DbSet`, service dùng `AppDbContext`.
-- `Departments` ↔ `Employees`: `EmployeeService` dùng `IDepartmentService`, `DepartmentService` đọc `db.Employees`.
-
-## Phụ thuộc nội bộ: frontend
+### Backend
 
 ```text
-main.tsx -> App, styles
-App -> AppLayout, pages
-pages -> api, components, hooks, utils
-validateDepartment, validateEmployee -> utils/normalizeText, api/client (kiểu)
-DepartmentDetailPage, DepartmentFormPage, EmployeeFormPage, EmployeesPage -> utils/parseId
-useDepartmentDelete -> api/departments, ConfirmDialog, useSubmitGuard
-ErrorSummary, splitErrors -> api/client (kiểu)
+Program -> DepartmentsController, EmployeesController (qua MapControllers),
+           DepartmentService, EmployeeService (DI), AppDbContext,
+           Platform.Cors, Platform.Errors, Platform.Security, StartupChecks
+DepartmentsController -> IDepartmentService, DepartmentDto, DepartmentRequest
+EmployeesController   -> IEmployeeService, EmployeeDto, EmployeeRequest
+DepartmentService -> AppDbContext, TextInput, DomainError, ErrorTitles, DbConstraintNames, DepartmentConfiguration
+EmployeeService   -> AppDbContext, IDepartmentService, TextInput, DomainError, ErrorTitles, DbConstraintNames, EmployeeConfiguration
+DepartmentRequest -> DepartmentService (hằng câu báo)
+EmployeeRequest   -> EmployeeService (hằng câu báo)
+EmployeeConfiguration -> DbConstraintNames
+AppDbContext -> Department, Employee
+ErrorMapper -> DomainError, ErrorTitles, DbConstraintNames
+ProblemDetailsExceptionHandler -> ErrorMapper, CorsSetup
+StatusCodeProblemWriter, ValidationResponseFactory -> ErrorTitles
+```
+
+Không có vòng phụ thuộc giữa file. Ở mức namespace có phụ thuộc hai chiều `Platform.Data` ↔ `Departments`/`Employees` (context biết thực thể, service biết context). `EmployeeService` → `IDepartmentService` là một chiều.
+
+### Frontend
+
+```text
+main.tsx -> App, styles/*
+App -> AppLayout, pages/*
+pages/employees/*   -> api/employees, api/departments, api/client, components/*, hooks/*, utils/*
+pages/departments/* -> api/departments, api/employees, api/client, components/*, hooks/*, utils/*, useDepartmentDelete
+useDepartmentDelete -> api/departments, components/ConfirmDialog, hooks/useSubmitGuard
+validateEmployee, validateDepartment -> utils/normalizeText, api/client (kiểu FieldErrors)
 api/departments, api/employees -> api/client
+components/ErrorSummary, components/splitErrors -> api/client (kiểu FieldErrors)
+AppLayout, NavMenu, PageHeader, FormField, ErrorSummary, ConfirmDialog, SearchBox, StatusMessage, Toast -> components/Icon
+AppLayout -> components/NavMenu
 ```
 
-Không có import vòng trong số file đã đọc.
-
-## Những chỗ phải đổi cùng nhau
-
-Hai đầu không chia sẻ code, nên các cặp sau được giữ khớp bằng tay:
-
-| Bên backend | Bên frontend | Luật |
-|---|---|---|
-| `Platform/Text/TextInput.cs` | `utils/normalizeText.ts` | Chuẩn hóa chữ, tập ký tự bị chặn, gồm noncharacter |
-| `EmployeeService.EmailPattern` | `validateEmployee.EMAIL_PATTERN` | Định dạng email |
-| `*Configuration` hằng độ dài | `validate*` hằng độ dài | 100, 254 ký tự |
-| Lời báo trong service | Lời báo trong `validate*` | Cùng câu tiếng Việt |
-| `ParseDepartmentFilter`, ràng buộc `{id:int}` | `utils/parseId.ts` `MAX_ID` | Mã là số nguyên dương trong phạm vi `int` |
-| `NameField`, `EmailField`, `DepartmentIdField` | `FIELD_NAMES` ở hai trang form | Khóa trong `errors` |
-| `appsettings.json` `Cors:AllowedOrigins` | `vite.config.ts` cổng 5173 | Origin được phép |
-| `launchSettings.json` cổng 5081 | `.env.development`, `api/client.ts:13` | Địa chỉ backend |
-| Tên ràng buộc trong migration | `DbConstraintNames` | Nhận ra lỗi database |
-
-Ngay trong backend cũng có một cặp giữ khớp bằng tay: `ErrorMapper.cs:77`, `:79` với `DepartmentService.NameField`, `EmployeeService.EmailField` (`BE-12`).
-
-Trong frontend: quy tắc kiểm `returnTo` ở `EmployeeFormPage.listPathFrom` sẽ cần dùng ở `DepartmentFormPage` khi sửa `FE-13`.
+Không có import vòng. `components/` chỉ phụ thuộc kiểu (`import type`) từ `api/client`.

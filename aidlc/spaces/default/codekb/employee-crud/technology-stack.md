@@ -1,75 +1,74 @@
-# Công nghệ sử dụng
+# Technology Stack: employee-crud
 
-Phiên bản lấy từ `.csproj`, `dotnet-tools.json`, `frontend/package.json` và `frontend/package-lock.json`. Lượt quét `261104-sua-loi-luot-8` chỉ đọc lại `EmployeeCrud.Api.csproj`, các gói backend khớp bảng dưới; phần còn lại giữ từ lượt trước.
+Phiên bản lấy từ file trong repo (`*.csproj`, `dotnet-tools.json`, `frontend/package.json`, `frontend/package-lock.json`, snapshot migration). Phiên bản phần mềm đã cài trên máy làm bài lấy từ README mục 1 và `project.md`, scan không kiểm lại.
 
-## Ngôn ngữ và runtime
+## Ngôn ngữ
 
-| Thành phần | Phiên bản | Nguồn |
-|---|---|---|
-| C# / .NET | `net10.0`, nullable bật, implicit usings bật | `EmployeeCrud.Api.csproj` |
-| TypeScript | 6.0.3, `strict`, `noUncheckedIndexedAccess` | `package-lock.json`, `tsconfig.json` |
-| Node.js | `>=24` | `package.json` |
-| SQL | PostgreSQL | Migration, `docs/du-lieu-mau.sql` |
-| CSS | Thuần, không thư viện | `frontend/src/styles/` |
+| Ngôn ngữ | Dùng ở | Cấu hình |
+| --- | --- | --- |
+| C# | `backend/` | `net10.0`, `Nullable` enable, `ImplicitUsings` enable |
+| TypeScript | `frontend/src/`, `frontend/vite.config.ts` | `strict`, `noUncheckedIndexedAccess`, `noUnusedLocals/Parameters`, `noFallthroughCasesInSwitch`, `target ES2022`, `moduleResolution bundler`, `jsx react-jsx`, `noEmit` |
+| JavaScript (ESM) | `frontend/eslint.config.js` | `"type": "module"` |
+| SQL (PostgreSQL) | `migrationBuilder.Sql` trong 2 migration, `docs/du-lieu-mau.sql` | – |
+| CSS | `frontend/src/styles/` | CSS thuần, biến `:root` |
 
 ## Backend
 
-| Gói | Phiên bản | Dùng để |
-|---|---|---|
-| ASP.NET Core (`Microsoft.NET.Sdk.Web`) | theo `net10.0` | Web API, controller, DI |
+| Thành phần | Phiên bản | Vai trò |
+| --- | --- | --- |
+| .NET / ASP.NET Core (`Microsoft.NET.Sdk.Web`) | `net10.0` (máy làm bài: SDK 10.0.403) | Web API kiểu controller |
+| Microsoft.AspNetCore.OpenApi | 10.0.14 | Sinh `/openapi/v1.json` |
+| Swashbuckle.AspNetCore.SwaggerUI | 10.3.1 | Trang `/swagger` (chỉ UI, đặc tả do OpenApi sinh) |
 | Microsoft.EntityFrameworkCore | 10.0.14 | ORM |
-| Microsoft.EntityFrameworkCore.Relational | 10.0.14 | Phần quan hệ của EF Core |
-| Microsoft.EntityFrameworkCore.Design | 10.0.14 | Công cụ migration, chỉ lúc phát triển |
-| Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | Provider PostgreSQL |
-| Microsoft.AspNetCore.OpenApi | 10.0.14 | Sinh đặc tả OpenAPI |
-| Swashbuckle.AspNetCore.SwaggerUI | 10.3.1 | Trang Swagger UI |
+| Microsoft.EntityFrameworkCore.Relational | 10.0.14 | Migration, SQL thô |
+| Microsoft.EntityFrameworkCore.Design | 10.0.14 (PrivateAssets all) | Cho `dotnet ef` |
+| Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | Provider PostgreSQL, `PostgresException`, `PostgresErrorCodes` |
 
-## Test backend
+Phiên bản NuGet ghim chính xác (không dùng `10.*`), có comment giải thích trong csproj.
 
-| Gói | Phiên bản | Dùng để |
-|---|---|---|
-| xunit | 2.9.3 | Framework test |
-| xunit.runner.visualstudio | 3.1.4 | Chạy test |
-| Microsoft.NET.Test.Sdk | 17.14.1 | Nền chạy test |
-| Microsoft.AspNetCore.Mvc.Testing | 10.0.14 | `WebApplicationFactory` |
-| Microsoft.EntityFrameworkCore.InMemory | 10.0.14 | Database giả cho unit test |
-| coverlet.collector | 6.0.4 | Đo độ phủ |
+## Kiểm thử backend
 
-## Công cụ .NET cục bộ (`dotnet-tools.json`)
-
-| Công cụ | Phiên bản |
-|---|---|
-| dotnet-ef | 10.0.14 |
-| dotnet-reportgenerator-globaltool | 5.5.12 |
+| Thành phần | Phiên bản |
+| --- | --- |
+| xunit | 2.9.3 |
+| xunit.runner.visualstudio | 3.1.4 |
+| Microsoft.NET.Test.Sdk | 17.14.1 |
+| Microsoft.AspNetCore.Mvc.Testing | 10.0.14 |
+| Microsoft.EntityFrameworkCore.InMemory | 10.0.14 |
+| coverlet.collector | 6.0.4 |
 
 ## Frontend
 
-| Gói | Khai báo | Đã khóa | Dùng để |
-|---|---|---|---|
-| react, react-dom | `^19.3.1` | 19.3.1 | Giao diện |
-| react-router | `^8.5.1` | 8.5.1 | Định tuyến |
-| vite | `^8.3.5` | 8.3.5 | Dev server, build |
-| @vitejs/plugin-react | `^6.1.2` | 6.1.2 | JSX, nạp nóng |
-| typescript | `^6.0.3` | 6.0.3 | Kiểm kiểu |
-| eslint | `^10.14.0` | 10.14.0 | Lint |
-| @eslint/js | `^10.0.1` | 10.0.1 | Luật JavaScript |
-| typescript-eslint | `^8.72.1` | 8.72.1 | Luật TypeScript |
-| eslint-plugin-react-hooks | `^7.1.1` | 7.1.1 | Luật Hooks |
-| eslint-plugin-react-refresh | `^0.5.7` | 0.5.7 | Luật nạp nóng |
-| globals | `^17.14.0` | 17.14.0 | Biến toàn cục trình duyệt |
-| prettier | `^3.9.10` | 3.9.10 | Định dạng |
-| @types/react, @types/react-dom | `^19.3.0` | 19.3.0 | Kiểu React |
+| Gói | Khai trong `package.json` | Đã khóa trong `package-lock.json` | Vai trò |
+| --- | --- | --- | --- |
+| react, react-dom | ^19.3.1 | 19.3.1 | UI |
+| react-router | ^8.5.1 | 8.5.1 | Định tuyến SPA (`BrowserRouter`) |
+| vite | ^8.3.5 | 8.3.5 | Dev server cổng 5173 `strictPort`, build |
+| @vitejs/plugin-react | ^6.1.2 | 6.1.2 | Plugin React cho Vite |
+| typescript | ^6.0.3 | 6.0.3 | Kiểm kiểu (`tsc -p tsconfig.json`) |
+| eslint | ^10.14.0 | 10.14.0 | Lint (flat config) |
+| typescript-eslint | ^8.72.1 | 8.72.1 | Luật TS |
+| @eslint/js, eslint-plugin-react-hooks, eslint-plugin-react-refresh, globals | ^10.0.1, ^7.1.1, ^0.5.7, ^17.14.0 | (khóa trong lock, không tra từng gói) | Luật JS, Hooks, React Refresh, biến toàn cục trình duyệt |
+| prettier | ^3.9.10 | 3.9.10 | Định dạng, **không có file cấu hình** → mặc định Prettier 3 |
+| @types/react, @types/react-dom | ^19.3.0 | (khóa trong lock) | Kiểu |
 
-Không có thư viện UI, thư viện state hay thư viện form.
+`engines.node` = `>=24` (máy làm bài: Node 24.15.0, npm 11.16.0). Cài bằng `npm ci` theo README.
 
-## Hạ tầng cục bộ
+## Database và môi trường chạy
 
-| Thành phần | Giá trị | Nguồn |
-|---|---|---|
-| Database | PostgreSQL 18, cổng 5432, `employee_db` | `README.md`, `project.md` |
-| Backend | `http://localhost:5081`; hồ sơ https `https://localhost:7205` | `launchSettings.json` |
-| Frontend | `http://localhost:5173`, `strictPort` | `vite.config.ts` |
-| Bí mật | .NET user-secrets (`UserSecretsId` trong `.csproj`) | `README.md` mục 3 |
-| Container, CI/CD | Không có, đúng `project.md` | Quét repo |
+- PostgreSQL 18 (máy làm bài 18.6), cổng 5432, database `employee_db`; ứng dụng có thể dùng tài khoản quyền tối thiểu `employee_app` (README mục 13).
+- Connection string qua `dotnet user-secrets` (`UserSecretsId` trong csproj) hoặc biến môi trường `ConnectionStrings__Default`.
+- Frontend đọc `VITE_API_BASE_URL` từ `frontend/.env.development` khi `npm run dev`; bản build dùng giá trị mặc định trong `client.ts`.
+- Không Docker, không cloud, không CI/CD.
 
-Bản đã chạy thử theo `README.md:16-24`: .NET SDK 10.0.403, Node.js 24.15.0, npm 11.16.0, PostgreSQL 18.6, Git 2.54.0. Các lượt quét không kiểm lại.
+## Công cụ phát triển
+
+| Công cụ | Phiên bản | Nơi khai | Ghi chú |
+| --- | --- | --- | --- |
+| dotnet-ef | 10.0.14 | `dotnet-tools.json` (gốc repo, `isRoot: true`) | Cài cục bộ bằng `dotnet tool restore` |
+| dotnet-reportgenerator-globaltool (`reportgenerator`) | 5.5.12 | `dotnet-tools.json` | Dùng trong `npm run coverage` |
+| dotnet format | đi kèm SDK | gọi trong `npm run verify` | Theo `.editorconfig` |
+| Git | máy làm bài 2.54.0 | – | Máy này `core.autocrlf=true` ở cấu hình hệ thống; repo không có `.gitattributes` |
+| Postman, pgAdmin 4, file `.http` của VS Code | – | – | Kiểm tay API và database |
+
+Chi tiết cấu hình định dạng và đầu dòng: `code-quality-assessment.md`.
