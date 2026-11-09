@@ -17,6 +17,8 @@ public class PlatformWebAppFactory : WebApplicationFactory<Program>
         // Môi trường "Testing" (không phải Development) để KHÔNG nạp user-secrets thật trên máy.
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
+        // ASP.NET Core chỉ tự tìm controller trong project ứng dụng; TestOnlyController nằm ở project test
+        // nên phải khai báo thêm assembly này, nếu không các route chỉ dành cho test sẽ trả 404.
         builder.ConfigureServices(services => services
             .AddControllers()
             .AddApplicationPart(typeof(TestOnlyController).Assembly));
@@ -26,5 +28,7 @@ public class PlatformWebAppFactory : WebApplicationFactory<Program>
 /// <summary>Giống factory trên nhưng cố ý để trống chuỗi kết nối.</summary>
 public sealed class MissingConnectionStringWebAppFactory : PlatformWebAppFactory
 {
+    // Dùng trong PipelineTests để chứng minh ứng dụng dừng ngay lúc khởi động khi thiếu chuỗi kết nối,
+    // thay vì chạy lên rồi mới lỗi ở request đầu tiên.
     protected override string ConnectionString => string.Empty;
 }

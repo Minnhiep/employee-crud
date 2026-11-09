@@ -13,6 +13,7 @@ internal sealed class ThrowingAppDbContext(DbContextOptions<AppDbContext> option
     : AppDbContext(options)
 {
     // Chỉ ghi đè SaveChangesAsync: các truy vấn đọc (AnyAsync, CountAsync...) trước bước lưu vẫn chạy thật trên InMemory.
+    // Lỗi được ném ngay khi gọi hàm; service gọi kèm await bên trong try/catch nên bắt được y như lỗi thật từ database.
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         throw toThrow;
 }

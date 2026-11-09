@@ -22,6 +22,8 @@ internal static class TestDb
     /// <summary>Nạp sẵn các phòng ban theo tên, trả về danh sách đã có id.</summary>
     public static async Task<List<Department>> SeedAsync(DbContextOptions<AppDbContext> options, params string[] names)
     {
+        // Nạp bằng context riêng rồi đóng ngay: service trong test mở context khác, nên phải đọc lại
+        // từ database, không lấy được đối tượng còn nhớ sẵn trong context nạp dữ liệu.
         await using var db = new AppDbContext(options);
         var departments = names.Select(name => new Department { Name = name }).ToList();
         db.Departments.AddRange(departments);

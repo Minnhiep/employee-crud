@@ -27,6 +27,8 @@ public sealed class LogCapturingWebAppFactory : PlatformWebAppFactory
 /// <summary>Bộ ghi log trong bộ nhớ: mỗi dòng giữ tên nhóm log (category) và mức.</summary>
 public sealed class CapturedLogs : ILoggerProvider
 {
+    // ConcurrentQueue thay vì List: máy chủ test ghi log trên luồng xử lý request, trong khi test đọc
+    // Entries trên luồng khác; List bị ghi và đọc cùng lúc có thể hỏng hoặc ném lỗi.
     private readonly ConcurrentQueue<(string Category, LogLevel Level, string Message)> _entries = new();
 
     public IReadOnlyList<(string Category, LogLevel Level, string Message)> Entries => [.. _entries];
