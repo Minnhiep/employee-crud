@@ -3,6 +3,10 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+
 namespace EmployeeCrud.Api.Tests.Platform;
 
 public class PipelineTests(PlatformWebAppFactory factory) : IClassFixture<PlatformWebAppFactory>
@@ -144,6 +148,37 @@ public class PipelineTests(PlatformWebAppFactory factory) : IClassFixture<Platfo
 
         var body = await ReadJsonAsync(response);
         Assert.Equal("Kiểu dữ liệu không được hỗ trợ", body.GetProperty("title").GetString());
+    }
+
+    // Request chỉ nhận text/html (không có */*): bộ ghi ProblemDetails mặc định từ chối ghi. API vẫn phải trả JSON
+    // đúng mã, giữ lời báo theo ô, thay vì phản hồi rỗng.
+    [Fact]
+    public async Task DomainError_WithHtmlOnlyAcceptHeader_StillReturnsProblemJson()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/test-only/conflict");
+        request.Headers.Add("Accept", "text/html");
+
+        var response = await factory.CreateClient().SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(ProblemJson, response.Content.Headers.ContentType?.MediaType);
+
+        var body = await ReadJsonAsync(response);
+        Assert.Equal("Dữ liệu bị trùng", body.GetProperty("title").GetString());
+        Assert.Equal(409, body.GetProperty("status").GetInt32());
+        Assert.Equal("Email đã được sử dụng", body.GetProperty("errors").GetProperty("email")[0].GetString());
+        Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("traceId").GetString()));
+    }
+
+    // Host thử trong bộ nhớ không chạy Kestrel nên không gửi được body thật lớn để thấy 413. Nhưng cấu hình Kestrel
+    // mà Program.cs đăng ký (ConfigureKestrel) vẫn nằm trong DI, nên đọc được giới hạn đã đặt.
+    // Số viết thẳng ở đây, không dùng lại hằng của code: ai xóa hay đổi dòng cấu hình trong Program.cs là test đỏ.
+    [Fact]
+    public void Kestrel_LimitsRequestBodyTo64Kilobytes()
+    {
+        var kestrel = factory.Services.GetRequiredService<IOptions<KestrelServerOptions>>().Value;
+
+        Assert.Equal(64 * 1024, kestrel.Limits.MaxRequestBodySize);
     }
 
     [Fact]

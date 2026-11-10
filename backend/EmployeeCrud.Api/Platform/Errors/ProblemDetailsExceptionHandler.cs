@@ -46,11 +46,24 @@ public sealed class ProblemDetailsExceptionHandler(
         await ApplyCorsAsync(httpContext);
 
         httpContext.Response.StatusCode = status;
-        return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+        var written = await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             ProblemDetails = problem,
         });
+        if (written)
+        {
+            return true;
+        }
+
+        // Dịch vụ trên chỉ ghi khi request nhận JSON (header Accept có application/json, application/problem+json
+        // hoặc */*). Request chỉ nhận text/html thì nó từ chối, và phản hồi lỗi ra rỗng (đã thấy khi chạy thật).
+        // API này chỉ trả JSON, nên tự ghi ProblemDetails như StatusCodeProblemWriter, kèm cùng traceId.
+        // Truyền kiểu thật của đối tượng (problem.GetType()) để lỗi kiểm dữ liệu giữ được phần "errors".
+        problem.Extensions["traceId"] = traceId;
+        await httpContext.Response.WriteAsJsonAsync(
+            problem, problem.GetType(), options: null, contentType: "application/problem+json", cancellationToken);
+        return true;
     }
 
     private async Task ApplyCorsAsync(HttpContext httpContext)

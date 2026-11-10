@@ -245,13 +245,17 @@ public class EmployeeService(AppDbContext db, IDepartmentService departments) : 
         }
     }
 
-    // So không phân biệt hoa thường. ToLower() được Npgsql dịch thành lower(email) = lower(@p),
-    // cùng biểu thức với chỉ mục ux_employees_email. Nếu hai request chen nhau cùng qua bước này,
-    // chỉ mục chặn cái sau (23505) và ErrorMapper đổi thành 409.
+    // So không phân biệt hoa thường. Câu SQL thật: WHERE lower(e.email) = @loweredEmail.
+    // - Vế giá trị: hạ chữ ngay ở .NET rồi gửi xuống làm tham số. Dùng ToLowerInvariant (như chỗ tìm kiếm ở trên)
+    //   vì ToLower() của .NET theo ngôn ngữ cài trên máy, kết quả có thể khác lower() của PostgreSQL.
+    // - Vế cột: e.Email.ToLower() được Npgsql dịch thành lower(email) chạy trong PostgreSQL, cùng biểu thức với chỉ mục
+    //   ux_employees_email.
+    // Nếu hai request chen nhau cùng qua bước này, chỉ mục là lớp chặn cuối: chặn cái sau (23505), ErrorMapper đổi thành 409.
     private async Task EnsureEmailIsFreeAsync(string email, int? excludeId, CancellationToken cancellationToken)
     {
+        var loweredEmail = email.ToLowerInvariant();
         var taken = await db.Employees.AnyAsync(
-            e => e.Email.ToLower() == email.ToLower() && e.Id != excludeId,
+            e => e.Email.ToLower() == loweredEmail && e.Id != excludeId,
             cancellationToken);
 
         if (taken)

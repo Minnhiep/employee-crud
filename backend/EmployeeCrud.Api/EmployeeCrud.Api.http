@@ -3,12 +3,15 @@
 # Gọi thử 10 thao tác (và các ví dụ lọc 6b–6d) ngay trong VS Code (bấm "Send Request" phía trên mỗi khối), thay cho Postman khi cần nhanh.
 # Chạy backend trước: dotnet run --project backend/EmployeeCrud.Api
 # Đổi các số id (1, 2...) theo dữ liệu thật trên máy. Chi tiết và ví dụ phản hồi: docs/danh-sach-api.md
+# Hai ví dụ sửa (#4, #9) dùng mã của bản ghi vừa tạo ở #2, #7 (biến {{createDepartment...}}, {{createEmployee...}}),
+# nên không đổi dữ liệu có sẵn. Thử xong thì xóa hai bản ghi đó (xem ghi chú ở #5, #10).
 
 ### 1. Danh sách phòng ban (sắp theo tên, mỗi phòng kèm employeeCount)
 GET {{baseUrl}}/api/departments
 Accept: application/json
 
 ### 2. Thêm phòng ban (lần đầu ra 201; gửi lại cùng tên, kể cả khác hoa thường, ra 409)
+# @name createDepartment
 POST {{baseUrl}}/api/departments
 Content-Type: application/json
 
@@ -20,16 +23,20 @@ Content-Type: application/json
 GET {{baseUrl}}/api/departments/1
 Accept: application/json
 
-### 4. Sửa tên phòng ban
-PUT {{baseUrl}}/api/departments/1
+### 4. Sửa tên phòng ban vừa tạo ở #2 (chạy #2 trước và phải ra 201)
+# Dùng mã của phòng vừa tạo để không đổi tên phòng ban có sẵn. Công cụ không hiểu biến {{createDepartment...}}
+# thì thay bằng mã phòng vừa tạo; ĐỪNG dùng mã của phòng ban mẫu.
+PUT {{baseUrl}}/api/departments/{{createDepartment.response.body.$.id}}
 Content-Type: application/json
 
 {
-  "name": "Nhân sự"
+  "name": "Thử nghiệm đã sửa"
 }
 
 ### 5. Xóa phòng ban (mã 99999 không có nên ra 404)
 # Muốn thấy 409: đổi 99999 thành mã một phòng còn nhân viên; API từ chối và không xóa.
+# Dọn phòng vừa tạo ở #2: đổi 99999 thành {{createDepartment.response.body.$.id}} (xóa nhân viên ở #7 trước nếu
+# đã cho người đó vào phòng này).
 DELETE {{baseUrl}}/api/departments/99999
 
 ### 6. Danh sách nhân viên, có thể tìm theo họ tên hoặc email (không phân biệt hoa thường)
@@ -49,6 +56,7 @@ GET {{baseUrl}}/api/employees?departmentId=abc
 Accept: application/json
 
 ### 7. Thêm nhân viên (lần đầu ra 201; gửi lại cùng email ra 409; phòng ban không có ra 400)
+# @name createEmployee
 POST {{baseUrl}}/api/employees
 Content-Type: application/json
 
@@ -62,17 +70,20 @@ Content-Type: application/json
 GET {{baseUrl}}/api/employees/1
 Accept: application/json
 
-### 9. Sửa nhân viên (gửi đủ 3 trường)
-PUT {{baseUrl}}/api/employees/1
+### 9. Sửa nhân viên vừa tạo ở #7 (gửi đủ 3 trường; chạy #7 trước và phải ra 201)
+# Dùng mã của người vừa tạo để không ghi đè nhân viên có sẵn. Công cụ không hiểu biến {{createEmployee...}}
+# thì thay bằng mã người vừa tạo; ĐỪNG dùng mã của nhân viên mẫu (ví dụ 1).
+PUT {{baseUrl}}/api/employees/{{createEmployee.response.body.$.id}}
 Content-Type: application/json
 
 {
-  "fullName": "Đỗ Văn An",
-  "email": "do.an@congty.vn",
-  "departmentId": 3
+  "fullName": "Nguyễn Văn Thử",
+  "email": "nguyen.van.thu.da.sua@example.com",
+  "departmentId": 1
 }
 
 ### 10. Xóa nhân viên (không có mã này thì ra 404)
+# Dọn người vừa tạo ở #7: đổi 99999 thành {{createEmployee.response.body.$.id}}.
 DELETE {{baseUrl}}/api/employees/99999
 
 ### Đường dẫn không tồn tại: 404 dạng ProblemDetails, title "Không tìm thấy"

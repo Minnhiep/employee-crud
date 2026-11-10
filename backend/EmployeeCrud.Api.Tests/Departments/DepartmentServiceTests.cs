@@ -191,6 +191,32 @@ public class DepartmentServiceTests
         AssertDomainError(exception!, DomainErrorKind.NotFound);
     }
 
+    [Theory] // Tìm phòng trước rồi mới kiểm tên (giống sửa nhân viên): phòng không có thì 404, dù tên toàn khoảng trắng
+    // hay dài 101 ký tự. Nếu kiểm tên trước, hai ca này sẽ ra lỗi kiểm dữ liệu.
+    [InlineData(' ', 3)]
+    [InlineData('a', 101)]
+    public async Task Update_WhenMissing_ThrowsNotFound_EvenIfNameInvalid(char character, int count)
+    {
+        var exception = await Record.ExceptionAsync(
+            () => CreateService().UpdateAsync(99999, new DepartmentRequest { Name = new string(character, count) }));
+
+        var error = AssertDomainError(exception!, DomainErrorKind.NotFound);
+        Assert.Equal("Không tìm thấy phòng ban có mã 99999.", error.Message);
+    }
+
+    [Fact] // Phòng có thật mà tên quá dài: vẫn là lỗi kiểm dữ liệu như trước, tên cũ giữ nguyên.
+    public async Task Update_WithNameTooLong_ThrowsValidationAndKeepsOldName()
+    {
+        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
+
+        var exception = await Record.ExceptionAsync(
+            () => CreateService().UpdateAsync(seeded[0].Id, new DepartmentRequest { Name = new string('a', 101) }));
+
+        var error = AssertDomainError(exception!, DomainErrorKind.Validation);
+        Assert.Equal(DepartmentService.NameTooLongMessage, error.Message);
+        Assert.Equal(["Kế toán"], await NamesInDatabaseAsync());
+    }
+
     [Fact] // #14
     public async Task Update_WithBlankName_ThrowsValidationAndKeepsOldName()
     {
@@ -258,7 +284,9 @@ public class DepartmentServiceTests
         AssertDomainError(exception!, DomainErrorKind.NotFound);
     }
 
-    [Fact] // #18. Còn nhân viên: PostgreSQL báo 23503 trên khóa ngoại fk_employees_department.
+    [Fact] // #18. Lúc lưu, khóa ngoại fk_employees_department báo 23503 (có người vừa thêm nhân viên chen vào), nhưng
+    // database thử không có nhân viên nào nên đếm lại ra 0 (như người đó vừa bị xóa tiếp): vẫn báo "còn 1 nhân viên",
+    // không ra câu vô lý "còn 0 nhân viên".
     public async Task Delete_WhenEmployeesStillReferToIt_ThrowsConflictWithDepartmentName()
     {
         var seeded = await TestDb.SeedAsync(_options, "Kế toán");
@@ -409,19 +437,6 @@ public class DepartmentServiceTests
 
         var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
         Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì còn 2 nhân viên.", error.Message);
-    }
-
-    [Fact] // D9. Chen nhau mà đếm lại ra 0 (người đó vừa bị xóa tiếp): vẫn báo 1, không ra câu "còn 0 nhân viên".
-    public async Task Delete_WhenForeignKeyBlocksButRecountIsZero_ReportsOne()
-    {
-        var seeded = await TestDb.SeedAsync(_options, "Kế toán");
-        var service = CreateServiceThatFailsOnSave(
-            PostgresError(PostgresErrorCodes.ForeignKeyViolation, DbConstraintNames.EmployeeDepartmentForeignKey));
-
-        var exception = await Record.ExceptionAsync(() => service.DeleteAsync(seeded[0].Id));
-
-        var error = AssertDomainError(exception!, DomainErrorKind.Conflict);
-        Assert.Equal("Không thể xóa phòng ban \"Kế toán\" vì còn 1 nhân viên.", error.Message);
     }
 
     // ---- Kiểm tồn tại (cho EmployeeService) ----

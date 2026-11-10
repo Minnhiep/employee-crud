@@ -12,7 +12,7 @@ public static class StartupChecks
         "dotnet user-secrets set \"ConnectionStrings:Default\" " +
         "\"Host=localhost;Port=5432;Database=employee_db;Username=<tài khoản>\" " +
         "--project backend/EmployeeCrud.Api " +
-        "(thêm \";Password\", dấu bằng và mật khẩu PostgreSQL của anh vào cuối chuỗi trong ngoặc kép).";
+        "(thêm \";Password\", dấu bằng và mật khẩu PostgreSQL vào cuối chuỗi trong ngoặc kép).";
 
     /// <summary>
     /// Thiếu chuỗi kết nối thì dừng ngay với lời hướng dẫn, thay vì để tới request đầu tiên mới lỗi khó hiểu.

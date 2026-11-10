@@ -61,8 +61,8 @@ public class EmployeeServiceTests
         Assert.Equal(message, error.Message);
     }
 
-    // Ba nhân viên dùng cho các ca tìm kiếm: chỉ "Minh Le" có "minh"; "congty" nằm trong email của Minh và Hoa;
-    // "Trần Bình" có dấu để thử "binh" không khớp.
+    // Ba nhân viên dùng cho các ca tìm kiếm: chỉ họ tên "Hoa Pham" có "pham" (không email nào có); "congty" nằm trong
+    // email của Minh và Hoa; "Trần Bình" có dấu để thử "binh" không khớp.
     private async Task SeedSearchDataAsync()
     {
         var departmentId = await SeedDepartmentAsync();
@@ -100,14 +100,15 @@ public class EmployeeServiceTests
 
     // ---- Tìm kiếm ----
 
-    [Fact] // #3. Không phân biệt hoa thường.
+    [Fact] // #3. Không phân biệt hoa thường ở cột họ tên. "pham" chỉ có trong họ tên "Hoa Pham", không có trong email nào,
+    // nên test chỉ đạt khi cột họ tên được so không phân biệt hoa thường (không nhờ email khớp hộ).
     public async Task Search_IsCaseInsensitive()
     {
         await SeedSearchDataAsync();
 
-        var result = await CreateService().GetAllAsync("MINH");
+        var result = await CreateService().GetAllAsync("PHAM");
 
-        Assert.Equal(["Minh Le"], result.Select(e => e.FullName));
+        Assert.Equal(["Hoa Pham"], result.Select(e => e.FullName));
     }
 
     [Fact] // #4. Tìm cả trong email.
@@ -118,6 +119,22 @@ public class EmployeeServiceTests
         var result = await CreateService().GetAllAsync("congty");
 
         Assert.Equal(["Hoa Pham", "Minh Le"], result.Select(e => e.FullName));
+    }
+
+    [Fact] // Email được lưu giữ nguyên chữ hoa như người dùng gõ, nên cột email cũng phải so không phân biệt hoa thường.
+    // Họ tên "Đỗ Văn An" không chứa "congty": người này chỉ có thể khớp qua email.
+    public async Task Search_MatchesEmailWrittenInUpperCase_IgnoringCase()
+    {
+        var departmentId = await SeedDepartmentAsync();
+        await TestDb.SeedEmployeeAsync(_options, "Đỗ Văn An", "Do.An@CongTy.VN", departmentId);
+        await TestDb.SeedEmployeeAsync(_options, "Trần Bình", "tb@khac.vn", departmentId);
+        var service = CreateService();
+
+        var upperCaseTerm = await service.GetAllAsync("CONGTY");
+        var lowerCaseTerm = await service.GetAllAsync("congty");
+
+        Assert.Equal(["Đỗ Văn An"], upperCaseTerm.Select(e => e.FullName));
+        Assert.Equal(["Đỗ Văn An"], lowerCaseTerm.Select(e => e.FullName));
     }
 
     [Fact] // #5

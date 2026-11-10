@@ -52,8 +52,10 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
 
     public async Task<DepartmentDto> UpdateAsync(int id, DepartmentRequest request, CancellationToken cancellationToken = default)
     {
-        var name = NormalizeName(request.Name);
+        // Tìm phòng ban TRƯỚC khi kiểm tên: sửa phòng không tồn tại luôn ra 404, kể cả khi tên gửi lên cũng sai.
+        // Cùng thứ tự với EmployeeService.UpdateAsync, để hai API sửa trả lỗi theo cùng một luật.
         var department = await FindTrackedAsync(id, cancellationToken);
+        var name = NormalizeName(request.Name);
 
         // Loại trừ chính nó: giữ nguyên tên, hoặc chỉ đổi hoa thường của chính nó, vẫn lưu được.
         await EnsureNameIsFreeAsync(name, excludeId: id, cancellationToken);
@@ -135,14 +137,17 @@ public class DepartmentService(AppDbContext db) : IDepartmentService
         return name;
     }
 
-    // So không phân biệt hoa thường. ToLower() được Npgsql dịch thành lower(name) = lower(@p),
-    // cùng biểu thức với chỉ mục ux_departments_name. Nếu hai request chen nhau cùng qua bước này,
-    // chỉ mục chặn cái sau (23505) và ErrorMapper đổi thành 409.
+    // So không phân biệt hoa thường. Câu SQL thật: WHERE lower(d.name) = @loweredName.
+    // - Vế giá trị: hạ chữ ngay ở .NET rồi gửi xuống làm tham số. Dùng ToLowerInvariant vì ToLower() của .NET theo
+    //   ngôn ngữ cài trên máy (máy tiếng Thổ Nhĩ Kỳ đổi "I" thành "ı" không dấu chấm, sẽ không khớp với PostgreSQL).
+    // - Vế cột: d.Name.ToLower() được Npgsql dịch thành lower(name) chạy trong PostgreSQL, cùng biểu thức với chỉ mục
+    //   ux_departments_name.
+    // Nếu hai request chen nhau cùng qua bước này, chỉ mục là lớp chặn cuối: chặn cái sau (23505), ErrorMapper đổi thành 409.
     private async Task EnsureNameIsFreeAsync(string name, int? excludeId, CancellationToken cancellationToken)
     {
-        // Gọi ToLower() ở cả hai vế bên trong biểu thức, để PostgreSQL dùng đúng một hàm lower() cho cả hai bên.
+        var loweredName = name.ToLowerInvariant();
         var taken = await db.Departments.AnyAsync(
-            d => d.Name.ToLower() == name.ToLower() && d.Id != excludeId,
+            d => d.Name.ToLower() == loweredName && d.Id != excludeId,
             cancellationToken);
 
         if (taken)

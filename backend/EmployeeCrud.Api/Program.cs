@@ -10,8 +10,15 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Không gửi header "Server: Kestrel": không cần cho người dùng, chỉ giúp người dò tìm biết máy chủ là gì.
-builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // Không gửi header "Server: Kestrel": không cần cho người dùng, chỉ giúp người dò tìm biết máy chủ là gì.
+    options.AddServerHeader = false;
+    // Giới hạn body 64 KB. Request hợp lệ lớn nhất (thêm, sửa nhân viên) chỉ vài trăm byte; mặc định của Kestrel
+    // khoảng 30 MB, tức máy chủ phải nhận hết một body rất lớn rồi mới báo "tối đa 100 ký tự".
+    // Vượt giới hạn thì Kestrel báo 413, ErrorMapper đổi thành ProblemDetails "Dữ liệu gửi lên quá lớn".
+    options.Limits.MaxRequestBodySize = 64 * 1024;
+});
 
 // ---- Đăng ký dịch vụ (Dependency Injection) ----
 
@@ -30,8 +37,11 @@ builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 builder.Services.AddFrontendCors(builder.Configuration);
 builder.Services.AddOpenApi();
 
-// Mỗi request một AppDbContext (vòng đời scoped). Chuỗi kết nối được đọc khi tạo ngữ cảnh,
-// nên lệnh "dotnet ef" và test đều dựng được ứng dụng mà không cần mở kết nối lúc khởi động.
+// Mỗi request một AppDbContext (vòng đời scoped). Chuỗi kết nối được đọc khi tạo ngữ cảnh, không mở kết nối lúc
+// khởi động, nên lệnh "dotnet ef" và test đều dựng được ứng dụng khi PostgreSQL chưa chạy.
+// Nhưng việc nào chạm database vẫn cần CÓ chuỗi kết nối: thiếu nó thì "dotnet ef migrations list" báo
+// "The ConnectionString property has not been initialized" (và "dotnet ef database update" không chạy được).
+// "dotnet ef" dừng ứng dụng ngay sau builder.Build(), nên không tới bước StartupChecks ở dưới để in câu hướng dẫn.
 builder.Services.AddDbContext<AppDbContext>((services, options) =>
     options.UseNpgsql(services.GetRequiredService<IConfiguration>()
         .GetConnectionString(StartupChecks.ConnectionStringName)));
