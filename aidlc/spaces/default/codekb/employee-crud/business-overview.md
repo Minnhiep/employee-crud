@@ -2,54 +2,42 @@
 
 ## Mục đích
 
-Ứng dụng web nhỏ quản lý **nhân viên** và **phòng ban**: xem danh sách, thêm, sửa, xóa, tìm kiếm nhân viên; quản lý danh mục phòng ban; mỗi nhân viên thuộc đúng một phòng ban chọn từ danh sách có sẵn. Đây là bài thực hành của kế hoạch thực tập (`docs/ke-hoach.md` mục 3), dùng để chứng minh và giải thích được luồng dữ liệu React → Web API JSON → ASP.NET Core → PostgreSQL.
+Ứng dụng web nhỏ quản lý **nhân viên** và **phòng ban**, là bài thực hành của kế hoạch thực tập `docs/ke-hoach.md` (mục 3). Mục tiêu của bài là chứng minh trọn một luồng dữ liệu: giao diện React gửi JSON tới Web API ASP.NET Core, API kiểm luật rồi đọc/ghi PostgreSQL, và người làm giải thích được từng tầng.
 
-Kết quả bàn giao theo đề bài (`docs/ke-hoach.md` mục 5): mã nguồn kèm migration, sơ đồ database (`docs/so-do-database.md`), danh sách API kèm JSON mẫu (`docs/danh-sach-api.md`), README cài đặt và chạy trên máy cá nhân, demo 15 phút.
-
-## Người dùng và bối cảnh
-
-- Một loại người dùng duy nhất, không đăng nhập, không phân quyền (đề bài không yêu cầu; `project.md` cấm thêm).
-- Chạy trên máy cá nhân: backend `http://localhost:5081`, frontend `http://localhost:5173`, PostgreSQL 18 cổng 5432, database `employee_db`. Không có môi trường staging hay production.
-- Giao diện và mọi lời báo lỗi viết tiếng Việt; tên trong code viết tiếng Anh.
+Người dùng: một người quản trị nội bộ dùng trình duyệt trên chính máy chạy ứng dụng. Không có đăng nhập hay phân quyền (cố ý: `project.md` cấm thêm).
 
 ## Chức năng chính
 
-| Nhóm | Chức năng | Màn hình | API |
-|---|---|---|---|
-| Phòng ban | Danh sách sắp theo tên kèm số nhân viên | `/departments` | `GET /api/departments` |
-| Phòng ban | Xem chi tiết: tên, số nhân viên, bảng nhân viên của phòng | `/departments/:id` | `GET /api/departments/{id}` + `GET /api/employees?departmentId=` |
-| Phòng ban | Thêm, sửa tên | `/departments/new`, `/departments/:id/edit` | `POST`, `PUT` |
-| Phòng ban | Xóa (chặn khi còn nhân viên) | Hộp xác nhận / hộp thông báo | `DELETE /api/departments/{id}` |
-| Nhân viên | Danh sách kèm tên phòng ban, tìm theo họ tên hoặc email, lọc theo phòng ban | `/employees?search=&departmentId=` | `GET /api/employees` |
-| Nhân viên | Thêm (có thể chọn sẵn phòng), sửa | `/employees/new`, `/employees/:id/edit` | `POST`, `PUT` |
-| Nhân viên | Xóa hẳn (có xác nhận ghi họ tên và email) | Hộp xác nhận | `DELETE /api/employees/{id}` |
-
-Chi tiết hợp đồng API: `api-documentation.md`. Cách các màn hình gọi nhau: `architecture.md` mục Interaction Diagrams.
-
-## Luật nghiệp vụ
-
-Luật được kiểm ở cả form React lẫn API (cùng câu báo); database chặn thêm phần trùng và khóa ngoại.
-
-| ID | Luật | Nơi thực thi |
+| Nhóm | Chức năng | Nơi thể hiện |
 |---|---|---|
-| BR1 | Tên phòng ban bắt buộc, tối đa 100 ký tự, đo **sau** khi chuẩn hóa | `DepartmentService.NormalizeName`, `validateDepartment.ts` |
-| BR2 | Tên phòng ban không trùng, không phân biệt hoa thường | `DepartmentService.EnsureNameIsFreeAsync` + chỉ mục `ux_departments_name` trên `lower(name)` → 409 |
-| BR3 | Không xóa được phòng ban còn nhân viên; lời báo nêu số người còn lại | `DepartmentService.DeleteAsync` + khóa ngoại `fk_employees_department` `ON DELETE RESTRICT` (23001/23503) → 409 |
-| BR4 | Họ tên bắt buộc, tối đa 100 ký tự | `EmployeeService.Normalize`, `validateEmployee.ts` |
-| BR5 | Email bắt buộc, tối đa 254 ký tự, đúng mẫu `^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$` | như BR4 (mẫu chép giống hệt hai phía) |
-| BR6 | Email không trùng, không phân biệt hoa thường; email lưu nguyên chữ hoa thường người dùng gõ | `EmployeeService.EnsureEmailIsFreeAsync` + chỉ mục `ux_employees_email` trên `lower(email)` → 409 |
-| BR7 | Nhân viên phải chọn một phòng ban đang tồn tại | `EmployeeService.EnsureDepartmentExistsAsync` (hỏi qua `IDepartmentService`) + khóa ngoại → 400 |
-| BR8 | Chuẩn hóa chữ nhập: gộp khoảng trắng, bỏ hai đầu, đưa về NFC; từ chối ký tự điều khiển, ký tự định dạng vô hình, nửa cặp surrogate, noncharacter | `Platform/Text/TextInput.cs` ↔ `utils/normalizeText.ts` |
-| BR9 | Tìm kiếm theo họ tên hoặc email chứa chuỗi tìm, không phân biệt hoa thường, có phân biệt dấu; chuỗi tìm có ký tự lạ thì trả rỗng (200) | `EmployeeService.GetAllAsync` |
-| BR10 | Lọc theo phòng ban: chỉ nhận số nguyên dương viết bằng chữ số 0-9; sai dạng trả 400; phòng không tồn tại trả `[]` | `EmployeeService.ParseDepartmentFilter` |
-| BR11 | Thứ tự kiểm khi thêm/sửa nhân viên: dữ liệu (400) → phòng ban có không (400) → email trùng (409); sửa người không tồn tại luôn 404 trước | `EmployeeService.CreateAsync` / `UpdateAsync` |
-| BR12 | Xóa là xóa hẳn (không xóa mềm), luôn có hộp xác nhận | Service + `ConfirmDialog` |
-| BR13 | Dữ liệu mẫu: migration chèn 4 phòng ban (Nhân sự, Kế toán, Kỹ thuật, Kinh doanh) | `20261101183552_CreateDepartments` |
+| Nhân viên | Danh sách kèm tên phòng ban, sắp theo họ tên rồi mã | `/employees`, `GET /api/employees` |
+| Nhân viên | Tìm theo họ tên **hoặc** email, không phân biệt hoa thường, có phân biệt dấu | `?search=` |
+| Nhân viên | Lọc theo phòng ban, ghép AND với tìm kiếm | `?departmentId=` |
+| Nhân viên | Thêm, sửa (đủ 3 trường), xóa hẳn có hộp xác nhận | `/employees/new`, `/employees/:id/edit` |
+| Phòng ban | Danh sách kèm số nhân viên từng phòng | `/departments`, `GET /api/departments` |
+| Phòng ban | Trang chi tiết: tên, số người, bảng nhân viên của phòng, thêm nhân viên đã chọn sẵn phòng | `/departments/:id` |
+| Phòng ban | Thêm, sửa tên, xóa (chỉ khi phòng không còn ai) | `/departments/new`, `/departments/:id/edit` |
 
-## Ngoài phạm vi (theo đề bài và `project.md`)
+## Luật nghiệp vụ (đang có trong code)
 
-Đăng nhập và phân quyền, xóa mềm, nhật ký thay đổi (README mục 15), microservices, Redux, CI/CD, Docker, Next.js.
+- Mỗi nhân viên thuộc **đúng một** phòng ban đang tồn tại; chọn từ ô danh sách.
+- Email không trùng, **không phân biệt hoa thường**; email được lưu giữ nguyên chữ hoa thường như người dùng gõ.
+- Tên phòng ban không trùng, không phân biệt hoa thường.
+- Không xóa được phòng ban còn nhân viên; câu báo nêu tên phòng và số người còn lại.
+- Giới hạn độ dài đo **sau khi chuẩn hóa**: tên phòng ban và họ tên tối đa 100 ký tự, email tối đa 254.
+- Chuẩn hóa chữ trước khi kiểm và lưu: gộp khoảng trắng, bỏ hai đầu, đưa về NFC; chặn ký tự điều khiển, ký tự định dạng vô hình, nửa cặp surrogate và noncharacter.
+- Định dạng email: một luật regex chung cho form và API.
+- Kiểm dữ liệu hai lớp: form React báo ngay, API kiểm lại và trả ProblemDetails tiếng Việt với mã 400/404/409. Database chặn thêm lớp cuối (chỉ mục không trùng trên `lower(...)`, khóa ngoại `RESTRICT`).
+- Xóa là xóa hẳn (không xóa mềm), không có nhật ký thay đổi; hai người sửa cùng lúc thì người lưu sau thắng.
 
-## Liên quan tới intent hiện tại
+Chi tiết nơi từng luật nằm trong code: `component-inventory.md` (DepartmentService, EmployeeService, Platform.Text). Hợp đồng API: `api-documentation.md`.
 
-Intent `kiem-cuoi-crlf` không đổi chức năng nghiệp vụ: nó sửa cách repo giữ đầu dòng (line endings) để `npm run verify` chạy sạch trên mọi máy Windows sau khi clone, rồi kiểm lại toàn bộ. Phát hiện kỹ thuật nằm ở `code-quality-assessment.md` mục "Đầu dòng và định dạng".
+## Dữ liệu
+
+Hai bảng `departments` và `employees` trong database `employee_db` (PostgreSQL 18). Migration chèn sẵn 4 phòng ban: Nhân sự, Kế toán, Kỹ thuật, Kinh doanh. `docs/du-lieu-mau.sql` thêm 4 phòng và 80 nhân viên tên giả để demo. Sơ đồ: `docs/so-do-database.md`; mô tả kỹ thuật: `architecture.md`.
+
+## Phạm vi và ràng buộc
+
+- Chạy trên máy cá nhân: `dotnet run` (cổng 5081), `npm run dev` (cổng 5173), PostgreSQL cục bộ cổng 5432. Không Docker, không CI/CD, không microservices, không Redux, không Next.js.
+- Chữ trên giao diện và lời báo lỗi bằng tiếng Việt; tên trong code bằng tiếng Anh.
+- Bàn giao (kế hoạch mục 5): source trên Git, migration, sơ đồ DB, danh sách API kèm JSON mẫu, README, demo 15 phút.

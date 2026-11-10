@@ -1,70 +1,72 @@
 # Dependencies: employee-crud
 
-Phiên bản cụ thể nằm ở `technology-stack.md`; tài liệu này ghi **ai dùng gì** và các phụ thuộc giữa phần code với nhau.
+## Gói NuGet
 
-## Phụ thuộc ngoài theo thành phần
+### `backend/EmployeeCrud.Api/EmployeeCrud.Api.csproj`
 
-| Thành phần | Phụ thuộc ngoài | Dùng để |
-| --- | --- | --- |
-| `Program` | ASP.NET Core (MVC, ProblemDetails, CORS, Diagnostics), Microsoft.AspNetCore.OpenApi, Swashbuckle SwaggerUI, Npgsql EF provider | Dựng ứng dụng, middleware, tài liệu API |
-| `DepartmentService`, `EmployeeService` | EF Core (`AnyAsync`, `CountAsync`, `AsNoTracking`, `DbUpdateException`), Npgsql (`PostgresException`, `PostgresErrorCodes`) | Truy vấn, bắt lỗi ràng buộc |
-| `Platform.Errors` | ASP.NET Core Diagnostics/MVC, EF Core, Npgsql, `System.Text.Json` | Đổi lỗi sang ProblemDetails |
-| `Migrations` | EF Core Migrations, `Npgsql.EntityFrameworkCore.PostgreSQL.Metadata` | Tạo bảng, identity |
-| `EmployeeCrud.Api.Tests` | xUnit, Mvc.Testing, EF InMemory, Npgsql (dựng `PostgresException` giả), coverlet | Test |
-| `frontend-api-client` | `fetch`, `AbortController`/`AbortSignal.any` của trình duyệt | HTTP |
-| Trang, `shared-components`, `hooks` | `react`, `react-router` (`BrowserRouter`, `Link`, `NavLink`, `useSearchParams`, `useNavigate`, `useLocation`, `useParams`, `useNavigationType`, `Outlet`) | UI và định tuyến |
-| `repo-tooling` | Node/npm (Vite, tsc, ESLint, Prettier), .NET SDK (`dotnet format`, `dotnet test`, tool manifest), Git | Kiểm chất lượng |
+| Gói | Phiên bản | Dùng để |
+|---|---|---|
+| Microsoft.AspNetCore.OpenApi | 10.0.14 | `AddOpenApi`, `MapOpenApi` |
+| Microsoft.EntityFrameworkCore | 10.0.14 | ORM |
+| Microsoft.EntityFrameworkCore.Design | 10.0.14 (`PrivateAssets=all`) | cho `dotnet ef` sinh migration |
+| Microsoft.EntityFrameworkCore.Relational | 10.0.14 | API quan hệ (`ToTable`, `HasColumnName`, `migrationBuilder.Sql`) |
+| Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | provider PostgreSQL, `PostgresException`, `PostgresErrorCodes` |
+| Swashbuckle.AspNetCore.SwaggerUI | 10.3.1 | trang `/swagger` (chỉ Development) |
 
-Không có gói icon, gói UI, gói state, gói HTTP client hay gói đổi tên cột (cố ý, xem comment trong code và `team.md`).
+Phiên bản ghim đúng (không dùng `10.*`, có comment giải thích trong `.csproj`).
 
-## Phụ thuộc lúc chạy
+### `backend/EmployeeCrud.Api.Tests/EmployeeCrud.Api.Tests.csproj`
 
-- Trình duyệt → backend: HTTP JSON tới `http://localhost:5081`, phải mở đúng origin `http://localhost:5173` vì CORS so nguyên văn.
-- Backend → PostgreSQL 18 qua Npgsql; chuỗi kết nối từ user-secrets hoặc biến môi trường; backend vẫn khởi động khi PostgreSQL tắt (chỉ lỗi lúc request cần dữ liệu).
-- Backend không gọi dịch vụ ngoài nào khác.
+| Gói | Phiên bản | Dùng để |
+|---|---|---|
+| coverlet.collector | 6.0.4 | thu độ phủ (`--collect:"XPlat Code Coverage"`) |
+| Microsoft.AspNetCore.Mvc.Testing | 10.0.14 | `WebApplicationFactory<Program>` |
+| Microsoft.EntityFrameworkCore.InMemory | 10.0.14 | database giả cho test service |
+| Microsoft.NET.Test.Sdk | 17.14.1 | chạy test |
+| xunit | 2.9.3 | khung test |
+| xunit.runner.visualstudio | 3.1.4 | adapter chạy test |
 
-## Phụ thuộc giữa các project
+Không có lockfile NuGet (`packages.lock.json`).
 
-- `EmployeeCrud.Api.Tests` → `EmployeeCrud.Api` (`ProjectReference`; dùng `Program` qua `public partial class Program`).
-- `frontend/package.json` script `verify` và `coverage` gọi `dotnet` trên `../backend/EmployeeCrud.slnx`: frontend phụ thuộc đường dẫn tương đối tới backend ở cấp công cụ, không ở cấp code.
-- Không có thư viện dùng chung giữa C# và TypeScript; luật kiểm dữ liệu được chép tay hai phía (`TextInput.cs` ↔ `normalizeText.ts`, `EmployeeService.EmailPattern` ↔ `validateEmployee.ts`, độ dài tối đa).
+### Công cụ cục bộ (`dotnet-tools.json`, `rollForward: false`)
 
-## Đồ thị phụ thuộc nội bộ
+| Công cụ | Phiên bản |
+|---|---|
+| dotnet-ef | 10.0.14 |
+| dotnet-reportgenerator-globaltool | 5.5.12 |
 
-### Backend
+## Gói npm (`frontend/package.json`; phiên bản khóa đọc trong `package-lock.json`)
 
-```text
-Program -> DepartmentsController, EmployeesController (qua MapControllers),
-           DepartmentService, EmployeeService (DI), AppDbContext,
-           Platform.Cors, Platform.Errors, Platform.Security, StartupChecks
-DepartmentsController -> IDepartmentService, DepartmentDto, DepartmentRequest
-EmployeesController   -> IEmployeeService, EmployeeDto, EmployeeRequest
-DepartmentService -> AppDbContext, TextInput, DomainError, ErrorTitles, DbConstraintNames, DepartmentConfiguration
-EmployeeService   -> AppDbContext, IDepartmentService, TextInput, DomainError, ErrorTitles, DbConstraintNames, EmployeeConfiguration
-DepartmentRequest -> DepartmentService (hằng câu báo)
-EmployeeRequest   -> EmployeeService (hằng câu báo)
-EmployeeConfiguration -> DbConstraintNames
-AppDbContext -> Department, Employee
-ErrorMapper -> DomainError, ErrorTitles, DbConstraintNames
-ProblemDetailsExceptionHandler -> ErrorMapper, CorsSetup
-StatusCodeProblemWriter, ValidationResponseFactory -> ErrorTitles
-```
+| Gói | Khai | Khóa | Loại |
+|---|---|---|---|
+| react | ^19.3.1 | 19.3.1 | chạy |
+| react-dom | ^19.3.1 | 19.3.1 | chạy |
+| react-router | ^8.5.1 | 8.5.1 (phụ thuộc `@remix-run/route-pattern`, `cookie-es`; yêu cầu Node ≥ 22.22) | chạy |
+| vite | ^8.3.5 | 8.3.5 | dev |
+| @vitejs/plugin-react | ^6.1.2 | 6.1.2 | dev |
+| typescript | ^6.0.3 | 6.0.3 | dev |
+| eslint | ^10.14.0 | 10.14.0 | dev |
+| @eslint/js | ^10.0.1 | — | dev |
+| typescript-eslint | ^8.72.1 | 8.72.1 | dev |
+| eslint-plugin-react-hooks | ^7.1.1 | — | dev |
+| eslint-plugin-react-refresh | ^0.5.7 | — | dev |
+| globals | ^17.14.0 | — | dev |
+| prettier | ^3.9.10 | 3.9.10 | dev |
+| @types/react, @types/react-dom | ^19.3.0 | — | dev |
 
-Không có vòng phụ thuộc giữa file. Ở mức namespace có phụ thuộc hai chiều `Platform.Data` ↔ `Departments`/`Employees` (context biết thực thể, service biết context). `EmployeeService` → `IDepartmentService` là một chiều.
+"—": lần quét này không đọc dòng khóa của gói đó (lockfile chỉ đọc lướt). Chỉ ba gói chạy thật đi vào bản build; không có thư viện UI, icon, gọi HTTP hay quản lý state bên ngoài (icon tự vẽ, gọi API bằng `fetch`, state bằng hook React). README hướng dẫn cài bằng `npm ci`.
 
-### Frontend
+## Phụ thuộc bên ngoài lúc chạy
 
-```text
-main.tsx -> App, styles/*
-App -> AppLayout, pages/*
-pages/employees/*   -> api/employees, api/departments, api/client, components/*, hooks/*, utils/*
-pages/departments/* -> api/departments, api/employees, api/client, components/*, hooks/*, utils/*, useDepartmentDelete
-useDepartmentDelete -> api/departments, components/ConfirmDialog, hooks/useSubmitGuard
-validateEmployee, validateDepartment -> utils/normalizeText, api/client (kiểu FieldErrors)
-api/departments, api/employees -> api/client
-components/ErrorSummary, components/splitErrors -> api/client (kiểu FieldErrors)
-AppLayout, NavMenu, PageHeader, FormField, ErrorSummary, ConfirmDialog, SearchBox, StatusMessage, Toast -> components/Icon
-AppLayout -> components/NavMenu
-```
+| Thành phần | Ai cần | Cấu hình |
+|---|---|---|
+| PostgreSQL 18, database `employee_db` | backend, `dotnet ef` | chuỗi kết nối `ConnectionStrings:Default` (user-secrets) |
+| Trình duyệt hỗ trợ `<dialog>`, `AbortSignal.any`, `\p{…}` trong regex | frontend | — |
+| Backend ở `VITE_API_BASE_URL` | frontend | `frontend/.env.development`, mặc định `http://localhost:5081` trong `client.ts` |
 
-Không có import vòng. `components/` chỉ phụ thuộc kiểu (`import type`) từ `api/client`.
+## Phụ thuộc nội bộ
+
+- `EmployeeCrud.Api.Tests` → `EmployeeCrud.Api` (`ProjectReference`; test dùng `Program`, service, `Platform.*`).
+- Frontend → backend: chỉ qua HTTP; hợp đồng chung nằm ở `api-documentation.md`. Những thứ phải giữ khớp tay giữa hai đầu: luật chuẩn hóa (`TextInput.cs` ↔ `normalizeText.ts`), regex email (`EmployeeService.cs` ↔ `validateEmployee.ts`), độ dài 100/254 (`*Configuration.cs` ↔ `validate*.ts`), câu báo lỗi, cổng 5081/5173 (`launchSettings.json`, `appsettings.json` `Cors`, `.env.development`, `client.ts`, `vite.config.ts`).
+- Script `frontend/package.json` `verify` và `coverage` gọi `dotnet` trên `../backend/EmployeeCrud.slnx`.
+- Database: hai migration theo thứ tự `CreateDepartments` → `CreateEmployees` (khóa ngoại trỏ tới `departments`).

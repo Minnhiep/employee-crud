@@ -28,7 +28,15 @@
     "slug": "kiem-cuoi-crlf",
     "dirName": "261109-kiem-cuoi-crlf",
     "scope": "bugfix",
-    "status": "in-flight",
+    "status": "complete",
     "request": "8fc78f38"
+  },
+  {
+    "uuid": "01a1bfba-c743-7bc5-856e-49bcbca80d9b",
+    "slug": "sua-ra-soat-ban-giao",
+    "dirName": "261109-sua-ra-soat-ban-giao",
+    "scope": "bugfix",
+    "status": "complete",
+    "request": "b37aa35a"
   }
 ]

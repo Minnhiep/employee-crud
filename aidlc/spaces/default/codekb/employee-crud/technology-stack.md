@@ -1,74 +1,45 @@
 # Technology Stack: employee-crud
 
-Phiên bản lấy từ file trong repo (`*.csproj`, `dotnet-tools.json`, `frontend/package.json`, `frontend/package-lock.json`, snapshot migration). Phiên bản phần mềm đã cài trên máy làm bài lấy từ README mục 1 và `project.md`, scan không kiểm lại.
+Danh sách gói đầy đủ kèm phiên bản và chỗ khai báo nằm ở `dependencies.md`; file này tóm tầng công nghệ.
 
 ## Ngôn ngữ
 
-| Ngôn ngữ | Dùng ở | Cấu hình |
-| --- | --- | --- |
-| C# | `backend/` | `net10.0`, `Nullable` enable, `ImplicitUsings` enable |
-| TypeScript | `frontend/src/`, `frontend/vite.config.ts` | `strict`, `noUncheckedIndexedAccess`, `noUnusedLocals/Parameters`, `noFallthroughCasesInSwitch`, `target ES2022`, `moduleResolution bundler`, `jsx react-jsx`, `noEmit` |
-| JavaScript (ESM) | `frontend/eslint.config.js` | `"type": "module"` |
-| SQL (PostgreSQL) | `migrationBuilder.Sql` trong 2 migration, `docs/du-lieu-mau.sql` | – |
-| CSS | `frontend/src/styles/` | CSS thuần, biến `:root` |
+| Ngôn ngữ | Ở đâu | Ghi chú |
+|---|---|---|
+| C# (.NET 10, `net10.0`) | `backend/` | `Nullable` và `ImplicitUsings` bật; dùng primary constructor, record, collection expression, pattern matching |
+| TypeScript 6.0 | `frontend/src/` | `strict`, `noUncheckedIndexedAccess`, `noUnusedLocals/Parameters`, `verbatimModuleSyntax`, JSX `react-jsx`, `.tsx` cho component, `.ts` cho phần còn lại |
+| SQL (PostgreSQL) | `Migrations/` (câu `CREATE UNIQUE INDEX … (lower(...))` viết tay), `docs/du-lieu-mau.sql`, `docs/so-do-database.md` | |
+| CSS | `frontend/src/styles/` | biến CSS, đặt tên BEM, không framework CSS |
 
-## Backend
+## Tầng ứng dụng
 
-| Thành phần | Phiên bản | Vai trò |
-| --- | --- | --- |
-| .NET / ASP.NET Core (`Microsoft.NET.Sdk.Web`) | `net10.0` (máy làm bài: SDK 10.0.403) | Web API kiểu controller |
-| Microsoft.AspNetCore.OpenApi | 10.0.14 | Sinh `/openapi/v1.json` |
-| Swashbuckle.AspNetCore.SwaggerUI | 10.3.1 | Trang `/swagger` (chỉ UI, đặc tả do OpenApi sinh) |
-| Microsoft.EntityFrameworkCore | 10.0.14 | ORM |
-| Microsoft.EntityFrameworkCore.Relational | 10.0.14 | Migration, SQL thô |
-| Microsoft.EntityFrameworkCore.Design | 10.0.14 (PrivateAssets all) | Cho `dotnet ef` |
-| Npgsql.EntityFrameworkCore.PostgreSQL | 10.0.3 | Provider PostgreSQL, `PostgresException`, `PostgresErrorCodes` |
-
-Phiên bản NuGet ghim chính xác (không dùng `10.*`), có comment giải thích trong csproj.
-
-## Kiểm thử backend
-
-| Thành phần | Phiên bản |
-| --- | --- |
-| xunit | 2.9.3 |
-| xunit.runner.visualstudio | 3.1.4 |
-| Microsoft.NET.Test.Sdk | 17.14.1 |
-| Microsoft.AspNetCore.Mvc.Testing | 10.0.14 |
-| Microsoft.EntityFrameworkCore.InMemory | 10.0.14 |
-| coverlet.collector | 6.0.4 |
-
-## Frontend
-
-| Gói | Khai trong `package.json` | Đã khóa trong `package-lock.json` | Vai trò |
-| --- | --- | --- | --- |
-| react, react-dom | ^19.3.1 | 19.3.1 | UI |
-| react-router | ^8.5.1 | 8.5.1 | Định tuyến SPA (`BrowserRouter`) |
-| vite | ^8.3.5 | 8.3.5 | Dev server cổng 5173 `strictPort`, build |
-| @vitejs/plugin-react | ^6.1.2 | 6.1.2 | Plugin React cho Vite |
-| typescript | ^6.0.3 | 6.0.3 | Kiểm kiểu (`tsc -p tsconfig.json`) |
-| eslint | ^10.14.0 | 10.14.0 | Lint (flat config) |
-| typescript-eslint | ^8.72.1 | 8.72.1 | Luật TS |
-| @eslint/js, eslint-plugin-react-hooks, eslint-plugin-react-refresh, globals | ^10.0.1, ^7.1.1, ^0.5.7, ^17.14.0 | (khóa trong lock, không tra từng gói) | Luật JS, Hooks, React Refresh, biến toàn cục trình duyệt |
-| prettier | ^3.9.10 | 3.9.10 | Định dạng, **không có file cấu hình** → mặc định Prettier 3 |
-| @types/react, @types/react-dom | ^19.3.0 | (khóa trong lock) | Kiểu |
-
-`engines.node` = `>=24` (máy làm bài: Node 24.15.0, npm 11.16.0). Cài bằng `npm ci` theo README.
-
-## Database và môi trường chạy
-
-- PostgreSQL 18 (máy làm bài 18.6), cổng 5432, database `employee_db`; ứng dụng có thể dùng tài khoản quyền tối thiểu `employee_app` (README mục 13).
-- Connection string qua `dotnet user-secrets` (`UserSecretsId` trong csproj) hoặc biến môi trường `ConnectionStrings__Default`.
-- Frontend đọc `VITE_API_BASE_URL` từ `frontend/.env.development` khi `npm run dev`; bản build dùng giá trị mặc định trong `client.ts`.
-- Không Docker, không cloud, không CI/CD.
+| Tầng | Công nghệ | Phiên bản (khai trong repo) |
+|---|---|---|
+| Giao diện | React + React DOM, React Router (chế độ khai báo, `BrowserRouter`) | 19.3.1, 8.5.1 |
+| Đóng gói/dev server | Vite + @vitejs/plugin-react | 8.3.5, 6.1.2; cổng 5173 `strictPort` |
+| API | ASP.NET Core Web API (controller), ProblemDetails, OpenAPI (`Microsoft.AspNetCore.OpenApi`), Swagger UI (`Swashbuckle.AspNetCore.SwaggerUI`) | .NET 10, 10.0.14, 10.3.1 |
+| Truy cập dữ liệu | EF Core + Npgsql provider | 10.0.14, 10.0.3 |
+| Database | PostgreSQL | 18 (máy làm bài 18.6, theo README) |
+| Test | xUnit, EF Core InMemory, `WebApplicationFactory` | 2.9.3, 10.0.14, 10.0.14 |
 
 ## Công cụ phát triển
 
-| Công cụ | Phiên bản | Nơi khai | Ghi chú |
-| --- | --- | --- | --- |
-| dotnet-ef | 10.0.14 | `dotnet-tools.json` (gốc repo, `isRoot: true`) | Cài cục bộ bằng `dotnet tool restore` |
-| dotnet-reportgenerator-globaltool (`reportgenerator`) | 5.5.12 | `dotnet-tools.json` | Dùng trong `npm run coverage` |
-| dotnet format | đi kèm SDK | gọi trong `npm run verify` | Theo `.editorconfig` |
-| Git | máy làm bài 2.54.0 | – | Máy này `core.autocrlf=true` ở cấu hình hệ thống; repo không có `.gitattributes` |
-| Postman, pgAdmin 4, file `.http` của VS Code | – | – | Kiểm tay API và database |
+| Công cụ | Vai trò | Cấu hình |
+|---|---|---|
+| .NET SDK | build, test, `dotnet format` | không có `global.json` (SDK không ghim); README ghi máy làm bài 10.0.403 |
+| dotnet-ef 10.0.14 | migration, cài cục bộ | `dotnet-tools.json` |
+| reportgenerator 5.5.12 | in bảng độ phủ | `dotnet-tools.json`, script `npm run coverage` |
+| coverlet.collector 6.0.4 | thu độ phủ | project test |
+| Node.js ≥ 24, npm | chạy frontend | `package.json` `engines`; README ghi 24.15.0, npm 11.16.0 |
+| ESLint 10 + typescript-eslint 8 + react-hooks + react-refresh | lint | `frontend/eslint.config.js`, `--max-warnings 0` |
+| Prettier 3.9 | định dạng TS/CSS/JSON/MD | mặc định, `frontend/.prettierignore` |
+| EditorConfig | định dạng C#, LF | `.editorconfig` |
+| Git | quản lý mã | `.gitattributes` ép LF |
+| Postman, REST Client (`.http`), pgAdmin 4 | kiểm tay | `EmployeeCrud.Api.http`, README |
 
-Chi tiết cấu hình định dạng và đầu dòng: `code-quality-assessment.md`.
+## Môi trường chạy
+
+- Chạy trên máy: backend `http://localhost:5081` (hồ sơ `http`), `https://localhost:7205` (hồ sơ `https`); frontend `http://localhost:5173`; PostgreSQL `localhost:5432`, database `employee_db`.
+- Chuỗi kết nối: khóa `ConnectionStrings:Default` trong user-secrets (`UserSecretsId` trong `EmployeeCrud.Api.csproj`) hoặc biến môi trường `ConnectionStrings__Default`; không nằm trong repo.
+- Môi trường ASP.NET: `Development` khi `dotnet run` (Swagger bật); test dùng `Testing`.
+- Không Docker, không CI/CD, không dịch vụ đám mây (theo `project.md`).

@@ -2,20 +2,21 @@
 
 ## Run Record
 
-- Date: 2026-11-09T07:01:08Z
-- Commit: 9ebab38027119cd8d484b68a5345f080d1ab5229
-- Intent: `kiem-cuoi-crlf` (scope `bugfix`, độ sâu Minimal)
-- Kiểu quét: quét lại toàn bộ repo (`./`), thay thế toàn bộ 9 artifact của knowledge base cũ.
-- Ghi chú: lúc quét, working tree có thay đổi chưa commit ở `backend/EmployeeCrud.Api.Tests/Platform/PlatformWebAppFactory.cs` và `backend/EmployeeCrud.Api.Tests/TestSupport/ThrowingAppDbContext.cs` (chỉ thêm comment); vân tay bên dưới tính theo file trên đĩa, gồm cả hai thay đổi này.
-- Bỏ qua không mở: `.git/`, `bin/` và `obj/` của hai project .NET, `backend/TestResults/`, `backend/EmployeeCrud.Api.Tests/TestResults/`, `frontend/node_modules/`, `frontend/dist/`, `.playwright-mcp/`, phần cài đặt của AI-DLC (`.claude/`, `aidlc/`, khối AI-DLC trong `.gitignore`).
+- Date: 2026-11-10 (bắt đầu quét 2026-11-09)
+- Commit: 3f62f3e05e3fde56dfdefb8ee0339536ed92a3d6
+- Intent: `sua-ra-soat-ban-giao` (scope `bugfix`, độ sâu Minimal)
+- Kiểu quét: quét lại toàn bộ repo (`./`), thay thế toàn bộ 9 artifact của knowledge base cũ (bản quét sáng 09/11 ở commit `9ebab38`).
+- Ghi chú: lúc quét, mã nguồn ngoài `aidlc/` trùng commit trên (thay đổi chưa commit chỉ nằm trong `aidlc/`). Chỉ đọc file; không build, không chạy test hay chương trình nào.
+- Bỏ qua không mở: `.git/`; `bin/` và `obj/` của hai project .NET; `backend/TestResults/`, `backend/EmployeeCrud.Api.Tests/TestResults/`; `frontend/node_modules/`, `frontend/dist/`; `.playwright-mcp/`; phần cài đặt và hồ sơ AI-DLC (`.claude/`, `aidlc/`, khối AI-DLC trong `.gitignore`).
+- Handoff của bước quét: `aidlc/spaces/default/intents/261109-sua-ra-soat-ban-giao/inception/reverse-engineering/developer-scan.md`.
 
 ## Scope of Analysis
 
 ```yaml
 scope_version: 1
 kind: full
-intent: kiem-cuoi-crlf
-fingerprint: 091b4e1eb09166e5e29f710772bab4cf01624454
+intent: sua-ra-soat-ban-giao
+fingerprint: eb5d0b8381e6bd3876f4cf74c5d4d33e07dfa316
 analyzed:
   paths:
     - ./
@@ -47,16 +48,14 @@ analyzed:
     - utils
     - styles
     - repo-tooling
+    - project-docs
 shallow:
   paths:
-    - backend/EmployeeCrud.Api/Migrations/AppDbContextModelSnapshot.cs
-    - backend/EmployeeCrud.Api/Migrations/20261101183552_CreateDepartments.Designer.cs
-    - backend/EmployeeCrud.Api/Migrations/20261102083152_CreateEmployees.Designer.cs
-    - backend/EmployeeCrud.Api.Tests/Departments/DepartmentServiceTests.cs
-    - backend/EmployeeCrud.Api.Tests/Employees/EmployeeServiceTests.cs
-    - frontend/src/styles/components.css
-    - frontend/public/favicon.svg
-    - docs/danh-sach-api.md
-    - docs/du-lieu-mau.sql
-    - docs/tim-hieu-technical-stack/
+    - frontend/package-lock.json
+    - docs/tim-hieu-technical-stack/01-react.md
+    - docs/tim-hieu-technical-stack/02-api-json.md
+    - docs/tim-hieu-technical-stack/03-aspnet-core.md
+    - docs/tim-hieu-technical-stack/04-postgresql.md
+    - docs/tim-hieu-technical-stack/05-git.md
+    - docs/tim-hieu-technical-stack/06-cai-dat-moi-truong.md
 ```
