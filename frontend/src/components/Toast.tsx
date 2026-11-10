@@ -14,14 +14,30 @@ function moveFocusOutOf(container: HTMLElement | null) {
   }
 }
 
-/** Dữ liệu trang khác gửi kèm khi chuyển về trang danh sách. */
-export type ToastLocationState = { message?: string } | null;
+/**
+ * Lấy lời báo trang trước gửi kèm (state.message). Chỉ nhận chuỗi: state nằm trong lịch sử trình duyệt nên có thể
+ * là dữ liệu lạ (ví dụ một object); đưa thẳng object vào JSX thì React báo lỗi và cả trang trắng.
+ */
+function messageFrom(state: unknown): string | undefined {
+  if (
+    typeof state === "object" &&
+    state !== null &&
+    "message" in state &&
+    typeof state.message === "string"
+  ) {
+    return state.message;
+  }
+  return undefined;
+}
 
 /**
  * Thông báo thành công nổi ở góc dưới bên phải, tự ẩn sau 5 giây, có nút đóng.
  * Đặt ở góc dưới để không che nút chính ở dải đầu trang (ví dụ "Thêm phòng ban").
  *
- * Cách dùng ở trang khác:
+ * Đặt MỘT lần trong khung trang chung (AppLayout), không đặt trong từng trang: vùng role="status" nhờ vậy đã có
+ * sẵn trước khi chữ được điền, trình đọc màn hình mới đọc (vùng sinh ra cùng lúc với chữ thường bị bỏ qua).
+ *
+ * Cách dùng ở trang khác (chỉ cần gửi lời báo kèm khi chuyển trang):
  *   navigate('/employees', { state: { message: 'Đã thêm nhân viên' } })
  * Sau khi xóa ngay trên trang danh sách:
  *   1. gọi lại hàm tải danh sách để dòng vừa xóa biến mất;
@@ -32,7 +48,7 @@ export function Toast() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const incoming = (location.state as ToastLocationState)?.message;
+  const incoming = messageFrom(location.state);
   const [message, setMessage] = useState(incoming ?? "");
   const [lastIncoming, setLastIncoming] = useState(incoming);
   const toastRef = useRef<HTMLDivElement>(null);

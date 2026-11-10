@@ -22,7 +22,10 @@ import { usePageTitle } from "../../hooks/usePageTitle";
 import { useSubmitGuard } from "../../hooks/useSubmitGuard";
 import { normalizeText } from "../../utils/normalizeText";
 import { parseId } from "../../utils/parseId";
-import { validateDepartment } from "./validateDepartment";
+import {
+  DEPARTMENT_NAME_MAX_LENGTH,
+  validateDepartment,
+} from "./validateDepartment";
 
 const FIELD_NAMES = ["name"] as const;
 const FIELD_LABELS = { name: "Tên phòng ban" };
@@ -78,10 +81,22 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
   const title =
     loadStatus === "not-found" ? "Không tìm thấy phòng ban" : baseTitle;
   const headingRef = usePageTitle(title);
+  // Tăng số này để đưa focus về tiêu đề SAU khi trang đã vẽ lại (ví dụ sau khi bấm "Thử lại").
+  const [headingFocusRequest, setHeadingFocusRequest] = useState(0);
+
+  useEffect(() => {
+    if (headingFocusRequest > 0) {
+      headingRef.current?.focus();
+    }
+  }, [headingFocusRequest, headingRef]);
 
   const [touched, setTouched] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [summaryMessages, setSummaryMessages] = useState<string[]>([]);
+  // Đã bấm Lưu ít nhất một lần. Khung tóm tắt lỗi ("Chưa lưu được…", role="alert") chỉ hiện từ lúc đó: trước khi
+  // bấm Lưu, câu "Chưa lưu được" là sai sự thật, và trình đọc màn hình bị ngắt mỗi lần rời ô trống.
+  // Lỗi khi rời ô chỉ hiện ngay dưới ô (theo mẫu "error summary" của GOV.UK).
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const summaryRef = useRef<HTMLDivElement>(null);
   // Tăng số này để đưa focus vào khung tóm tắt lỗi SAU khi khung đã được vẽ.
@@ -130,9 +145,12 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
     return () => controller.abort();
   }, [isEdit, hasValidId, id, reloadKey]);
 
+  // Nút "Thử lại" biến mất ngay khi bấm (trang chuyển sang "đang tải"), focus sẽ rơi về body:
+  // đưa focus về tiêu đề để người dùng bàn phím không mất vị trí.
   function retryLoad() {
     setLoadStatus("loading");
     setReloadKey((key) => key + 1);
+    setHeadingFocusRequest((request) => request + 1);
   }
 
   function handleNameChange(value: string) {
@@ -158,10 +176,11 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
     if (isAborted(error)) {
       return;
     }
+    setSubmitAttempted(true);
     if (!(error instanceof ApiError)) {
       setSummaryMessages([GENERIC_MESSAGE]);
     } else if (error.status === 404) {
-      setSummaryMessages(["Không tìm thấy phòng ban, có thể đã bị xóa"]);
+      setSummaryMessages(["Không tìm thấy phòng ban, có thể đã bị xóa."]);
     } else if (error.kind === "client") {
       // 400/409: lỗi của ô tên hiện cạnh ô, lỗi khác (hoặc chỉ có detail) hiện ở khung tóm tắt.
       const { fieldErrors: apiFieldErrors, otherMessages } = splitErrors(
@@ -180,6 +199,11 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Nút Lưu khóa bằng aria-disabled nên vẫn bấm được (Enter trong ô cũng gửi form): tự bỏ qua khi đang lưu.
+    if (isSubmitting) {
+      return;
+    }
+    setSubmitAttempted(true);
     setTouched(true);
     setSummaryMessages([]);
 
@@ -233,7 +257,7 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
         title={title}
         headingRef={headingRef}
         breadcrumbs={[
-          { label: "Nhân sự" },
+          { label: "Trang chủ", to: "/", disabled: isSubmitting },
           { label: "Phòng ban", to: LIST_PATH, disabled: isSubmitting },
           { label: isEdit ? "Sửa" : "Thêm mới" },
         ]}
@@ -283,12 +307,14 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
             </div>
 
             <div className="panel__body form">
-              <ErrorSummary
-                ref={summaryRef}
-                fieldErrors={fieldErrors}
-                fieldLabels={FIELD_LABELS}
-                messages={summaryMessages}
-              />
+              {submitAttempted && (
+                <ErrorSummary
+                  ref={summaryRef}
+                  fieldErrors={fieldErrors}
+                  fieldLabels={FIELD_LABELS}
+                  messages={summaryMessages}
+                />
+              )}
 
               {/* Cùng lưới hai cột với form nhân viên: ô chỉ rộng một cột, hai form trông đồng bộ. */}
               <div className="form__grid">
@@ -296,7 +322,7 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
                   id="name"
                   label="Tên phòng ban"
                   required
-                  hint="Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT. Tối đa 100 ký tự, không trùng với phòng ban khác."
+                  hint={`Viết hoa chữ cái đầu, ví dụ: Kế toán, Nhân sự, IT. Tối đa ${DEPARTMENT_NAME_MAX_LENGTH} ký tự, không trùng với phòng ban khác.`}
                   errors={fieldErrors.name}
                 >
                   {(controlProps) => (
@@ -337,7 +363,10 @@ export function DepartmentFormPage({ mode }: DepartmentFormPageProps) {
               <button
                 type="submit"
                 className="btn btn--primary"
-                disabled={isSubmitting}
+                // Đang lưu thì khóa để bấm đúp chỉ gửi một lần. Dùng aria-disabled như nút Hủy, không dùng disabled:
+                // nút disabled bị trình duyệt lấy mất focus, người dùng bàn phím và trình đọc màn hình mất vị trí.
+                // Vì nút vẫn bấm được về mặt kỹ thuật, handleSubmit tự bỏ qua khi đang lưu.
+                aria-disabled={isSubmitting}
                 data-testid="department-save"
               >
                 {isSubmitting ? "Đang lưu…" : "Lưu phòng ban"}

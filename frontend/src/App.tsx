@@ -51,7 +51,11 @@ export default function App() {
           />
           <Route path="employees/:id/edit" element={<EmployeeEditRoute />} />
           <Route path="departments" element={<DepartmentsPage />} />
-          {/* key khác nhau: đi từ form sửa sang form thêm thì form được tạo mới, không giữ dữ liệu cũ. */}
+          {/*
+            Đi từ form sửa sang form thêm thì form luôn được tạo mới, không giữ dữ liệu cũ: hai trang là hai route
+            khác nhau (form sửa còn được bọc trong DepartmentEditRoute) nên React không dùng lại component cũ.
+            key="create" chỉ đặt tên cho dễ đọc, cặp với key "edit-<id>" của form sửa; không phải thứ làm form mới.
+          */}
           <Route
             path="departments/new"
             element={<DepartmentFormPage key="create" mode="create" />}

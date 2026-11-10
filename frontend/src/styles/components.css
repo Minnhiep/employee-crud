@@ -695,9 +695,13 @@
   border-radius: var(--radius-md);
 }
 
-/* Vùng thông báo luôn có trong trang; khi rỗng thì không chiếm chỗ. */
-.alert:empty {
-  display: none;
+/*
+ * Vùng thông báo (role="status") luôn có trong trang, kể cả lúc rỗng, để trình đọc màn hình đọc chữ khi chữ xuất hiện.
+ * Không dùng display:none khi rỗng: phần tử bị ẩn hẳn thì bị loại khỏi cây trợ năng. Lúc rỗng chỉ đưa nó ra khỏi
+ * dòng chảy (position: absolute) để không chiếm một ô của lưới .page-body, tức không sinh thêm khoảng cách.
+ */
+.live-region:empty {
+  position: absolute;
 }
 
 .alert--error {

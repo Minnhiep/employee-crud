@@ -96,13 +96,17 @@ export function Icon({ name, size = 1.25, className }: IconProps) {
   );
 }
 
-/** Dấu logo của ứng dụng ở thanh bên: khối vuông bo góc có hình hai người. */
+/**
+ * Dấu logo của ứng dụng ở thanh bên: khối vuông bo góc có hình hai người.
+ * Cỡ 1.75rem, cùng số với .brand-mark trong components.css (CSS quyết định cỡ hiển thị; thuộc tính ở đây chỉ để
+ * logo đúng cỡ ngay cả khi CSS chưa tải xong).
+ */
 export function BrandMark() {
   return (
     <svg
       className="brand-mark"
-      width="2rem"
-      height="2rem"
+      width="1.75rem"
+      height="1.75rem"
       viewBox="0 0 32 32"
       aria-hidden="true"
       focusable="false"

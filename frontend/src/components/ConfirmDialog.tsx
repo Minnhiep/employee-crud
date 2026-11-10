@@ -83,6 +83,21 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
           onCancel();
         }
       }}
+      onClose={() => {
+        // Chrome chỉ cho chặn Esc một lần sau mỗi lần người dùng bấm chuột hay gõ phím; nhấn Esc thêm lần nữa thì
+        // trình duyệt đóng hộp dù đã gọi preventDefault ở trên (đã thấy khi chạy thật). Sự kiện "close" báo việc đó.
+        // Hộp được đóng đúng cách (open đã là false) thì không làm gì.
+        if (!open) {
+          return;
+        }
+        if (busy) {
+          // Đang xóa: mở lại hộp để người dùng vẫn thấy "Đang xóa…" cho tới khi có kết quả.
+          dialogRef.current?.showModal();
+        } else {
+          // Không bận: coi như bấm Hủy, để state của trang cha khớp với hộp đã đóng.
+          onCancel();
+        }
+      }}
     >
       <div className="dialog__body">
         <span

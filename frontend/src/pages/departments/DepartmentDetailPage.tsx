@@ -10,7 +10,6 @@ import type { DataTableColumn } from "../../components/DataTable";
 import { Icon } from "../../components/Icon";
 import { PageHeader } from "../../components/PageHeader";
 import { StatusMessage } from "../../components/StatusMessage";
-import { Toast } from "../../components/Toast";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { parseId } from "../../utils/parseId";
 import { useDepartmentDelete } from "./useDepartmentDelete";
@@ -117,10 +116,18 @@ export function DepartmentDetailPage() {
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
+  // Nút "Thử lại" biến mất ngay khi trang chuyển sang "đang tải": đưa focus về tiêu đề, không để rơi về body.
+  function retry() {
+    reload();
+    setHeadingFocusRequest((request) => request + 1);
+  }
+
   const { requestDelete, isSubmitting, dialogs } = useDepartmentDelete({
     onDeleted: (deleted) => {
       // Phòng đã mất nên trang này không còn gì để hiện: về danh sách phòng ban kèm lời báo.
+      // replace: thay mục lịch sử của trang chi tiết, để bấm Back không quay về trang "Không tìm thấy phòng ban".
       void navigate("/departments", {
+        replace: true,
         state: { message: `Đã xóa phòng ban "${deleted.name}"` },
       });
     },
@@ -148,7 +155,7 @@ export function DepartmentDetailPage() {
         title={title}
         headingRef={headingRef}
         breadcrumbs={[
-          { label: "Nhân sự" },
+          { label: "Trang chủ", to: "/" },
           { label: "Phòng ban", to: "/departments" },
           { label: title },
         ]}
@@ -188,9 +195,6 @@ export function DepartmentDetailPage() {
         }
       />
 
-      {/* Lời báo "Đã thêm / Đã cập nhật…" khi form nhân viên hoặc form sửa phòng ban quay về trang này. */}
-      <Toast />
-
       <div className="page-body">
         {actionError && (
           <div className="alert alert--error" role="alert">
@@ -201,13 +205,18 @@ export function DepartmentDetailPage() {
           </div>
         )}
 
+        {/* Cùng kiểu với trang "không tìm thấy" của hai form: lời báo lỗi, nút quay về có mũi tên. */}
         {status === "not-found" && (
           <section className="panel">
             <StatusMessage
-              kind="empty"
+              kind="error"
               message="Không tìm thấy phòng ban"
-              description="Phòng ban này không tồn tại hoặc đã bị xóa."
-              action={{ label: "Về danh sách phòng ban", to: "/departments" }}
+              description="Phòng ban có thể đã bị xóa, hoặc đường dẫn không đúng."
+              action={{
+                label: "Về danh sách phòng ban",
+                to: "/departments",
+                icon: "arrowLeft",
+              }}
             />
           </section>
         )}
@@ -240,7 +249,7 @@ export function DepartmentDetailPage() {
                   kind="error"
                   message="Không tải được phòng ban"
                   description={current?.error}
-                  action={{ label: "Thử lại", onClick: reload }}
+                  action={{ label: "Thử lại", onClick: retry }}
                 />
               )}
               {status === "ready" && employees.length === 0 && (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { deleteDepartment } from "../../api/departments";
@@ -30,6 +30,17 @@ export function useDepartmentDelete({ onDeleted, onError }: Options): {
 
   const hasEmployees = pending !== null && pending.employeeCount > 0;
 
+  // Đánh dấu trang dùng hook này (danh sách hoặc chi tiết phòng ban) đã bị rời (nút Back, menu), để lời gọi xóa
+  // đang chờ biết không được gọi onDeleted/onError nữa: hai hàm đó chuyển trang và báo lỗi trên trang cũ.
+  // Cùng cách với form: đặt lại false khi gắn vì StrictMode gắn, gỡ rồi gắn lại một lần lúc phát triển.
+  const hasLeftPageRef = useRef(false);
+  useEffect(() => {
+    hasLeftPageRef.current = false;
+    return () => {
+      hasLeftPageRef.current = true;
+    };
+  }, []);
+
   async function confirmDelete() {
     const department = pending;
     if (!department || isSubmitting) {
@@ -38,9 +49,18 @@ export function useDepartmentDelete({ onDeleted, onError }: Options): {
     await run(async () => {
       try {
         await deleteDepartment(department.id);
+        // Đã rời trang trong lúc chờ: phòng ban đã bị xóa, không kéo người dùng về danh sách phòng ban.
+        if (hasLeftPageRef.current) {
+          return;
+        }
         setPending(null);
         onDeleted(department);
       } catch (error) {
+        // Trang không còn trên màn hình để hiện lỗi: chỉ ghi lại, như form lưu lỗi sau khi đã rời form.
+        if (hasLeftPageRef.current) {
+          console.error("Không xóa được phòng ban sau khi đã rời trang", error);
+          return;
+        }
         setPending(null);
         onError(department, error);
       }

@@ -1,7 +1,7 @@
 import type { FieldErrors } from "../../api/client";
 import { normalizeText } from "../../utils/normalizeText";
 
-/** Phải khớp DepartmentConfiguration.NameMaxLength ở backend. */
+/** Phải khớp DepartmentConfiguration.NameMaxLength ở backend. Xuất ra vì form dùng trong dòng gợi ý dưới ô tên. */
 export const DEPARTMENT_NAME_MAX_LENGTH = 100;
 
 /**
@@ -19,7 +19,9 @@ export function validateDepartment(name: string): FieldErrors {
   }
   // Đếm trên tên đã chuẩn hóa, đúng thứ API sẽ lưu (khoảng trắng thừa không bị tính).
   if (normalized.length > DEPARTMENT_NAME_MAX_LENGTH) {
-    return { name: ["Tên phòng ban tối đa 100 ký tự"] };
+    return {
+      name: [`Tên phòng ban tối đa ${DEPARTMENT_NAME_MAX_LENGTH} ký tự`],
+    };
   }
   return {};
 }

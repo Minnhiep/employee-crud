@@ -12,7 +12,8 @@ type SearchBoxProps = {
 };
 
 /**
- * Form tìm kiếm dùng chung. Gõ chưa làm gì; chỉ tìm khi bấm "Tìm" hoặc Enter.
+ * Ô tìm nhân viên theo họ tên hoặc email, chỉ dùng ở trang danh sách nhân viên (nhãn, chữ mẫu và data-testid đều
+ * dành cho nhân viên). Gõ chưa làm gì; chỉ tìm khi bấm "Tìm" hoặc Enter.
  *
  * Ô không bị khóa khi trang đang tải và không bị tạo lại sau mỗi lần tìm, để focus bàn phím ở lại trong ô
  * (WCAG 2.4.3). Bấm Tìm lần nữa lúc đang tải vẫn an toàn: trang hủy lời gọi cũ trước khi gọi lời mới.

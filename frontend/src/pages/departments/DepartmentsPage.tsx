@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ApiError, isAborted, messageOf } from "../../api/client";
 import { getDepartments } from "../../api/departments";
@@ -8,7 +8,6 @@ import type { DataTableColumn } from "../../components/DataTable";
 import { Icon } from "../../components/Icon";
 import { PageHeader } from "../../components/PageHeader";
 import { StatusMessage } from "../../components/StatusMessage";
-import { Toast } from "../../components/Toast";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { useDepartmentDelete } from "./useDepartmentDelete";
 
@@ -69,6 +68,14 @@ export function DepartmentsPage() {
     }
   }, [headingFocusRequest, headingRef]);
 
+  // Địa chỉ MỚI NHẤT của trang, cho lời gọi xóa đang chờ API (cùng cách với trang nhân viên): onDeleted thuộc lần
+  // vẽ lúc bấm Xóa, nếu trong lúc chờ người dùng bấm Back mà vẫn ở trang này thì `location` trong đó đã cũ.
+  // Ghi ref trong effect, sau mỗi lần vẽ: React không cho ghi ref trong lúc vẽ.
+  const latestLocationRef = useRef(location);
+  useEffect(() => {
+    latestLocationRef.current = location;
+  }, [location]);
+
   // Tải khi mở trang và mỗi khi reloadKey đổi. Lời gọi cũ bị hủy khi có lời gọi mới hoặc rời trang,
   // nên kết quả cũ không bao giờ đè lên kết quả mới. State chỉ được đặt khi API đã trả lời.
   useEffect(() => {
@@ -100,12 +107,19 @@ export function DepartmentsPage() {
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
+  // Nút "Thử lại" biến mất ngay khi trang chuyển sang "đang tải": đưa focus về tiêu đề, không để rơi về body.
+  function retry() {
+    reload();
+    setHeadingFocusRequest((request) => request + 1);
+  }
+
   const { requestDelete, isSubmitting, dialogs } = useDepartmentDelete({
     onDeleted: (department) => {
       // Gọi lại hàm tải danh sách để dòng vừa xóa biến mất ngay, không cần F5.
       reload();
-      // navigate chỉ để mang lời báo cho Toast; việc tải danh sách không phụ thuộc vào nó.
-      void navigate(location.pathname + location.search, {
+      // navigate chỉ để mang lời báo cho Toast, thay đúng địa chỉ đang mở; việc tải danh sách không phụ thuộc vào nó.
+      const latest = latestLocationRef.current;
+      void navigate(latest.pathname + latest.search, {
         replace: true,
         state: { message: `Đã xóa phòng ban "${department.name}"` },
       });
@@ -113,17 +127,17 @@ export function DepartmentsPage() {
     },
     onError: (_department, error) => {
       // 404 (đã bị xóa ở nơi khác) và 409 (có người vừa được thêm vào phòng) đều làm số trên bảng cũ:
-      // tải lại để bảng đúng với database.
+      // tải lại để bảng đúng với database. Bảng tải lại nên nút Xóa không còn để nhận focus:
+      // đưa focus về tiêu đề như khi xóa thành công.
       if (
         error instanceof ApiError &&
         (error.status === 404 || error.status === 409)
       ) {
         reload();
+        setHeadingFocusRequest((request) => request + 1);
       }
       if (error instanceof ApiError && error.status === 404) {
         setActionError("Phòng ban này không còn, danh sách đã được tải lại.");
-        // Bảng tải lại nên nút Xóa không còn để nhận focus: đưa focus về tiêu đề như khi xóa thành công.
-        setHeadingFocusRequest((request) => request + 1);
       } else {
         // 409 hoặc lỗi mạng: hiện lời API trả về ("…còn N nhân viên") hoặc câu chung.
         setActionError(messageOf(error));
@@ -136,7 +150,7 @@ export function DepartmentsPage() {
       <PageHeader
         title={TITLE}
         headingRef={headingRef}
-        breadcrumbs={[{ label: "Nhân sự" }, { label: TITLE }]}
+        breadcrumbs={[{ label: "Trang chủ", to: "/" }, { label: TITLE }]}
         description="Danh mục phòng ban và số nhân viên của từng phòng."
         actions={
           <Link
@@ -149,8 +163,6 @@ export function DepartmentsPage() {
           </Link>
         }
       />
-
-      <Toast />
 
       <div className="page-body">
         {actionError && (
@@ -181,7 +193,7 @@ export function DepartmentsPage() {
                 kind="error"
                 message="Không tải được danh sách phòng ban"
                 description={loadError}
-                action={{ label: "Thử lại", onClick: reload }}
+                action={{ label: "Thử lại", onClick: retry }}
               />
             )}
             {status === "ready" && departments.length === 0 && (

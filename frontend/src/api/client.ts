@@ -14,7 +14,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5081";
 
 const TIMEOUT_MS = 10_000;
 // Dùng khi không nói chuyện được với máy chủ: mất mạng, sai cổng, CORS chặn, hoặc lời gọi đọc quá 10 giây.
-const NETWORK_MESSAGE = "Không kết nối được máy chủ, vui lòng thử lại";
+const NETWORK_MESSAGE = "Không kết nối được máy chủ, vui lòng thử lại.";
 // Lời gọi ghi quá 10 giây có thể đã tới máy chủ và đã lưu: thử lại ngay dễ gặp 409 hoặc 404 khó hiểu.
 const SAVE_TIMEOUT_MESSAGE =
   "Máy chủ phản hồi quá lâu, chưa rõ đã lưu hay chưa. Hãy kiểm tra lại danh sách trước khi thử lại.";

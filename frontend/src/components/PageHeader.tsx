@@ -17,7 +17,10 @@ type PageHeaderProps = {
    * (ví dụ sau khi xóa một dòng, dòng đó biến mất cùng nút đang được focus).
    */
   headingRef: Ref<HTMLHeadingElement>;
-  /** Đường dẫn trang, ví dụ [{ label: "Nhân sự" }, { label: "Nhân viên", to: "/employees" }, { label: "Thêm mới" }]. */
+  /**
+   * Đường dẫn trang, ví dụ [{ label: "Trang chủ", to: "/" }, { label: "Nhân viên", to: "/employees" },
+   * { label: "Thêm mới" }]. Mục gốc luôn là "Trang chủ" bấm được, dẫn về trang đầu.
+   */
   breadcrumbs: Breadcrumb[];
   /** Một dòng giải thích trang dùng để làm gì. */
   description?: string;
@@ -45,7 +48,7 @@ export function PageHeader({
             {breadcrumbs.map((item, index) => {
               const isLast = index === breadcrumbs.length - 1;
               return (
-                // Ghép vị trí vào key: đường dẫn có thể trùng chữ, ví dụ "Nhân sự > Phòng ban > Nhân sự".
+                // Ghép vị trí vào key: hai mục có thể trùng chữ, ví dụ trang chi tiết của phòng tên "Phòng ban".
                 <Fragment key={`${index}-${item.label}`}>
                   <li className="breadcrumb__item">
                     {item.to && !isLast ? (

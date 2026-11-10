@@ -12,7 +12,6 @@ import { Icon } from "../../components/Icon";
 import { PageHeader } from "../../components/PageHeader";
 import { SearchBox } from "../../components/SearchBox";
 import { StatusMessage } from "../../components/StatusMessage";
-import { Toast } from "../../components/Toast";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { useSubmitGuard } from "../../hooks/useSubmitGuard";
 import { normalizeText } from "../../utils/normalizeText";
@@ -32,6 +31,13 @@ type DepartmentsLoad =
   | { status: "loading" }
   | { status: "ready"; departments: Department[] }
   | { status: "error" };
+
+/**
+ * Câu báo "phòng ban không còn": đang chờ trang tự bỏ tham số khỏi địa chỉ, hoặc đã hiện và gắn với một lần
+ * điều hướng (location.key của lần đó).
+ */
+type StaleNotice =
+  { phase: "removing" } | { phase: "shown"; locationKey: string };
 
 /** Chữ cái đầu của từ đầu và từ cuối trong họ tên, ví dụ "Đỗ Văn An" → "ĐA"; tên một từ thì một chữ. */
 function initialsOf(fullName: string): string {
@@ -129,13 +135,31 @@ export function EmployeesPage() {
     (departmentId !== null &&
       departmentsLoad.status === "ready" &&
       !selectedDepartment);
-  // Câu báo suy ra khi vẽ, không giữ state riêng: hiện trong lúc phát hiện, và sau khi trang đã bỏ tham số
-  // (lần điều hướng đó mang cờ staleDepartment). Người dùng lọc hoặc tìm lại là điều hướng mới, câu báo tự ẩn.
-  const showStaleNotice =
-    isStaleDepartment ||
-    (typeof location.state === "object" &&
-      location.state !== null &&
-      "staleDepartment" in location.state);
+
+  // Câu báo "phòng ban không còn" gắn với ĐÚNG MỘT lần điều hướng. Nhận ra lần điều hướng bằng location.key, không
+  // bằng địa chỉ: mỗi lần điều hướng (bấm menu, lọc, tìm, Back) có khóa mới, kể cả khi địa chỉ giống hệt (bấm lại
+  // mục "Nhân viên" khi đang ở /employees). So địa chỉ thì không phân biệt được trường hợp đó.
+  // 1. Địa chỉ còn phòng không hợp lệ: hiện câu báo, chờ trang tự bỏ tham số (chưa biết khóa).
+  // 2. Lần vẽ đầu tiên khi tham số đã mất: ghi khóa lúc đó. Những lần trang tự thay địa chỉ ngay khi vào (bỏ tham
+  //    số; Toast xóa lời báo khỏi lịch sử) đều đã xong trước lần vẽ này, nên câu báo không mất trước khi kịp đọc.
+  // 3. Khóa đổi sau đó (người dùng điều hướng): ẩn và quên luôn, nên Back về địa chỉ cũ cũng không hiện lại.
+  // Bấm Tìm lại đúng chuỗi cũ chỉ tải lại, không điều hướng, nên câu báo vẫn giữ. Giữ trong state của trang, không
+  // gửi vào lịch sử trình duyệt: F5 tạo trang mới nên câu báo không hiện lại.
+  // Đổi state ngay trong lúc vẽ (cách React khuyên cho việc đổi state theo dữ liệu đang có, thay vì effect).
+  const [staleNotice, setStaleNotice] = useState<StaleNotice | null>(null);
+  if (isStaleDepartment) {
+    if (staleNotice?.phase !== "removing") {
+      setStaleNotice({ phase: "removing" });
+    }
+  } else if (staleNotice?.phase === "removing") {
+    setStaleNotice({ phase: "shown", locationKey: location.key });
+  } else if (
+    staleNotice?.phase === "shown" &&
+    staleNotice.locationKey !== location.key
+  ) {
+    setStaleNotice(null);
+  }
+  const showStaleNotice = isStaleDepartment || staleNotice !== null;
 
   // Tăng số này để tải lại (bấm "Thử lại", sau khi xóa) mà vẫn giữ chuỗi tìm và phòng lọc hiện tại.
   const [reloadKey, setReloadKey] = useState(0);
@@ -154,6 +178,25 @@ export function EmployeesPage() {
     }
   }, [headingFocusRequest, headingRef]);
 
+  // Đánh dấu trang đã bị rời (nút Back, menu), để lời gọi xóa đang chờ biết không được chuyển trang nữa.
+  // Cùng cách với form: đặt lại false khi gắn vì StrictMode gắn, gỡ rồi gắn lại trang một lần lúc phát triển.
+  const hasLeftPageRef = useRef(false);
+  useEffect(() => {
+    hasLeftPageRef.current = false;
+    return () => {
+      hasLeftPageRef.current = true;
+    };
+  }, []);
+
+  // Địa chỉ MỚI NHẤT của trang, cho lời gọi xóa đang chờ API. confirmDelete thuộc lần vẽ lúc bấm Xóa nên `location`
+  // trong đó là địa chỉ của lúc ấy. Nếu trong lúc chờ người dùng bấm Back về chuỗi tìm khác (vẫn trang này, trang
+  // không bị gỡ), dùng địa chỉ cũ sẽ kéo họ về chỗ cũ. Ghi ref trong effect, sau mỗi lần vẽ: React không cho ghi ref
+  // trong lúc vẽ.
+  const latestLocationRef = useRef(location);
+  useEffect(() => {
+    latestLocationRef.current = location;
+  }, [location]);
+
   useEffect(() => {
     const controller = new AbortController();
     getDepartments({ signal: controller.signal }).then(
@@ -167,8 +210,8 @@ export function EmployeesPage() {
     return () => controller.abort();
   }, [departmentsReloadKey]);
 
-  // Phòng không còn: bỏ tham số khỏi địa chỉ (thay thế, không thêm mục lịch sử) để danh sách hiện tất cả,
-  // gửi kèm cờ để câu báo vẫn hiện sau khi tham số đã mất.
+  // Phòng không còn: bỏ tham số khỏi địa chỉ (thay thế, không thêm mục lịch sử) để danh sách hiện tất cả.
+  // Câu báo vẫn hiện sau khi tham số đã mất nhờ staleNotice ở trên.
   useEffect(() => {
     if (!isStaleDepartment) {
       return;
@@ -179,7 +222,7 @@ export function EmployeesPage() {
         next.delete("departmentId");
         return next;
       },
-      { replace: true, state: { staleDepartment: true } },
+      { replace: true },
     );
   }, [isStaleDepartment, setSearchParams]);
 
@@ -249,9 +292,17 @@ export function EmployeesPage() {
     searchInputRef.current?.focus();
   }
 
+  // Hai nút "Thử lại" biến mất ngay khi trang chuyển sang "đang tải", focus sẽ rơi về body (người dùng bàn phím
+  // mất vị trí): đưa focus về tiêu đề, như sau khi xóa.
+  function retryEmployees() {
+    reload();
+    setHeadingFocusRequest((request) => request + 1);
+  }
+
   function retryDepartments() {
     setDepartmentsLoad({ status: "loading" });
     setDepartmentsReloadKey((key) => key + 1);
+    setHeadingFocusRequest((request) => request + 1);
   }
 
   // Ô lọc bị khóa khi tải phòng ban lỗi nên cần lối thoát riêng. Giữ chuỗi tìm, khác "Xóa bộ lọc" xóa cả hai.
@@ -270,16 +321,26 @@ export function EmployeesPage() {
     await run(async () => {
       try {
         await deleteEmployee(employee.id);
+        // Đã rời trang (nút Back) trong lúc chờ: nhân viên đã bị xóa, không kéo người dùng về trang danh sách.
+        if (hasLeftPageRef.current) {
+          return;
+        }
         setPendingDelete(null);
         // Tải lại theo chuỗi tìm và phòng lọc hiện tại để dòng vừa xóa biến mất ngay, không cần F5.
         reload();
-        // navigate chỉ để mang lời báo cho Toast; giữ nguyên ?search= và ?departmentId= trên địa chỉ.
-        void navigate(location.pathname + location.search, {
+        // navigate chỉ để mang lời báo cho Toast; thay đúng địa chỉ đang mở (giữ ?search=, ?departmentId= của nó).
+        const latest = latestLocationRef.current;
+        void navigate(latest.pathname + latest.search, {
           replace: true,
           state: { message: `Đã xóa nhân viên "${employee.fullName}"` },
         });
         setHeadingFocusRequest((request) => request + 1);
       } catch (error) {
+        // Trang không còn trên màn hình để hiện lỗi: chỉ ghi lại, như form lưu lỗi sau khi đã rời form.
+        if (hasLeftPageRef.current) {
+          console.error("Không xóa được nhân viên sau khi đã rời trang", error);
+          return;
+        }
         setPendingDelete(null);
         if (error instanceof ApiError && error.status === 404) {
           // Đã bị xóa ở nơi khác: tải lại để bảng đúng với database.
@@ -323,7 +384,7 @@ export function EmployeesPage() {
       <PageHeader
         title={TITLE}
         headingRef={headingRef}
-        breadcrumbs={[{ label: "Nhân sự" }, { label: TITLE }]}
+        breadcrumbs={[{ label: "Trang chủ", to: "/" }, { label: TITLE }]}
         description="Danh sách nhân viên, tìm theo họ tên hoặc email, lọc theo phòng ban."
         actions={
           <Link
@@ -343,8 +404,6 @@ export function EmployeesPage() {
         }
       />
 
-      <Toast />
-
       <div className="page-body">
         {actionError && (
           <div className="alert alert--error" role="alert">
@@ -355,21 +414,26 @@ export function EmployeesPage() {
           </div>
         )}
 
-        {/* Vùng luôn có trong trang để trình đọc màn hình đọc câu báo khi nó xuất hiện. */}
+        {/*
+          Vùng role="status" luôn có trong trang VÀ luôn được vẽ, để trình đọc màn hình đọc câu báo khi nó xuất hiện.
+          Khung .alert đặt ở phần tử con, không đặt ở vùng: .alert rỗng bị ẩn hẳn (display:none), khi đó vùng bị loại
+          khỏi cây trợ năng và ra đời cùng lúc với chữ (dễ bị bỏ qua). Lúc rỗng, .live-region không chiếm chỗ trong
+          lưới của trang (xem components.css).
+        */}
         <div
-          className="alert alert--info"
+          className="live-region"
           role="status"
           data-testid="employees-stale-department"
         >
           {showStaleNotice && (
-            <>
+            <div className="alert alert--info">
               <span className="alert__icon" aria-hidden="true">
                 <Icon name="alertCircle" />
               </span>
               <p className="alert__content">
                 Phòng ban đã chọn không còn tồn tại. Đang hiện tất cả phòng ban.
               </p>
-            </>
+            </div>
           )}
         </div>
 
@@ -451,7 +515,7 @@ export function EmployeesPage() {
                 description={current?.error}
                 action={{
                   label: "Thử lại",
-                  onClick: reload,
+                  onClick: retryEmployees,
                   testId: "employees-retry",
                 }}
               />

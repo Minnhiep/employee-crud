@@ -1,6 +1,7 @@
 import { Link, Outlet } from "react-router";
 import { BrandMark } from "./Icon";
 import { NavMenu } from "./NavMenu";
+import { Toast } from "./Toast";
 
 /**
  * Khung chung của mọi trang, kiểu phần mềm quản trị: thanh bên trái (logo + menu) và vùng nội dung.
@@ -23,9 +24,9 @@ export function AppLayout() {
       </header>
       {/* tabIndex -1 để liên kết bỏ qua đưa được focus vào đây. */}
       <main id="noi-dung" className="app__main" tabIndex={-1}>
-        <div className="app__content">
-          <Outlet />
-        </div>
+        {/* Thông báo thành công dùng chung cho mọi trang, có sẵn trước khi trang nào gửi lời báo (xem Toast). */}
+        <Toast />
+        <Outlet />
       </main>
     </div>
   );

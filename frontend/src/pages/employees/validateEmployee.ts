@@ -1,9 +1,12 @@
 import type { FieldErrors } from "../../api/client";
 import { normalizeText } from "../../utils/normalizeText";
 
-/** Phải khớp EmployeeConfiguration.FullNameMaxLength / EmailMaxLength ở backend. */
+/**
+ * Phải khớp EmployeeConfiguration.FullNameMaxLength / EmailMaxLength ở backend.
+ * FULL_NAME_MAX_LENGTH xuất ra vì form dùng trong dòng gợi ý dưới ô Họ tên; EMAIL_MAX_LENGTH chỉ dùng trong file này.
+ */
 export const FULL_NAME_MAX_LENGTH = 100;
-export const EMAIL_MAX_LENGTH = 254;
+const EMAIL_MAX_LENGTH = 254;
 
 /**
  * Một luật định dạng email, chép GIỐNG HỆT EmployeeService.EmailPattern ở backend.
@@ -25,9 +28,12 @@ export type EmployeeFormValues = {
 export type EmployeeField = keyof EmployeeFormValues;
 
 /**
- * Kiểm cả ba ô trên trình duyệt, cùng luật, cùng thứ tự và cùng lời báo với API,
+ * Kiểm cả ba ô trên trình duyệt, cùng luật, cùng thứ tự trong từng ô và cùng lời báo với API,
  * để báo lỗi ngay mà không cần gọi máy chủ. API vẫn kiểm lại, vì không được tin dữ liệu từ form.
- * Khác API: form báo đủ lỗi của mọi ô một lần (API chỉ báo lỗi đầu tiên).
+ * Khác API:
+ * - form báo lỗi của mọi ô cùng lúc; API dừng ở lỗi đầu tiên service gặp (họ tên → email → phòng ban), trừ khi họ
+ *   tên, email bị thiếu hẳn hoặc bỏ trống: [Required] của EmployeeRequest chặn trước và báo cùng lúc cả hai ô;
+ * - chỉ API kiểm được những gì cần database: phòng ban còn tồn tại không, email đã có người dùng chưa.
  */
 export function validateEmployee(values: EmployeeFormValues): FieldErrors {
   const errors: FieldErrors = {};
@@ -39,7 +45,7 @@ export function validateEmployee(values: EmployeeFormValues): FieldErrors {
   } else if (fullName.length === 0) {
     errors.fullName = ["Vui lòng nhập họ tên"];
   } else if (fullName.length > FULL_NAME_MAX_LENGTH) {
-    errors.fullName = ["Họ tên tối đa 100 ký tự"];
+    errors.fullName = [`Họ tên tối đa ${FULL_NAME_MAX_LENGTH} ký tự`];
   }
 
   const email = normalizeText(values.email);
@@ -48,7 +54,7 @@ export function validateEmployee(values: EmployeeFormValues): FieldErrors {
   } else if (email.length === 0) {
     errors.email = ["Vui lòng nhập email"];
   } else if (email.length > EMAIL_MAX_LENGTH) {
-    errors.email = ["Email tối đa 254 ký tự"];
+    errors.email = [`Email tối đa ${EMAIL_MAX_LENGTH} ký tự`];
   } else if (!EMAIL_PATTERN.test(email)) {
     errors.email = ["Email không đúng định dạng"];
   }

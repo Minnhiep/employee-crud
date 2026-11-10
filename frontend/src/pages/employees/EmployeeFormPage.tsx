@@ -31,7 +31,7 @@ import { usePageTitle } from "../../hooks/usePageTitle";
 import { useSubmitGuard } from "../../hooks/useSubmitGuard";
 import { normalizeText } from "../../utils/normalizeText";
 import { parseId } from "../../utils/parseId";
-import { validateEmployee } from "./validateEmployee";
+import { FULL_NAME_MAX_LENGTH, validateEmployee } from "./validateEmployee";
 import type { EmployeeField, EmployeeFormValues } from "./validateEmployee";
 
 const FIELD_NAMES = ["fullName", "email", "departmentId"] as const;
@@ -143,6 +143,14 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
   const title =
     loadStatus === "not-found" ? "Không tìm thấy nhân viên" : baseTitle;
   const headingRef = usePageTitle(title);
+  // Tăng số này để đưa focus về tiêu đề SAU khi trang đã vẽ lại (ví dụ sau khi bấm "Thử lại").
+  const [headingFocusRequest, setHeadingFocusRequest] = useState(0);
+
+  useEffect(() => {
+    if (headingFocusRequest > 0) {
+      headingRef.current?.focus();
+    }
+  }, [headingFocusRequest, headingRef]);
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [departmentsStatus, setDepartmentsStatus] =
@@ -156,6 +164,10 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
   });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [summaryMessages, setSummaryMessages] = useState<string[]>([]);
+  // Đã bấm Lưu ít nhất một lần. Khung tóm tắt lỗi ("Chưa lưu được…", role="alert") chỉ hiện từ lúc đó: trước khi
+  // bấm Lưu, câu "Chưa lưu được" là sai sự thật, và trình đọc màn hình bị ngắt mỗi lần rời một ô trống.
+  // Lỗi khi rời ô chỉ hiện ngay dưới ô (theo mẫu "error summary" của GOV.UK).
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const summaryRef = useRef<HTMLDivElement>(null);
   // Tăng số này để đưa focus vào khung tóm tắt lỗi SAU khi khung đã được vẽ.
@@ -249,14 +261,22 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
     return () => controller.abort();
   }, [departmentsReloadKey, presetDepartmentId]);
 
+  // Hai nút "Thử lại" biến mất ngay khi bấm (trang chuyển sang "đang tải"), focus sẽ rơi về body:
+  // đưa focus về tiêu đề để người dùng bàn phím không mất vị trí.
   function retryLoad() {
     setLoadStatus("loading");
     setReloadKey((key) => key + 1);
+    setHeadingFocusRequest((request) => request + 1);
   }
 
   function reloadDepartments() {
     setDepartmentsStatus("reloading");
     setDepartmentsReloadKey((key) => key + 1);
+  }
+
+  function retryDepartments() {
+    reloadDepartments();
+    setHeadingFocusRequest((request) => request + 1);
   }
 
   function handleChange(field: EmployeeField, value: string) {
@@ -286,10 +306,11 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
     if (isAborted(error)) {
       return;
     }
+    setSubmitAttempted(true);
     if (!(error instanceof ApiError)) {
       setSummaryMessages([GENERIC_MESSAGE]);
     } else if (error.status === 404) {
-      setSummaryMessages(["Không tìm thấy nhân viên, có thể đã bị xóa"]);
+      setSummaryMessages(["Không tìm thấy nhân viên, có thể đã bị xóa."]);
     } else if (error.kind === "client") {
       // 400/409: lỗi theo khóa fullName, email, departmentId hiện cạnh ô; lỗi khác ở khung tóm tắt.
       const { fieldErrors: apiFieldErrors, otherMessages } = splitErrors(
@@ -313,6 +334,11 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+    // Nút Lưu khóa bằng aria-disabled nên vẫn bấm được (Enter trong ô cũng gửi form): tự bỏ qua khi đang khóa.
+    if (isSaveLocked) {
+      return;
+    }
+    setSubmitAttempted(true);
     setTouched({ fullName: true, email: true, departmentId: true });
     setSummaryMessages([]);
 
@@ -361,6 +387,9 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
     (loadStatus === "ready" && isEdit && departmentsStatus === "loading");
   const noDepartments =
     departmentsStatus === "ready" && departments.length === 0;
+  // Khóa nút Lưu khi: đang lưu (bấm đúp chỉ gửi một lần); danh sách phòng ban đang nạp, nạp lại hoặc nạp lỗi
+  // (chưa biết phòng đã chọn còn không; bấm Lưu lúc đang nạp sẽ bị báo nhầm "Vui lòng chọn phòng ban").
+  const isSaveLocked = isSubmitting || departmentsStatus !== "ready";
 
   // Câu về trường bắt buộc chỉ có nghĩa khi form hiện trên trang.
   let description: string | undefined;
@@ -378,7 +407,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
         title={title}
         headingRef={headingRef}
         breadcrumbs={[
-          { label: "Nhân sự" },
+          { label: "Trang chủ", to: "/", disabled: isSubmitting },
           { label: "Nhân viên", to: listPath, disabled: isSubmitting },
           { label: isEdit ? "Sửa" : "Thêm mới" },
         ]}
@@ -434,12 +463,14 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
             </div>
 
             <div className="panel__body form">
-              <ErrorSummary
-                ref={summaryRef}
-                fieldErrors={fieldErrors}
-                fieldLabels={FIELD_LABELS}
-                messages={summaryMessages}
-              />
+              {submitAttempted && (
+                <ErrorSummary
+                  ref={summaryRef}
+                  fieldErrors={fieldErrors}
+                  fieldLabels={FIELD_LABELS}
+                  messages={summaryMessages}
+                />
+              )}
 
               {/* Hai cột trên màn rộng (Họ tên | Email, rồi Phòng ban), một cột trên màn hẹp. */}
               <div className="form__grid">
@@ -447,7 +478,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                   id="fullName"
                   label="Họ tên"
                   required
-                  hint="Tối đa 100 ký tự."
+                  hint={`Tối đa ${FULL_NAME_MAX_LENGTH} ký tự.`}
                   errors={fieldErrors.fullName}
                 >
                   {(controlProps) => (
@@ -478,8 +509,17 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                   {(controlProps) => (
                     <input
                       {...controlProps}
-                      type="email"
+                      // type="text" chứ không "email": với type="email", Chrome tự đổi tên miền có dấu sang dạng
+                      // punycode (gõ a@bücher.vn thì giá trị thành a@xn--bcher-kva.vn), dữ liệu lưu khác chữ người gõ.
+                      // inputMode="email" vẫn mở bàn phím email trên điện thoại; tắt tự viết hoa và tự sửa chính tả.
+                      // Định dạng email vẫn do validateEmployee (trên form) và API kiểm như trước.
+                      type="text"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
                       // Không đặt maxLength, cùng lý do với ô họ tên.
+                      // Tắt gợi ý: form này nhập email của nhân viên khác, trình duyệt gợi ý email của chính người
+                      // đang dùng máy là sai mục đích (dễ chọn nhầm rồi lưu).
                       autoComplete="off"
                       placeholder="ten@congty.vn"
                       value={values.email}
@@ -553,7 +593,7 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
                       <button
                         type="button"
                         className="btn btn--sm btn--secondary"
-                        onClick={reloadDepartments}
+                        onClick={retryDepartments}
                         data-testid="employee-departments-retry"
                       >
                         <Icon name="refresh" />
@@ -592,13 +632,10 @@ export function EmployeeFormPage({ mode }: EmployeeFormPageProps) {
               <button
                 type="submit"
                 className="btn btn--primary"
-                // Nạp phòng ban lỗi hoặc đang nạp lại thì chưa biết phòng đã chọn còn không nên chưa cho lưu;
-                // đang lưu thì khóa để bấm đúp chỉ gửi một lần.
-                disabled={
-                  isSubmitting ||
-                  departmentsStatus === "error" ||
-                  departmentsStatus === "reloading"
-                }
+                // Lúc nào khóa: xem isSaveLocked. Dùng aria-disabled như nút Hủy, không dùng disabled: nút disabled bị
+                // trình duyệt lấy mất focus, người dùng bàn phím và trình đọc màn hình mất vị trí. Vì nút vẫn bấm được
+                // về mặt kỹ thuật, handleSubmit tự bỏ qua khi đang khóa.
+                aria-disabled={isSaveLocked}
                 data-testid="employee-save"
               >
                 {isSubmitting ? "Đang lưu…" : "Lưu nhân viên"}
