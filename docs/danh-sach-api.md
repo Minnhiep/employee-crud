@@ -1,6 +1,6 @@
 # Danh sách API
 
-API của ứng dụng quản lý nhân viên và phòng ban: 10 thao tác, nhận và trả JSON. Mọi ví dụ dưới đây là **kết quả gọi thật** lúc backend chạy trên máy phát triển (ngày 03/11/2026), với dữ liệu mẫu tên giả. Trên máy bạn, `id` và `traceId` sẽ khác.
+API của ứng dụng quản lý nhân viên và phòng ban: 10 thao tác, nhận và trả JSON. Mọi ví dụ dưới đây là **kết quả gọi thật** lúc backend chạy trên máy phát triển (ngày 03/11/2026; hai ví dụ "400 — JSON hỏng" và "413" gọi ngày 10/11/2026), với dữ liệu mẫu tên giả. Trên máy bạn, `id` và `traceId` sẽ khác.
 
 ## Quy ước chung
 
@@ -10,7 +10,8 @@ API của ứng dụng quản lý nhân viên và phòng ban: 10 thao tác, nh�
 | Địa chỉ HTTPS (không bắt buộc) | `https://localhost:7205` (chạy `dotnet run --launch-profile https`) |
 | Định dạng gửi lên | `Content-Type: application/json`, tên trường viết kiểu camelCase (`fullName`, `departmentId`) |
 | Định dạng trả về khi thành công | `application/json; charset=utf-8` |
-| Định dạng trả về khi lỗi 400, 404, 405, 409, 415, 500 | `application/problem+json` (chuẩn ProblemDetails, RFC 9457), luôn có `type`, `title`, `status`, `traceId` |
+| Định dạng trả về khi lỗi 400, 404, 405, 409, 413, 415, 500 | `application/problem+json` (chuẩn ProblemDetails, RFC 9457), luôn có `title`, `status`, `traceId` và thường có `type`; kể cả khi request chỉ nhận `text/html` (header `Accept`), API vẫn trả JSON này chứ không trả trang HTML hay body rỗng |
+| Kích thước body | Tối đa 64 KB mỗi request; lớn hơn thì trả `413` (request hợp lệ lớn nhất chỉ vài trăm byte) |
 | Chuẩn hóa chữ | Tên phòng ban, họ tên, email và chuỗi tìm được chuẩn hóa trước khi kiểm và lưu: gộp nhiều khoảng trắng thành một, bỏ khoảng trắng hai đầu, đưa chữ có dấu về một dạng (NFC). Tên phòng ban, họ tên, email có ký tự điều khiển (ví dụ U+0000), ký tự vô hình (ví dụ U+200B) hoặc noncharacter (ví dụ U+FFFE) thì trả `400` "… chứa ký tự không hợp lệ". Chuỗi tìm có các ký tự đó thì trả `200` với `[]`, xem mục `GET /api/employees` |
 | Ai được gọi từ trình duyệt | Chỉ trang `http://localhost:5173` (CORS). Postman không bị CORS chặn |
 | Đăng nhập | Không có |
@@ -26,24 +27,35 @@ API của ứng dụng quản lý nhân viên và phòng ban: 10 thao tác, nh�
 | 404 Not Found | Không có bản ghi với `id` đó |
 | 405 Method Not Allowed | Đường dẫn có, nhưng không nhận phương thức đó (ví dụ `PATCH`) |
 | 409 Conflict | Vi phạm luật nghiệp vụ: trùng tên phòng ban, trùng email, xóa phòng ban còn nhân viên |
+| 413 Payload Too Large | Body gửi lên lớn hơn 64 KB |
 | 415 Unsupported Media Type | Gửi body không phải JSON (thiếu hoặc sai `Content-Type`) |
 | 500 Internal Server Error | Lỗi phía máy chủ, ví dụ không kết nối được database. Lời báo là câu chung, không lộ chi tiết kỹ thuật; chi tiết nằm trong log, dò bằng `traceId` |
 
 Lời báo lỗi trong body viết bằng tiếng Việt để giao diện hiện thẳng cho người dùng.
+
+### Thứ tự kiểm khi sửa (PUT)
+
+Giống nhau cho `PUT /api/departments/{id}` và `PUT /api/employees/{id}`:
+
+1. Trường bắt buộc bị thiếu, `null`, rỗng hoặc chỉ toàn khoảng trắng: `400` ngay. Bước này do `[Required]` của ASP.NET Core làm, chạy **trước** khi vào controller, nên chưa ai tìm bản ghi (ví dụ `PUT /api/departments/99999` với `{ "name": "   " }` ra `400` "Vui lòng nhập tên phòng ban").
+2. Tìm bản ghi theo `id`: không có thì `404`, kể cả khi dữ liệu gửi lên còn sai chỗ khác (ví dụ `PUT /api/departments/99999` với tên dài 101 ký tự ra `404`, không ra `400`).
+3. Có bản ghi rồi mới kiểm dữ liệu (`400`: quá dài, sai định dạng, ký tự không hợp lệ, phòng ban không tồn tại), rồi kiểm trùng (`409`).
+
+Lý do: sửa một bản ghi không tồn tại thì việc đáng báo nhất là "không tìm thấy"; người dùng sửa dữ liệu cho đúng cũng không lưu được.
 
 ## Bảng tóm tắt
 
 | # | Phương thức | Đường dẫn | Làm gì | Thành công | Lỗi có thể |
 |---|---|---|---|---|---|
 | 1 | GET | `/api/departments` | Danh sách phòng ban, sắp theo tên, kèm số nhân viên | 200 | |
-| 2 | POST | `/api/departments` | Thêm phòng ban | 201 | 400, 409 |
+| 2 | POST | `/api/departments` | Thêm phòng ban | 201 | 400, 409, 413 |
 | 3 | GET | `/api/departments/{id}` | Xem một phòng ban, kèm số nhân viên | 200 | 404 |
-| 4 | PUT | `/api/departments/{id}` | Sửa tên phòng ban | 200 | 400, 404, 409 |
+| 4 | PUT | `/api/departments/{id}` | Sửa tên phòng ban | 200 | 400, 404, 409, 413 |
 | 5 | DELETE | `/api/departments/{id}` | Xóa phòng ban | 204 | 404, 409 |
 | 6 | GET | `/api/employees` | Danh sách nhân viên, có tìm theo họ tên hoặc email và lọc theo phòng ban | 200 | 400 (`departmentId` sai dạng) |
-| 7 | POST | `/api/employees` | Thêm nhân viên | 201 | 400, 409 |
+| 7 | POST | `/api/employees` | Thêm nhân viên | 201 | 400, 409, 413 |
 | 8 | GET | `/api/employees/{id}` | Xem một nhân viên | 200 | 404 |
-| 9 | PUT | `/api/employees/{id}` | Sửa nhân viên | 200 | 400, 404, 409 |
+| 9 | PUT | `/api/employees/{id}` | Sửa nhân viên | 200 | 400, 404, 409, 413 |
 | 10 | DELETE | `/api/employees/{id}` | Xóa nhân viên | 204 | 404 |
 
 Mỗi thao tác đi qua cùng một đường: React gọi API → Controller nhận JSON → Service kiểm luật → EF Core đọc hoặc ghi bảng `departments` / `employees` trong PostgreSQL (xem [sơ đồ database](so-do-database.md)).
@@ -118,7 +130,7 @@ Response `200` (`employeeCount` đếm lại sau khi lưu):
 { "id": 25, "name": "Đào tạo nội bộ", "employeeCount": 0 }
 ```
 
-Lỗi có thể: `400` tên rỗng hoặc quá dài; `404` không có phòng ban mã đó; `409` tên trùng với phòng ban khác.
+Lỗi có thể: `400` tên rỗng hoặc quá dài; `404` không có phòng ban mã đó; `409` tên trùng với phòng ban khác. Thứ tự kiểm: xem mục "Thứ tự kiểm khi sửa (PUT)".
 
 ### DELETE /api/departments/{id}
 
@@ -223,7 +235,7 @@ Response `200`:
 { "id": 2008, "fullName": "Nguyễn Văn Mẫu", "email": "mau.nguyen2@example.com", "departmentId": 25, "departmentName": "Đào tạo nội bộ" }
 ```
 
-Lỗi có thể: `400` như khi thêm; `404` không có nhân viên mã đó; `409` email trùng với nhân viên khác.
+Lỗi có thể: `400` như khi thêm; `404` không có nhân viên mã đó; `409` email trùng với nhân viên khác. Thứ tự kiểm: xem mục "Thứ tự kiểm khi sửa (PUT)".
 
 ### DELETE /api/employees/{id}
 
@@ -276,6 +288,31 @@ Response `400`, `Content-Type: application/problem+json`:
 `errors` gom lỗi theo từng trường, để form React hiện lời báo ngay dưới ô nhập tương ứng (`frontend/src/api/client.ts` đọc body khi `Content-Type` là `application/problem+json`).
 
 > Ví dụ này gọi lại ngày 03/11/2026, sau khi bước Build and Test sửa lỗi 400 cho khớp hợp đồng (trước đó lỗi 400 trả `application/json` và thiếu `type`).
+
+#### Lỗi 400 — JSON hỏng
+
+Request: `POST /api/employees`, `Content-Type: application/json`, body bị cắt dở (không phải JSON hợp lệ):
+
+```text
+{ "fullName":
+```
+
+Response `400`, `Content-Type: application/problem+json`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "Dữ liệu không hợp lệ",
+  "status": 400,
+  "errors": {
+    "body": ["Dữ liệu gửi lên không đúng định dạng JSON"],
+    "fullName": ["Giá trị không đúng kiểu dữ liệu"]
+  },
+  "traceId": "00-d8b628d6d6661686bfd2be6ad8f5080a-28bb4ef8097d496f-00"
+}
+```
+
+Khóa `body` nghĩa là lỗi của **cả body**, không gắn với ô nào: giao diện hiện nó ở khung tóm tắt đầu form. Bộ đọc JSON của ASP.NET Core còn báo thêm trường đang đọc dở (`fullName`). Chỉ gặp khi gọi bằng Postman hoặc công cụ khác: giao diện luôn gửi JSON đúng.
 
 #### Lỗi 400 — chứa ký tự không hợp lệ
 
@@ -375,6 +412,23 @@ Response `405`, `Content-Type: application/problem+json`:
   "traceId": "00-0e7575e4f073e78c29de5d34247a404f-895bd32d17b6a2f3-00"
 }
 ```
+
+### Lỗi 413 Payload Too Large
+
+Request: `POST /api/departments` với tên dài khoảng 70 000 ký tự (body hơn 64 KB)
+
+Response `413`, `Content-Type: application/problem+json`:
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.14",
+  "title": "Dữ liệu gửi lên quá lớn",
+  "status": 413,
+  "traceId": "00-e22165715becff41ae37613ecd5b60eb-abdac7cb0e78e4be-00"
+}
+```
+
+Kestrel (máy chủ web của ASP.NET Core) dừng đọc body khi vượt 64 KB, nên body rất lớn bị từ chối sớm, không phải đọc hết rồi mới báo "tối đa 100 ký tự". Body dưới 64 KB mà tên vẫn quá 100 ký tự thì vẫn là `400` như thường.
 
 ### Lỗi 415 Unsupported Media Type
 

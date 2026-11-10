@@ -8,14 +8,16 @@ Dữ liệu đi theo một đường: **React** (giao diện trên trình duyệ
 frontend/   React + TypeScript (Vite)            chạy ở http://localhost:5173
 backend/    ASP.NET Core Web API (.NET 10)       chạy ở http://localhost:5081
             + migration EF Core tạo database employee_db trên PostgreSQL 18
-docs/       sơ đồ database, danh sách API
+docs/       sơ đồ database, danh sách API, luồng xử lý thực tế, tài liệu tự học
+.claude/    công cụ AI-DLC (quy trình làm phần mềm có AI hỗ trợ) dùng trong lúc làm bài
+aidlc/      hồ sơ AI-DLC: yêu cầu, thiết kế, nhật ký quyết định; không cần để chạy ứng dụng
 ```
 
 ## 1. Phần mềm cần có
 
 | Phần mềm | Phiên bản cần có | Đã thử trên máy làm bài | Ghi chú |
 |---|---|---|---|
-| .NET SDK | 10.0 trở lên | 10.0.403 | Backend nhắm tới `net10.0` |
+| .NET SDK | 10.0.x | 10.0.403 | Backend nhắm tới `net10.0`. File `global.json` ở gốc repo ghim SDK 10.0 (nhận mọi bản 10.0.x từ 10.0.100). Máy chỉ có bản mới hơn (ví dụ .NET 11) thì cài thêm SDK 10.0.x: lệnh `dotnet` sẽ báo không tìm thấy SDK phù hợp, và `dotnet run` cần runtime .NET 10 |
 | Node.js | 24 trở lên | 24.15.0 | `package.json` ghi `"node": ">=24"` |
 | npm | đi kèm Node.js | 11.16.0 | |
 | PostgreSQL | 18 | 18.6 | Chạy trên máy, cổng 5432; nhớ mật khẩu tài khoản `postgres` đặt lúc cài |
@@ -41,6 +43,10 @@ Repo đang để chế độ **Private**: chỉ người được chủ repo m�
 ## 3. Đặt connection string bằng user-secrets
 
 Backend cần biết cách vào PostgreSQL. Mật khẩu **không** để trong file nào của repo; nó được lưu riêng trên máy bạn bằng user-secrets (nằm trong thư mục hồ sơ người dùng của Windows, ngoài repo).
+
+**Tài khoản `postgres` ở mục này chỉ để bắt đầu nhanh.** Đó là tài khoản quyền cao nhất (tạo, xóa cả database). Ngay sau khi chạy migration ở mục 5, nên làm mục 13 để ứng dụng chạy bằng tài khoản riêng `employee_app`, chỉ đủ quyền đọc, ghi hai bảng.
+
+**user-secrets không mã hóa:** giá trị được lưu thành file JSON chữ thường trong `%APPDATA%\Microsoft\UserSecrets\`, ai đọc được thư mục đó là đọc được mật khẩu. Chỉ dùng trên máy phát triển; máy chủ thật dùng biến môi trường hoặc kho bí mật của nơi triển khai.
 
 Dán cả khối dưới đây vào PowerShell, bấm Enter, rồi gõ mật khẩu PostgreSQL khi được hỏi (chỉ hiện dấu `*`):
 
@@ -73,7 +79,7 @@ Phải thấy `ConnectionStrings:Default = Host=localhost;Port=5432;Database=emp
 
 Không dán mật khẩu vào `appsettings.json` hay `appsettings.Development.json`: hai file này nằm trong Git.
 
-Nếu quên bước này, backend sẽ dừng ngay khi chạy và in lời báo "Thiếu cấu hình ConnectionStrings:Default" kèm lệnh cần gõ.
+Nếu quên bước này, backend sẽ dừng ngay khi chạy và in lời báo "Thiếu cấu hình ConnectionStrings:Default" kèm lệnh cần gõ. Lệnh `dotnet ef` ở mục 5 thì báo `The ConnectionString property has not been initialized`: cũng là thiếu bước này.
 
 ## 4. Khôi phục công cụ và gói thư viện của dự án
 
@@ -164,7 +170,7 @@ npm run coverage
 
 Mức sàn của dự án: ít nhất 80% số dòng của các lớp service. Kiểm đủ một lượt (kiểu TypeScript, lint, định dạng TypeScript, build frontend, định dạng C# bằng `dotnet format` và test backend): `npm run verify` trong thư mục `frontend`.
 
-**Con số độ phủ nói lên điều gì:** khi bảng tóm tắt ghi 100% cho `DepartmentService`, `EmployeeService`, đó là **100% số dòng C#** của các lớp service được unit test chạy qua. Unit test dùng database giả trong bộ nhớ (InMemory), nên các luật nằm ở PostgreSQL không đo được bằng con số này: chỉ mục không trùng theo `lower()`, khóa ngoại chặn xóa phòng ban còn nhân viên, thứ tự sắp xếp chữ tiếng Việt. Các luật đó được kiểm tay trên database thật (danh sách D1–D5 trong hồ sơ kiểm thử của phòng ban và nhân viên). "Tổng" trong bảng thấp hơn vì tính cả controller và migration, hai phần này kiểm tay theo quy ước của dự án.
+**Con số độ phủ nói lên điều gì:** khi bảng tóm tắt ghi 100% cho `DepartmentService`, `EmployeeService`, đó là **100% số dòng C#** của các lớp service được unit test chạy qua. Unit test dùng database giả trong bộ nhớ (InMemory), nên các luật nằm ở PostgreSQL không đo được bằng con số này: chỉ mục không trùng theo `lower()`, khóa ngoại chặn xóa phòng ban còn nhân viên, thứ tự sắp xếp chữ tiếng Việt. Các luật đó được kiểm tay trên database thật: các ca D01–D05 ở [docs/tim-hieu-technical-stack/07-kiem-thu-va-demo.md](docs/tim-hieu-technical-stack/07-kiem-thu-va-demo.md), mục 3.4. "Tổng" trong bảng thấp hơn vì tính cả controller và migration, hai phần này kiểm tay theo quy ước của dự án.
 
 **Vì sao lệnh đo độ phủ backend nằm trong `frontend/package.json`:** để mọi lệnh kiểm nằm chung một chỗ, gõ cùng một kiểu `npm run …` (dự án không có CI). Hai lệnh làm hai việc khác nhau: `npm run verify` kiểm kiểu TypeScript, lint, định dạng TypeScript, build frontend, kiểm định dạng C# (`dotnet format --verify-no-changes`, chỉ kiểm, không tự sửa file) và chạy test backend (không đo độ phủ), dùng trước mỗi lần commit; `npm run coverage` chạy test backend kèm đo độ phủ và in bảng phần trăm.
 
@@ -173,6 +179,14 @@ Mức sàn của dự án: ít nhất 80% số dòng của các lớp service. K
 Các lỗi dưới đây đã gặp thật khi làm bài trên Windows 11, không phải lỗi code.
 
 - **`dotnet run` / `dotnet test` báo "Application Control policy has blocked this file" (0x800711C7).** Windows Smart App Control chặn file `.dll` vừa build. Thử build lại trước (`dotnet build backend/EmployeeCrud.slnx`) rồi chạy lại lệnh; vẫn bị chặn thì báo người hướng dẫn. **Đừng vội tắt Smart App Control:** trên Windows 11, tắt đi có thể không bật lại được nếu không cài lại Windows (tùy phiên bản; chưa kiểm trên máy làm bài). Muốn tắt thì đọc hướng dẫn của Microsoft về Smart App Control trước và hỏi người quản lý máy.
+- **`npm run coverage` bị Smart App Control chặn (0x800711C7).** Coverlet (`npm run coverage`, mục 10) vẫn là cách đo độ phủ chuẩn của dự án. Trên máy bật Smart App Control mà coverlet bị chặn, đo bằng công cụ đo độ phủ của Microsoft (có sẵn trong bộ chạy test, không cài thêm gì). Chạy hai lệnh từ thư mục gốc, rồi đọc bảng tóm tắt ở `backend/TestResults/coverage-ms-report/Summary.txt`:
+
+  ```powershell
+  dotnet test backend/EmployeeCrud.slnx --collect "Code Coverage;Format=cobertura" --results-directory backend/TestResults/coverage-ms
+  dotnet tool run reportgenerator "-reports:backend/TestResults/coverage-ms/**/*.cobertura.xml" "-targetdir:backend/TestResults/coverage-ms-report" "-reporttypes:TextSummary;Html" "-assemblyfilters:+EmployeeCrud.Api"
+  ```
+
+  `-assemblyfilters:+EmployeeCrud.Api` để báo cáo chỉ tính code của ứng dụng: công cụ của Microsoft đo cả project test và thư viện test, không lọc thì con số bị lẫn. Trước mỗi lần đo lại, xóa kết quả cũ bằng `Remove-Item -Recurse -Force backend/TestResults/coverage-ms, backend/TestResults/coverage-ms-report -ErrorAction SilentlyContinue`: reportgenerator đọc mọi file khớp mẫu nên sẽ gộp cả kết quả của lần trước.
 - **Build hoặc test báo không chép được file vì "being used by another process".** Backend vẫn đang chạy ở cửa sổ khác và giữ file `.exe`. Bấm `Ctrl+C` ở cửa sổ backend rồi chạy lại lệnh.
 - **Gõ `psql` báo không tìm thấy lệnh.** Bộ cài PostgreSQL không tự thêm `psql` vào PATH. Dùng pgAdmin 4 (Query Tool) hoặc "SQL Shell (psql)" trong menu Start thay vì đổi PATH.
 - **Trang báo "Không kết nối được máy chủ" dù backend đang chạy.** Kiểm thanh địa chỉ: phải là `http://localhost:5173`, không phải `http://127.0.0.1:5173` (xem mục 8).
@@ -245,16 +259,26 @@ Vì sao: khi một câu SQL lỗi, EF Core tự ghi một dòng Error, rồi ứ
 
 Muốn xem câu SQL khi học: đổi tạm `Microsoft.EntityFrameworkCore.Database.Command` trong `appsettings.Development.json` sang `Information`, xem xong đổi lại `Critical`.
 
-## 15. Hướng phát triển
+## 15. Giới hạn bảo mật
+
+Ứng dụng làm cho một người dùng, chạy trên chính máy của mình:
+
+- Backend chỉ nghe ở `localhost`, chỉ nhận request gửi tới `localhost` (`AllowedHosts` trong `appsettings.json`) và chỉ cho trang ở `http://localhost:5173` gọi API (CORS). Body mỗi request tối đa 64 KB, lớn hơn thì trả 413.
+- **Không có đăng nhập:** ai mở được trang là thêm, sửa, xóa được mọi dữ liệu. Vì vậy đừng mở ứng dụng ra mạng (không chạy Vite với `--host`, không nới `AllowedHosts`, không đưa lên máy chủ).
+- Muốn cho nhiều người dùng qua mạng thì tối thiểu phải có: đăng nhập và phân quyền, HTTPS, giới hạn số request mỗi phút (chống dò mật khẩu, chống quá tải). Đây là hướng phát triển; đề bài không yêu cầu nên chưa làm.
+
+## 16. Hướng phát triển
 
 Bài làm đúng phạm vi `docs/ke-hoach.md`. Hai việc dưới đây công ty thật thường làm nhưng đề bài không yêu cầu, nên chưa làm:
 
 - **Xóa mềm:** thay vì xóa hẳn dòng, thêm cột `deleted_at` và ẩn các dòng đã đánh dấu; khôi phục được khi xóa nhầm. Bài này xóa hẳn, có hộp xác nhận ghi rõ tên (và email với nhân viên).
 - **Nhật ký thay đổi:** ghi lại ai sửa gì, lúc nào, giá trị trước và sau. Cần có đăng nhập mới biết "ai", mà đề bài không có đăng nhập.
 
-## 16. Tài liệu khác
+## 17. Tài liệu khác
 
+- [docs/luong-xu-ly-thuc-te.md](docs/luong-xu-ly-thuc-te.md): luồng "Thêm nhân viên" đi qua từng file, hàm thật của bài, và các vấn đề đã gặp khi làm bài (dùng khi demo).
 - [docs/so-do-database.md](docs/so-do-database.md): sơ đồ hai bảng, cột, ràng buộc, cách đối chiếu bằng pgAdmin.
-- [docs/danh-sach-api.md](docs/danh-sach-api.md): 10 thao tác API kèm JSON mẫu, ví dụ lỗi 400/404/405/409/415/500, cách gọi bằng Postman.
+- [docs/danh-sach-api.md](docs/danh-sach-api.md): 10 thao tác API kèm JSON mẫu, ví dụ lỗi 400/404/405/409/413/415/500, cách gọi bằng Postman.
+- [docs/tim-hieu-technical-stack/](docs/tim-hieu-technical-stack/00-tong-quan-luong.md): tài liệu tự học từng phần của stack, bắt đầu từ `00-tong-quan-luong.md`; [06-cai-dat-moi-truong.md](docs/tim-hieu-technical-stack/06-cai-dat-moi-truong.md) cài đặt máy mới, [07-kiem-thu-va-demo.md](docs/tim-hieu-technical-stack/07-kiem-thu-va-demo.md) danh sách kiểm tay và chuẩn bị demo.
 - [docs/du-lieu-mau.sql](docs/du-lieu-mau.sql): 80 nhân viên mẫu và 4 phòng ban thêm để demo (mục 12).
 - [docs/ke-hoach.md](docs/ke-hoach.md): đề bài thực tập.

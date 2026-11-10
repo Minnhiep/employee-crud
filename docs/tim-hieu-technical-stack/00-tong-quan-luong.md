@@ -4,7 +4,7 @@
 > Mục tiêu cuối: **tự giải thích được luồng React → API JSON → ASP.NET Core → PostgreSQL**, rồi áp dụng làm bài CRUD nhân viên/phòng ban.
 > Viết ngày 30/10/2026.
 >
-> **Lưu ý: đây là bản nháp học, viết trước khi làm bài.** Bài thật khác ở: React viết bằng TypeScript, không phải JavaScript; API có 10 thao tác, gồm cả thêm, sửa, xóa phòng ban. Đúng với bài thật: [danh sách API](../danh-sach-api.md), [sơ đồ database](../so-do-database.md).
+> **Lưu ý: đây là bản nháp học, viết trước khi làm bài.** Bài thật khác ở: React viết bằng TypeScript, không phải JavaScript; API có 10 thao tác, gồm cả thêm, sửa, xóa phòng ban; bài thật đã cài trang Swagger UI ở `/swagger` (chỉ khi chạy môi trường Development), ý "không kèm sẵn trang Swagger" ở dưới chỉ đúng với dự án mới tạo; mẫu tìm bằng `ILike` và mẫu CORS trong bản học [03-aspnet-core.md](03-aspnet-core.md) không phải code thật: code thật tìm bằng `Contains` (EF Core tự thoát `%`, `_` nên hai ký tự này là chữ thường, không phải ký tự đại diện), CORS chỉ cho 4 phương thức GET, POST, PUT, DELETE và header `Content-Type`, không mở mọi phương thức, mọi header. Đúng với bài thật: [luồng xử lý thực tế](../luong-xu-ly-thuc-te.md), [danh sách API](../danh-sach-api.md), [sơ đồ database](../so-do-database.md).
 
 ## 1. Hình dung bằng ví dụ đời thường: một nhà hàng
 

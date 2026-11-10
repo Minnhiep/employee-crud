@@ -3,7 +3,7 @@
 > Phần trong kế hoạch: *REST; GET, POST, PUT, DELETE; request/response JSON; HTTP status code; validation và xử lý lỗi; OpenAPI và kiểm thử bằng Postman.*
 > Vị trí trong luồng: **bước 3 và 8** ở [00-tong-quan-luong.md](00-tong-quan-luong.md).
 >
-> **Lưu ý: đây là bản nháp học, viết trước khi làm bài.** Bài thật khác ở: `PUT` trả `200` kèm dữ liệu sau khi sửa, không phải `204`; API có 10 thao tác, gồm cả thêm, sửa, xóa phòng ban; phòng ban trả thêm `employeeCount`; danh sách nhân viên lọc được theo `departmentId`. Bảng ở mục 8 chỉ là nháp, bản đúng với bài thật là [danh sách API](../danh-sach-api.md).
+> **Lưu ý: đây là bản nháp học, viết trước khi làm bài.** Bài thật khác ở: `PUT` trả `200` kèm dữ liệu sau khi sửa, không phải `204`; API có 10 thao tác, gồm cả thêm, sửa, xóa phòng ban; phòng ban trả thêm `employeeCount`; danh sách nhân viên lọc được theo `departmentId`; bài thật đã cài trang Swagger UI ở `/swagger` (chỉ khi chạy môi trường Development), ý "không kèm sẵn trang giao diện" ở mục OpenAPI chỉ đúng với dự án mới tạo; mẫu tìm bằng `ILike` và mẫu CORS trong bản học [03-aspnet-core.md](03-aspnet-core.md) không phải code thật: code thật tìm bằng `Contains` (EF Core tự thoát `%`, `_`), CORS chỉ cho 4 phương thức GET, POST, PUT, DELETE và header `Content-Type`. Bảng ở mục 8 chỉ là nháp, bản đúng với bài thật là [danh sách API](../danh-sach-api.md).
 
 ## 1. Nói đơn giản
 

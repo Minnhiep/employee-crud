@@ -46,3 +46,8 @@ TestResults/
 coverage*/
 # Log của công cụ kiểm trình duyệt (Playwright) khi kiểm tay
 .playwright-mcp/
+# File log bất kỳ, thư mục cấu hình của IDE JetBrains (Rider), và file biến bí mật của file .http
+# (Visual Studio và Rider đọc http-client.private.env.json để điền mật khẩu, token khi gọi thử API)
+*.log
+.idea/
+http-client.private.env.json
